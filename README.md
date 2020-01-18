@@ -1,2 +1,2 @@
-# node-ntjs-assets
-Node Javascript repository assets
+# ntjs-web-assets
+NTJS web assets repository
