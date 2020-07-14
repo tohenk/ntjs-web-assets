@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2010-2019 Torstein Honsi
+ *  (c) 2010-2020 Torstein Honsi
  *
  *  License: www.highcharts.com/license
  *
@@ -9,9 +9,10 @@
  * */
 'use strict';
 import H from './Globals.js';
-import './Utilities.js';
-import './Point.js';
-var Point = H.Point, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+import Point from './Point.js';
+import U from './Utilities.js';
+var seriesType = U.seriesType;
+var seriesTypes = H.seriesTypes;
 /**
  * The ohlc series type.
  *
@@ -138,7 +139,7 @@ seriesType('ohlc', 'column'
      */
     init: function () {
         seriesTypes.column.prototype.init.apply(this, arguments);
-        this.options.stacking = false; // #8817
+        this.options.stacking = void 0; // #8817
     },
     /**
      * Postprocess mapping between options and SVG attributes
@@ -201,9 +202,24 @@ seriesType('ohlc', 'column'
      * @return {void}
      */
     drawPoints: function () {
-        var series = this, points = series.points, chart = series.chart;
+        var series = this, points = series.points, chart = series.chart, 
+        /**
+         * Extend vertical stem to open and close values.
+         */
+        extendStem = function (path, halfStrokeWidth, openOrClose) {
+            var start = path[0];
+            var end = path[1];
+            // We don't need to worry about crisp - openOrClose value
+            // is already crisped and halfStrokeWidth should remove it.
+            if (typeof start[2] === 'number') {
+                start[2] = Math.max(openOrClose + halfStrokeWidth, start[2]);
+            }
+            if (typeof end[2] === 'number') {
+                end[2] = Math.min(openOrClose - halfStrokeWidth, end[2]);
+            }
+        };
         points.forEach(function (point) {
-            var plotOpen, plotClose, crispCorr, halfWidth, path, graphic = point.graphic, crispX, isNew = !graphic;
+            var plotOpen, plotClose, crispCorr, halfWidth, path, graphic = point.graphic, crispX, isNew = !graphic, strokeWidth;
             if (typeof point.plotY !== 'undefined') {
                 // Create and/or update the graphic
                 if (!graphic) {
@@ -214,26 +230,27 @@ seriesType('ohlc', 'column'
                     graphic.attr(series.pointAttribs(point, (point.selected && 'select'))); // #3897
                 }
                 // crisp vector coordinates
-                crispCorr = (graphic.strokeWidth() % 2) / 2;
+                strokeWidth = graphic.strokeWidth();
+                crispCorr = (strokeWidth % 2) / 2;
                 // #2596:
                 crispX = Math.round(point.plotX) - crispCorr;
                 halfWidth = Math.round(point.shapeArgs.width / 2);
                 // the vertical stem
                 path = [
-                    'M',
-                    crispX, Math.round(point.yBottom),
-                    'L',
-                    crispX, Math.round(point.plotHigh)
+                    ['M', crispX, Math.round(point.yBottom)],
+                    ['L', crispX, Math.round(point.plotHigh)]
                 ];
                 // open
                 if (point.open !== null) {
                     plotOpen = Math.round(point.plotOpen) + crispCorr;
-                    path.push('M', crispX, plotOpen, 'L', crispX - halfWidth, plotOpen);
+                    path.push(['M', crispX, plotOpen], ['L', crispX - halfWidth, plotOpen]);
+                    extendStem(path, strokeWidth / 2, plotOpen);
                 }
                 // close
                 if (point.close !== null) {
                     plotClose = Math.round(point.plotClose) + crispCorr;
-                    path.push('M', crispX, plotClose, 'L', crispX + halfWidth, plotClose);
+                    path.push(['M', crispX, plotClose], ['L', crispX + halfWidth, plotClose]);
+                    extendStem(path, strokeWidth / 2, plotClose);
                 }
                 graphic[isNew ? 'attr' : 'animate']({ d: path })
                     .addClass(point.getClassName(), true);

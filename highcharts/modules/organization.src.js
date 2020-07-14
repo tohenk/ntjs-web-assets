@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  * Organization chart series type
  *
  * (c) 2019-2019 Torstein Honsi
@@ -32,14 +32,14 @@
          *
          *  Organization chart module
          *
-         *  (c) 2018-2019 Torstein Honsi
+         *  (c) 2018-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var pick = U.pick, wrap = U.wrap;
+        var css = U.css, pick = U.pick, seriesType = U.seriesType, wrap = U.wrap;
         /**
          * Layout value for the child nodes in an organization chart. If `hanging`, this
          * node's children will hang below their parent, allowing a tighter packing of
@@ -55,7 +55,7 @@
          *
          * @augments Highcharts.seriesTypes.sankey
          */
-        H.seriesType('organization', 'sankey', 
+        seriesType('organization', 'sankey', 
         /**
          * An organization chart is a diagram that shows the structure of an
          * organization and the relationships and relative ranks of its parts and
@@ -71,7 +71,7 @@
          *               Centered layout
          *
          * @extends      plotOptions.sankey
-         * @excluding    allowPointSelect, curveFactor
+         * @excluding    allowPointSelect, curveFactor, dataSorting
          * @since        7.1.0
          * @product      highcharts
          * @requires     modules/organization
@@ -295,33 +295,52 @@
             // General function to apply corner radius to a path - can be lifted to
             // renderer or utilities if we need it elsewhere.
             curvedPath: function (path, r) {
-                var d = [], i, x, y, x1, x2, y1, y2, directionX, directionY;
-                for (i = 0; i < path.length; i++) {
-                    x = path[i][0];
-                    y = path[i][1];
-                    // moveTo
-                    if (i === 0) {
-                        d.push('M', x, y);
-                    }
-                    else if (i === path.length - 1) {
-                        d.push('L', x, y);
-                        // curveTo
-                    }
-                    else if (r) {
-                        x1 = path[i - 1][0];
-                        y1 = path[i - 1][1];
-                        x2 = path[i + 1][0];
-                        y2 = path[i + 1][1];
-                        // Only apply to breaks
-                        if (x1 !== x2 && y1 !== y2) {
-                            directionX = x1 < x2 ? 1 : -1;
-                            directionY = y1 < y2 ? 1 : -1;
-                            d.push('L', x - directionX * Math.min(Math.abs(x - x1), r), y - directionY * Math.min(Math.abs(y - y1), r), 'C', x, y, x, y, x + directionX * Math.min(Math.abs(x - x2), r), y + directionY * Math.min(Math.abs(y - y2), r));
+                var d = [];
+                for (var i = 0; i < path.length; i++) {
+                    var x = path[i][1];
+                    var y = path[i][2];
+                    if (typeof x === 'number' && typeof y === 'number') {
+                        // moveTo
+                        if (i === 0) {
+                            d.push(['M', x, y]);
                         }
-                        // lineTo
-                    }
-                    else {
-                        d.push('L', x, y);
+                        else if (i === path.length - 1) {
+                            d.push(['L', x, y]);
+                            // curveTo
+                        }
+                        else if (r) {
+                            var prevSeg = path[i - 1];
+                            var nextSeg = path[i + 1];
+                            if (prevSeg && nextSeg) {
+                                var x1 = prevSeg[1], y1 = prevSeg[2], x2 = nextSeg[1], y2 = nextSeg[2];
+                                // Only apply to breaks
+                                if (typeof x1 === 'number' &&
+                                    typeof x2 === 'number' &&
+                                    typeof y1 === 'number' &&
+                                    typeof y2 === 'number' &&
+                                    x1 !== x2 &&
+                                    y1 !== y2) {
+                                    var directionX = x1 < x2 ? 1 : -1, directionY = y1 < y2 ? 1 : -1;
+                                    d.push([
+                                        'L',
+                                        x - directionX * Math.min(Math.abs(x - x1), r),
+                                        y - directionY * Math.min(Math.abs(y - y1), r)
+                                    ], [
+                                        'C',
+                                        x,
+                                        y,
+                                        x,
+                                        y,
+                                        x + directionX * Math.min(Math.abs(x - x2), r),
+                                        y + directionY * Math.min(Math.abs(y - y2), r)
+                                    ]);
+                                }
+                            }
+                            // lineTo
+                        }
+                        else {
+                            d.push(['L', x, y]);
+                        }
                     }
                 }
                 return d;
@@ -368,10 +387,10 @@
                 point.shapeType = 'path';
                 point.shapeArgs = {
                     d: this.curvedPath([
-                        [x1, y1],
-                        [xMiddle, y1],
-                        [xMiddle, y2],
-                        [x2, y2]
+                        ['M', x1, y1],
+                        ['L', xMiddle, y1],
+                        ['L', xMiddle, y2],
+                        ['L', x2, y2]
                     ], this.options.linkRadius)
                 };
             },
@@ -387,18 +406,21 @@
                     height -= padjust;
                     width -= padjust;
                     // Set the size of the surrounding div emulating `g`
-                    H.css(dataLabel.text.element.parentNode, {
-                        width: width + 'px',
-                        height: height + 'px'
-                    });
-                    // Set properties for the span emulating `text`
-                    H.css(dataLabel.text.element, {
-                        left: 0,
-                        top: 0,
-                        width: '100%',
-                        height: '100%',
-                        overflow: 'hidden'
-                    });
+                    var text = dataLabel.text;
+                    if (text) {
+                        css(text.element.parentNode, {
+                            width: width + 'px',
+                            height: height + 'px'
+                        });
+                        // Set properties for the span emulating `text`
+                        css(text.element, {
+                            left: 0,
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            overflow: 'hidden'
+                        });
+                    }
                     // The getBBox function is used in `alignDataLabel` to align
                     // inside the box
                     dataLabel.getBBox = function () {
@@ -407,6 +429,9 @@
                             height: height
                         };
                     };
+                    // Overwrite dataLabel dimensions (#13100).
+                    dataLabel.width = width;
+                    dataLabel.height = height;
                 }
                 H.seriesTypes.column.prototype.alignDataLabel.apply(this, arguments);
             }
@@ -416,6 +441,7 @@
          * not specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.organization
+         * @exclude   dataSorting
          * @product   highcharts
          * @requires  modules/organization
          * @apioption series.organization

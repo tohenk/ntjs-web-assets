@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * (c) 2009-2019 Torstein Honsi
  *
@@ -26,10 +26,10 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'themes/dark-blue.js', [_modules['parts/Globals.js']], function (Highcharts) {
+    _registerModule(_modules, 'themes/dark-blue.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (Highcharts, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
@@ -38,6 +38,7 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
+        var setOptions = U.setOptions;
         Highcharts.theme = {
             colors: ['#DDDF0D', '#55BF3B', '#DF5353', '#7798BF', '#aaeeee',
                 '#ff0066', '#eeaaee', '#55BF3B', '#DF5353', '#7798BF', '#aaeeee'],
@@ -278,7 +279,7 @@
             }
         };
         // Apply the theme
-        Highcharts.setOptions(Highcharts.theme);
+        setOptions(Highcharts.theme);
 
     });
     _registerModule(_modules, 'masters/themes/dark-blue.src.js', [], function () {

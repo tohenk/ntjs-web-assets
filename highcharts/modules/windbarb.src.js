@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * Wind barb series module
  *
@@ -31,15 +31,15 @@
     _registerModule(_modules, 'mixins/on-series.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined;
-        var seriesTypes = H.seriesTypes, stableSort = H.stableSort;
+        var defined = U.defined, stableSort = U.stableSort;
+        var seriesTypes = H.seriesTypes;
         /**
          * @private
          * @mixin onSeriesMixin
@@ -167,15 +167,15 @@
          *
          *  Wind barb series module
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var animObject = U.animObject, isNumber = U.isNumber, pick = U.pick;
-        var noop = H.noop, seriesType = H.seriesType;
+        var animObject = U.animObject, isNumber = U.isNumber, pick = U.pick, seriesType = U.seriesType;
+        var noop = H.noop;
         // eslint-disable-next-line valid-jsdoc
         /**
          * Once off, register the windbarb approximation for data grouping. This can be
@@ -361,18 +361,18 @@
                 }
                 // The stem and the arrow head
                 path = [
-                    'M', 0, 7 * u,
-                    'L', -1.5 * u, 7 * u,
-                    0, 10 * u,
-                    1.5 * u, 7 * u,
-                    0, 7 * u,
-                    0, -10 * u // top
+                    ['M', 0, 7 * u],
+                    ['L', -1.5 * u, 7 * u],
+                    ['L', 0, 10 * u],
+                    ['L', 1.5 * u, 7 * u],
+                    ['L', 0, 7 * u],
+                    ['L', 0, -10 * u] // top
                 ];
                 // For each full 50 knots, add a pennant
                 barbs = (knots - knots % 50) / 50; // pennants
                 if (barbs > 0) {
                     while (barbs--) {
-                        path.push(pos === -10 ? 'L' : 'M', 0, pos * u, 'L', 5 * u, pos * u + 2, 'L', 0, pos * u + 4);
+                        path.push(pos === -10 ? ['L', 0, pos * u] : ['M', 0, pos * u], ['L', 5 * u, pos * u + 2], ['L', 0, pos * u + 4]);
                         // Substract from the rest and move position for next
                         knots -= 50;
                         pos += 7;
@@ -382,7 +382,7 @@
                 barbs = (knots - knots % 10) / 10;
                 if (barbs > 0) {
                     while (barbs--) {
-                        path.push(pos === -10 ? 'L' : 'M', 0, pos * u, 'L', 7 * u, pos * u);
+                        path.push(pos === -10 ? ['L', 0, pos * u] : ['M', 0, pos * u], ['L', 7 * u, pos * u]);
                         knots -= 10;
                         pos += 3;
                     }
@@ -391,7 +391,7 @@
                 barbs = (knots - knots % 5) / 5; // half barbs
                 if (barbs > 0) {
                     while (barbs--) {
-                        path.push(pos === -10 ? 'L' : 'M', 0, pos * u, 'L', 4 * u, pos * u);
+                        path.push(pos === -10 ? ['L', 0, pos * u] : ['M', 0, pos * u], ['L', 4 * u, pos * u]);
                         knots -= 5;
                         pos += 3;
                     }
@@ -468,13 +468,12 @@
                     this.markerGroup.animate({
                         opacity: 1
                     }, animObject(this.options.animation));
-                    this.animate = null;
                 }
             },
             // Don't invert the marker group (#4960)
             invertGroups: noop,
             // No data extremes for the Y axis
-            getExtremes: noop
+            getExtremes: function () { return ({}); }
         }, {
             isValid: function () {
                 return isNumber(this.value) && this.value >= 0;
@@ -541,7 +540,7 @@
         /**
          * The wind speed in meters per second.
          *
-         * @type      {number}
+         * @type      {number|null}
          * @product   highcharts highstock
          * @apioption series.windbarb.data.value
          */

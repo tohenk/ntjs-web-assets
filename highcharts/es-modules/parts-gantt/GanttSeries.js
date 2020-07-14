@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2016-2019 Highsoft AS
+ *  (c) 2016-2020 Highsoft AS
  *
  *  Author: Lars A. V. Cabrera
  *
@@ -11,15 +11,16 @@
  * */
 'use strict';
 import H from '../parts/Globals.js';
+import O from '../parts/Options.js';
+var dateFormat = O.dateFormat;
+import './TreeGridAxis.js';
 import U from '../parts/Utilities.js';
-var isNumber = U.isNumber, pick = U.pick, splat = U.splat;
+var isNumber = U.isNumber, merge = U.merge, pick = U.pick, seriesType = U.seriesType, splat = U.splat;
 import './CurrentDateIndicator.js';
-import './GridAxis.js';
 import '../modules/static-scale.src.js';
-import './TreeGrid.js';
 import './Pathfinder.js';
 import '../modules/xrange.src.js';
-var dateFormat = H.dateFormat, merge = H.merge, seriesType = H.seriesType, seriesTypes = H.seriesTypes, Series = H.Series, parent = seriesTypes.xrange;
+var seriesTypes = H.seriesTypes, Series = H.Series, parent = seriesTypes.xrange;
 /**
  * @private
  * @class
@@ -132,7 +133,7 @@ seriesType('gantt', 'xrange'
     drawPoint: function (point, verb) {
         var series = this, seriesOpts = series.options, renderer = series.chart.renderer, shapeArgs = point.shapeArgs, plotY = point.plotY, graphic = point.graphic, state = point.selected && 'select', cutOff = seriesOpts.stacking && !seriesOpts.borderRadius, diamondShape;
         if (point.options.milestone) {
-            if (isNumber(plotY) && point.y !== null) {
+            if (isNumber(plotY) && point.y !== null && point.visible !== false) {
                 diamondShape = renderer.symbols.diamond(shapeArgs.x, shapeArgs.y, shapeArgs.width, shapeArgs.height);
                 if (graphic) {
                     graphic[verb]({
@@ -231,7 +232,7 @@ seriesType('gantt', 'xrange'
  * @declare   Highcharts.GanttPointOptionsObject
  * @type      {Array<*>}
  * @extends   series.xrange.data
- * @excluding className, color, colorIndex, connect, dataLabels, events, id,
+ * @excluding className, color, colorIndex, connect, dataLabels, events,
  *            partialFill, selected, x, x2
  * @product   gantt
  * @apioption series.gantt.data

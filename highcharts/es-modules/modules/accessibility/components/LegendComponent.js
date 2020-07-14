@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2009-2019 Øystein Moseng
+ *  (c) 2009-2020 Øystein Moseng
  *
  *  Accessibility component for chart legend.
  *
@@ -11,8 +11,9 @@
  * */
 'use strict';
 import H from '../../../parts/Globals.js';
+import Legend from '../../../parts/Legend.js';
 import U from '../../../parts/Utilities.js';
-var extend = U.extend;
+var addEvent = U.addEvent, extend = U.extend, find = U.find, fireEvent = U.fireEvent;
 import AccessibilityComponent from '../AccessibilityComponent.js';
 import KeyboardNavigationHandler from '../KeyboardNavigationHandler.js';
 import HTMLUtilities from '../utils/htmlUtilities.js';
@@ -50,17 +51,17 @@ H.Chart.prototype.highlightLegendItem = function (ix) {
     var items = this.legend.allItems, oldIx = this.highlightedLegendItemIx;
     if (items[ix]) {
         if (items[oldIx]) {
-            H.fireEvent(items[oldIx].legendGroup.element, 'mouseout');
+            fireEvent(items[oldIx].legendGroup.element, 'mouseout');
         }
         scrollLegendToItem(this.legend, ix);
         this.setFocusToElement(items[ix].legendItem, items[ix].a11yProxyElement);
-        H.fireEvent(items[ix].legendGroup.element, 'mouseover');
+        fireEvent(items[ix].legendGroup.element, 'mouseover');
         return true;
     }
     return false;
 };
 // Keep track of pressed state for legend items
-H.addEvent(H.Legend, 'afterColorizeItem', function (e) {
+addEvent(Legend, 'afterColorizeItem', function (e) {
     var chart = this.chart, a11yOptions = chart.options.accessibility, legendItem = e.item;
     if (a11yOptions.enabled && legendItem && legendItem.a11yProxyElement) {
         legendItem.a11yProxyElement.setAttribute('aria-pressed', e.visible ? 'false' : 'true');
@@ -82,9 +83,20 @@ extend(LegendComponent.prototype, /** @lends Highcharts.LegendComponent */ {
      */
     init: function () {
         var component = this;
-        this.addEvent(H.Legend, 'afterScroll', function () {
+        this.proxyElementsList = [];
+        this.recreateProxies();
+        // Note: Chart could create legend dynamically, so events can not be
+        // tied to the component's chart's current legend.
+        this.addEvent(Legend, 'afterScroll', function () {
             if (this.chart === component.chart) {
-                component.updateProxies();
+                component.updateProxiesPositions();
+                component.updateLegendItemProxyVisibility();
+                this.chart.highlightLegendItem(component.highlightedLegendItemIx);
+            }
+        });
+        this.addEvent(Legend, 'afterPositionItem', function (e) {
+            if (this.chart === component.chart && this.chart.renderer) {
+                component.updateProxyPositionForItem(e.item);
             }
         });
     },
@@ -92,9 +104,9 @@ extend(LegendComponent.prototype, /** @lends Highcharts.LegendComponent */ {
      * @private
      */
     updateLegendItemProxyVisibility: function () {
-        var legend = this.chart.legend, items = legend.allItems || [], curPage = legend.currentPage || 1;
+        var legend = this.chart.legend, items = legend.allItems || [], curPage = legend.currentPage || 1, clipHeight = legend.clipHeight || 0;
         items.forEach(function (item) {
-            var itemPage = item.pageIx || 0, hide = itemPage !== curPage - 1;
+            var itemPage = item.pageIx || 0, y = item._legendItemPos ? item._legendItemPos[1] : 0, h = item.legendItem ? Math.round(item.legendItem.getBBox().height) : 0, hide = y + h - legend.pages[itemPage] > clipHeight || itemPage !== curPage - 1;
             if (item.a11yProxyElement) {
                 item.a11yProxyElement.style.visibility = hide ?
                     'hidden' : 'visible';
@@ -106,25 +118,48 @@ extend(LegendComponent.prototype, /** @lends Highcharts.LegendComponent */ {
      * of the proxy overlays.
      */
     onChartRender: function () {
-        var component = this;
-        // Ignore render after proxy clicked. No need to destroy it, and
-        // destroying also kills focus.
-        if (this.legendProxyButtonClicked) {
-            delete component.legendProxyButtonClicked;
-            return;
+        if (shouldDoLegendA11y(this.chart)) {
+            this.updateProxiesPositions();
         }
-        this.updateProxies();
+        else {
+            this.removeProxies();
+        }
     },
     /**
      * @private
      */
-    updateProxies: function () {
-        removeElement(this.legendProxyGroup);
+    updateProxiesPositions: function () {
+        for (var _i = 0, _a = this.proxyElementsList; _i < _a.length; _i++) {
+            var _b = _a[_i], element = _b.element, posElement = _b.posElement;
+            this.updateProxyButtonPosition(element, posElement);
+        }
+    },
+    /**
+     * @private
+     */
+    updateProxyPositionForItem: function (item) {
+        var proxyRef = find(this.proxyElementsList, function (ref) { return ref.item === item; });
+        if (proxyRef) {
+            this.updateProxyButtonPosition(proxyRef.element, proxyRef.posElement);
+        }
+    },
+    /**
+     * @private
+     */
+    recreateProxies: function () {
+        this.removeProxies();
         if (shouldDoLegendA11y(this.chart)) {
             this.addLegendProxyGroup();
             this.proxyLegendItems();
             this.updateLegendItemProxyVisibility();
         }
+    },
+    /**
+     * @private
+     */
+    removeProxies: function () {
+        removeElement(this.legendProxyGroup);
+        this.proxyElementsList = [];
     },
     /**
      * @private
@@ -151,10 +186,13 @@ extend(LegendComponent.prototype, /** @lends Highcharts.LegendComponent */ {
     },
     /**
      * @private
-     * @param {Highcharts.BubbleLegend|Highcharts.Point|Highcharts.Series} item
+     * @param {Highcharts.BubbleLegend|Point|Highcharts.Series} item
      */
     proxyLegendItem: function (item) {
-        var component = this, itemLabel = this.chart.langFormat('accessibility.legend.legendItem', {
+        if (!item.legendItem || !item.legendGroup) {
+            return;
+        }
+        var itemLabel = this.chart.langFormat('accessibility.legend.legendItem', {
             chart: this.chart,
             itemName: stripHTMLTags(item.name)
         }), attribs = {
@@ -162,14 +200,15 @@ extend(LegendComponent.prototype, /** @lends Highcharts.LegendComponent */ {
             'aria-pressed': !item.visible,
             'aria-label': itemLabel
         }, 
-        // Keep track of when we should ignore next render
-        preClickEvent = function () {
-            component.legendProxyButtonClicked = true;
-        }, 
         // Considers useHTML
         proxyPositioningElement = item.legendGroup.div ?
             item.legendItem : item.legendGroup;
-        item.a11yProxyElement = this.createProxyButton(item.legendItem, this.legendProxyGroup, attribs, proxyPositioningElement, preClickEvent);
+        item.a11yProxyElement = this.createProxyButton(item.legendItem, this.legendProxyGroup, attribs, proxyPositioningElement);
+        this.proxyElementsList.push({
+            item: item,
+            element: item.a11yProxyElement,
+            posElement: proxyPositioningElement
+        });
     },
     /**
      * Get keyboard navigation handler for this component.
@@ -231,7 +270,7 @@ extend(LegendComponent.prototype, /** @lends Highcharts.LegendComponent */ {
     onKbdClick: function (keyboardNavigationHandler) {
         var legendItem = this.chart.legend.allItems[this.highlightedLegendItemIx];
         if (legendItem && legendItem.a11yProxyElement) {
-            H.fireEvent(legendItem.a11yProxyElement, 'click');
+            fireEvent(legendItem.a11yProxyElement, 'click');
         }
         return keyboardNavigationHandler.response.success;
     },

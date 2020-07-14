@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * Old IE (v6, v7, v8) array polyfills for Highcharts v7+.
  *
@@ -32,7 +32,7 @@
     _registerModule(_modules, 'modules/oldie-polyfills.src.js', [], function () {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
@@ -45,6 +45,11 @@
          * */
         /* global document */
         /* eslint-disable no-extend-native */
+        if (!String.prototype.trim) {
+            String.prototype.trim = function () {
+                return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+            };
+        }
         if (!Array.prototype.forEach) {
             Array.prototype.forEach = function (fn, thisArg) {
                 var i = 0, len = this.length;
@@ -115,6 +120,23 @@
                 return accumulator;
             };
         }
+        if (!Function.prototype.bind) {
+            Function.prototype.bind = function () {
+                var thatFunc = this;
+                var thatArg = arguments[0];
+                var args = Array.prototype.slice.call(arguments, 1);
+                if (typeof thatFunc !== 'function') {
+                    // closest thing possible to the ECMAScript 5
+                    // internal IsCallable function
+                    throw new TypeError('Function.prototype.bind - ' +
+                        'what is trying to be bound is not callable');
+                }
+                return function () {
+                    var funcArgs = args.concat(Array.prototype.slice.call(arguments));
+                    return thatFunc.apply(thatArg, funcArgs);
+                };
+            };
+        }
         if (!Object.keys) {
             Object.keys = function (obj) {
                 var result = [], prop;
@@ -128,7 +150,7 @@
         }
         // Add a getElementsByClassName function if the browser doesn't have one
         // Limitation: only works with one class name
-        // Copyright: Eike Send http://eike.se/nd
+        // Copyright: Eike Send https://eike.se/nd
         // License: MIT License
         if (!document.getElementsByClassName) {
             document.getElementsByClassName = function (search) {

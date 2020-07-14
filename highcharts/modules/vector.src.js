@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * Vector plot series module
  *
@@ -33,15 +33,14 @@
          *
          *  Vector plot series module
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var animObject = U.animObject, arrayMax = U.arrayMax, pick = U.pick;
-        var seriesType = H.seriesType;
+        var animObject = U.animObject, arrayMax = U.arrayMax, pick = U.pick, seriesType = U.seriesType;
         /**
          * The vector series class.
          *
@@ -170,12 +169,12 @@
                 // The stem and the arrow head. Draw the arrow first with rotation
                 // 0, which is the arrow pointing down (vector from north to south).
                 path = [
-                    'M', 0, 7 * u + o,
-                    'L', -1.5 * u, 7 * u + o,
-                    0, 10 * u + o,
-                    1.5 * u, 7 * u + o,
-                    0, 7 * u + o,
-                    0, -10 * u + o // top
+                    ['M', 0, 7 * u + o],
+                    ['L', -1.5 * u, 7 * u + o],
+                    ['L', 0, 10 * u + o],
+                    ['L', 1.5 * u, 7 * u + o],
+                    ['L', 0, 7 * u + o],
+                    ['L', 0, -10 * u + o] // top
                 ];
                 return path;
             },
@@ -273,7 +272,6 @@
                     this.markerGroup.animate({
                         opacity: 1
                     }, animObject(this.options.animation));
-                    this.animate = null;
                 }
             }
             /* eslint-enable valid-jsdoc */

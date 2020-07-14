@@ -2,7 +2,7 @@
  *
  *  X-range series module
  *
- *  (c) 2010-2019 Torstein Honsi, Lars A. V. Cabrera
+ *  (c) 2010-2020 Torstein Honsi, Lars A. V. Cabrera
  *
  *  License: www.highcharts.com/license
  *
@@ -10,7 +10,13 @@
  *
  * */
 'use strict';
+import Axis from '../parts/Axis.js';
 import H from '../parts/Globals.js';
+import Color from '../parts/Color.js';
+var color = Color.parse;
+import Point from '../parts/Point.js';
+import U from '../parts/Utilities.js';
+var addEvent = U.addEvent, clamp = U.clamp, correctFloat = U.correctFloat, defined = U.defined, find = U.find, isNumber = U.isNumber, isObject = U.isObject, merge = U.merge, pick = U.pick, seriesType = U.seriesType;
 /* *
  * @interface Highcharts.PointOptionsObject in parts/Point.ts
  */ /**
@@ -19,9 +25,7 @@ import H from '../parts/Globals.js';
 * @type {number|undefined}
 * @requires modules/xrange
 */
-import U from '../parts/Utilities.js';
-var clamp = U.clamp, correctFloat = U.correctFloat, defined = U.defined, isNumber = U.isNumber, isObject = U.isObject, pick = U.pick;
-var addEvent = H.addEvent, color = H.color, columnType = H.seriesTypes.column, find = H.find, merge = H.merge, seriesType = H.seriesType, seriesTypes = H.seriesTypes, Axis = H.Axis, Point = H.Point, Series = H.Series;
+var columnType = H.seriesTypes.column, seriesTypes = H.seriesTypes, Series = H.Series;
 /**
  * Return color of a point based on its category.
  *
@@ -72,7 +76,7 @@ seriesType('xrange', 'column'
  *               edgeWidth, findNearestPointBy, getExtremesFromAll,
  *               negativeColor, pointInterval, pointIntervalUnit,
  *               pointPlacement, pointRange, pointStart, softThreshold,
- *               stacking, threshold, data
+ *               stacking, threshold, data, dataSorting
  * @requires     modules/xrange
  * @optionparent plotOptions.xrange
  */
@@ -140,6 +144,15 @@ seriesType('xrange', 'column'
     autoIncrement: H.noop,
     buildKDTree: H.noop,
     /* eslint-disable valid-jsdoc */
+    /**
+     * @private
+     * @function Highcarts.seriesTypes.xrange#init
+     * @return {void}
+     */
+    init: function () {
+        seriesTypes.column.prototype.init.apply(this, arguments);
+        this.options.stacking = void 0; // #13161
+    },
     /**
      * Borrow the column series metrics, but with swapped axes. This gives
      * free access to features like groupPadding, grouping, pointWidth etc.
@@ -236,7 +249,7 @@ seriesType('xrange', 'column'
      * @param {Highcharts.Point} point
      */
     translatePoint: function (point) {
-        var series = this, xAxis = series.xAxis, yAxis = series.yAxis, metrics = series.columnMetrics, options = series.options, minPointLength = options.minPointLength || 0, plotX = point.plotX, posX = pick(point.x2, point.x + (point.len || 0)), plotX2 = xAxis.translate(posX, 0, 0, 0, 1), length = Math.abs(plotX2 - plotX), widthDifference, shapeArgs, partialFill, inverted = this.chart.inverted, borderWidth = pick(options.borderWidth, 1), crisper = borderWidth % 2 / 2, yOffset = metrics.offset, pointHeight = Math.round(metrics.width), dlLeft, dlRight, dlWidth, clipRectWidth;
+        var series = this, xAxis = series.xAxis, yAxis = series.yAxis, metrics = series.columnMetrics, options = series.options, minPointLength = options.minPointLength || 0, plotX = point.plotX, posX = pick(point.x2, point.x + (point.len || 0)), plotX2 = xAxis.translate(posX, 0, 0, 0, 1), length = Math.abs(plotX2 - plotX), widthDifference, shapeArgs, partialFill, inverted = this.chart.inverted, borderWidth = pick(options.borderWidth, 1), crisper = borderWidth % 2 / 2, yOffset = metrics.offset, pointHeight = Math.round(metrics.width), dlLeft, dlRight, dlWidth, clipRectWidth, tooltipYOffset;
         if (minPointLength) {
             widthDifference = minPointLength - length;
             if (widthDifference < 0) {
@@ -285,10 +298,12 @@ seriesType('xrange', 'column'
         var tooltipPos = point.tooltipPos;
         var xIndex = !inverted ? 0 : 1;
         var yIndex = !inverted ? 1 : 0;
+        tooltipYOffset = series.columnMetrics ?
+            series.columnMetrics.offset : -metrics.width / 2;
         // Limit position by the correct axis size (#9727)
         tooltipPos[xIndex] = clamp(tooltipPos[xIndex] + ((!inverted ? 1 : -1) * (xAxis.reversed ? -1 : 1) *
             (length / 2)), 0, xAxis.len - 1);
-        tooltipPos[yIndex] = clamp(tooltipPos[yIndex] + ((!inverted ? -1 : 1) * (metrics.width / 2)), 0, yAxis.len - 1);
+        tooltipPos[yIndex] = clamp(tooltipPos[yIndex] + ((inverted ? -1 : 1) * tooltipYOffset), 0, yAxis.len - 1);
         // Add a partShapeArgs to the point, based on the shapeArgs property
         partialFill = point.partialFill;
         if (partialFill) {
@@ -349,7 +364,7 @@ seriesType('xrange', 'column'
         var series = this, seriesOpts = series.options, renderer = series.chart.renderer, graphic = point.graphic, type = point.shapeType, shapeArgs = point.shapeArgs, partShapeArgs = point.partShapeArgs, clipRectArgs = point.clipRectArgs, pfOptions = point.partialFill, cutOff = seriesOpts.stacking && !seriesOpts.borderRadius, pointState = point.state, stateOpts = (seriesOpts.states[pointState || 'normal'] ||
             {}), pointStateVerb = typeof pointState === 'undefined' ?
             'attr' : verb, pointAttr = series.pointAttribs(point, pointState), animation = pick(series.chart.options.chart.animation, stateOpts.animation), fill;
-        if (!point.isNull) {
+        if (!point.isNull && point.visible !== false) {
             // Original graphic
             if (graphic) { // update
                 graphic.rect[verb](shapeArgs);
@@ -559,7 +574,7 @@ addEvent(Axis, 'afterGetSeriesExtremes', function () {
  * @excluding boostThreshold, crisp, cropThreshold, depth, edgeColor, edgeWidth,
  *            findNearestPointBy, getExtremesFromAll, negativeColor,
  *            pointInterval, pointIntervalUnit, pointPlacement, pointRange,
- *            pointStart, softThreshold, stacking, threshold
+ *            pointStart, softThreshold, stacking, threshold, dataSorting
  * @product   highcharts highstock gantt
  * @requires  modules/xrange
  * @apioption series.xrange

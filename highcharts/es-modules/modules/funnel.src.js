@@ -2,7 +2,7 @@
  *
  *  Highcharts funnel module
  *
- *  (c) 2010-2019 Torstein Honsi
+ *  (c) 2010-2020 Torstein Honsi
  *
  *  License: www.highcharts.com/license
  *
@@ -11,13 +11,13 @@
  * */
 /* eslint indent: 0 */
 'use strict';
-import Highcharts from '../parts/Globals.js';
+import Chart from '../parts/Chart.js';
+import H from '../parts/Globals.js';
+var noop = H.noop, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
 import U from '../parts/Utilities.js';
-var pick = U.pick;
+var addEvent = U.addEvent, fireEvent = U.fireEvent, isArray = U.isArray, pick = U.pick;
 import '../parts/Options.js';
 import '../parts/Series.js';
-// create shortcuts
-var seriesType = Highcharts.seriesType, seriesTypes = Highcharts.seriesTypes, fireEvent = Highcharts.fireEvent, addEvent = Highcharts.addEvent, noop = Highcharts.noop;
 /**
  * @private
  * @class
@@ -35,7 +35,7 @@ seriesType('funnel', 'pie',
  *         Funnel demo
  *
  * @extends      plotOptions.pie
- * @excluding    innerSize,size
+ * @excluding    innerSize,size,dataSorting
  * @product      highcharts
  * @requires     modules/funnel
  * @optionparent plotOptions.funnel
@@ -238,16 +238,14 @@ seriesType('funnel', 'pie',
             }
             // save the path
             path = [
-                'M',
-                x1, y1,
-                'L',
-                x2, y1,
-                x4, y3
+                ['M', x1, y1],
+                ['L', x2, y1],
+                ['L', x4, y3]
             ];
             if (y5 !== null) {
-                path.push(x4, y5, x3, y5);
+                path.push(['L', x4, y5], ['L', x3, y5]);
             }
-            path.push(x3, y3, 'Z');
+            path.push(['L', x3, y3], ['Z']);
             // prepare for using shared dr
             point.shapeType = 'path';
             point.shapeArgs = { d: path };
@@ -382,11 +380,16 @@ seriesType('funnel', 'pie',
     }
 });
 /* eslint-disable no-invalid-this */
-addEvent(Highcharts.Chart, 'afterHideAllOverlappingLabels', function () {
+addEvent(Chart, 'afterHideAllOverlappingLabels', function () {
     this.series.forEach(function (series) {
-        if (series instanceof seriesTypes.pie &&
+        var dataLabelsOptions = series.options && series.options.dataLabels;
+        if (isArray(dataLabelsOptions)) {
+            dataLabelsOptions = dataLabelsOptions[0];
+        }
+        if (series.is('pie') &&
             series.placeDataLabels &&
-            !((series.options || {}).dataLabels || {}).inside) {
+            dataLabelsOptions &&
+            !dataLabelsOptions.inside) {
             series.placeDataLabels();
         }
     });
@@ -396,7 +399,7 @@ addEvent(Highcharts.Chart, 'afterHideAllOverlappingLabels', function () {
  * not specified, it is inherited from [chart.type](#chart.type).
  *
  * @extends   series,plotOptions.funnel
- * @excluding dataParser, dataURL, stack, xAxis, yAxis
+ * @excluding dataParser, dataURL, stack, xAxis, yAxis, dataSorting
  * @product   highcharts
  * @requires  modules/funnel
  * @apioption series.funnel
@@ -496,7 +499,7 @@ seriesType('pyramid', 'funnel',
  * not specified, it is inherited from [chart.type](#chart.type).
  *
  * @extends   series,plotOptions.pyramid
- * @excluding dataParser, dataURL, stack, xAxis, yAxis
+ * @excluding dataParser, dataURL, stack, xAxis, yAxis, dataSorting
  * @product   highcharts
  * @requires  modules/funnel
  * @apioption series.pyramid

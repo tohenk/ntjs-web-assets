@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * (c) 2016-2019 Highsoft AS
  * Authors: Jon Arild Nygard
@@ -51,7 +51,8 @@
          * @todo export this function to enable usage
          */
         var draw = function draw(params) {
-            var component = this, graphic = component.graphic, animatableAttribs = params.animatableAttribs, onComplete = params.onComplete, css = params.css, renderer = params.renderer;
+            var _a;
+            var component = this, graphic = component.graphic, animatableAttribs = params.animatableAttribs, onComplete = params.onComplete, css = params.css, renderer = params.renderer, animation = (_a = component.series) === null || _a === void 0 ? void 0 : _a.options.animation;
             if (component.shouldDraw()) {
                 if (!graphic) {
                     component.graphic = graphic =
@@ -61,7 +62,7 @@
                 graphic
                     .css(css)
                     .attr(params.attribs)
-                    .animate(animatableAttribs, params.isNew ? false : void 0, onComplete);
+                    .animate(animatableAttribs, params.isNew ? false : animation, onComplete);
             }
             else if (graphic) {
                 var destroy = function () {
@@ -98,18 +99,18 @@
 
         return drawPoint;
     });
-    _registerModule(_modules, 'mixins/tree-series.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'mixins/tree-series.js', [_modules['parts/Color.js'], _modules['parts/Utilities.js']], function (Color, U) {
         /* *
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject, pick = U.pick;
+        var extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject, merge = U.merge, pick = U.pick;
         var isBoolean = function (x) {
             return typeof x === 'boolean';
         }, isFn = function (x) {
             return typeof x === 'function';
-        }, merge = H.merge;
+        };
         /* eslint-disable valid-jsdoc */
         /**
          * @todo Combine buildTree and buildNode with setTreeValues
@@ -166,7 +167,7 @@
                 var colorVariation = level && level.colorVariation;
                 if (colorVariation) {
                     if (colorVariation.key === 'brightness') {
-                        return H.color(color).brighten(colorVariation.to * (index / siblings)).get();
+                        return Color.parse(color).brighten(colorVariation.to * (index / siblings)).get();
                     }
                 }
                 return color;
@@ -284,10 +285,10 @@
 
         return result;
     });
-    _registerModule(_modules, 'modules/treemap.src.js', [_modules['parts/Globals.js'], _modules['mixins/tree-series.js'], _modules['mixins/draw-point.js'], _modules['parts/Utilities.js']], function (H, mixinTreeSeries, drawPoint, U) {
+    _registerModule(_modules, 'modules/treemap.src.js', [_modules['parts/Globals.js'], _modules['mixins/tree-series.js'], _modules['mixins/draw-point.js'], _modules['parts/Color.js'], _modules['mixins/legend-symbol.js'], _modules['parts/Point.js'], _modules['parts/Utilities.js']], function (H, mixinTreeSeries, drawPoint, Color, LegendSymbolMixin, Point, U) {
         /* *
          *
-         *  (c) 2014-2019 Highsoft AS
+         *  (c) 2014-2020 Highsoft AS
          *
          *  Authors: Jon Arild Nygard / Oystein Moseng
          *
@@ -296,14 +297,15 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var correctFloat = U.correctFloat, defined = U.defined, extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject, isString = U.isString, objectEach = U.objectEach, pick = U.pick;
+        var color = Color.parse;
+        var addEvent = U.addEvent, correctFloat = U.correctFloat, defined = U.defined, error = U.error, extend = U.extend, fireEvent = U.fireEvent, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject, isString = U.isString, merge = U.merge, objectEach = U.objectEach, pick = U.pick, seriesType = U.seriesType, stableSort = U.stableSort;
         /* eslint-disable no-invalid-this */
         var AXIS_MAX = 100;
-        var seriesType = H.seriesType, seriesTypes = H.seriesTypes, addEvent = H.addEvent, merge = H.merge, error = H.error, noop = H.noop, fireEvent = H.fireEvent, getColor = mixinTreeSeries.getColor, getLevelOptions = mixinTreeSeries.getLevelOptions, 
+        var seriesTypes = H.seriesTypes, noop = H.noop, getColor = mixinTreeSeries.getColor, getLevelOptions = mixinTreeSeries.getLevelOptions, 
         // @todo Similar to eachObject, this function is likely redundant
         isBoolean = function (x) {
             return typeof x === 'boolean';
-        }, Series = H.Series, stableSort = H.stableSort, color = H.Color, 
+        }, Series = H.Series, 
         // @todo Similar to recursive, this function is likely redundant
         eachObject = function (list, func, context) {
             context = context || this;
@@ -320,7 +322,7 @@
             if (next !== false) {
                 recursive(next, func, context);
             }
-        }, updateRootId = mixinTreeSeries.updateRootId;
+        }, updateRootId = mixinTreeSeries.updateRootId, treemapAxisDefaultValues = false;
         /* eslint-enable no-invalid-this */
         /**
          * @private
@@ -338,7 +340,7 @@
          *         Treemap
          *
          * @extends      plotOptions.scatter
-         * @excluding    dragDrop, marker, jitter
+         * @excluding    dragDrop, marker, jitter, dataSorting
          * @product      highcharts
          * @requires     modules/treemap
          * @optionparent plotOptions.treemap
@@ -874,6 +876,8 @@
                     }
                 }));
                 Series.prototype.init.call(series, chart, options);
+                // Treemap's opacity is a different option from other series
+                delete series.opacity;
                 if (series.options.allowTraversingTree) {
                     series.eventsToUnbind.push(addEvent(series, 'click', series.onClickDrillToNode));
                 }
@@ -1473,7 +1477,8 @@
             onClickDrillToNode: function (event) {
                 var series = this, point = event.point, drillId = point && point.drillId;
                 // If a drill id is returned, add click event and cursor.
-                if (isString(drillId)) {
+                if (isString(drillId) &&
+                    (series.isDrillAllowed ? series.isDrillAllowed(drillId) : true)) {
                     point.setState(''); // Remove hover
                     series.setRootNode(drillId, true, { trigger: 'click' });
                 }
@@ -1535,8 +1540,7 @@
             },
             // TODO remove this function at a suitable version.
             drillToNode: function (id, redraw) {
-                error('WARNING: treemap.drillToNode has been renamed to treemap.' +
-                    'setRootNode, and will be removed in the next major version.');
+                error(32, false, void 0, { 'treemap.drillToNode': 'use treemap.setRootNode' });
                 this.setRootNode(id, redraw);
             },
             /**
@@ -1598,9 +1602,25 @@
                 // Fire setRootNode event.
                 fireEvent(series, 'setRootNode', eventArgs, defaultFn);
             },
+            /**
+             * Check if the drill up/down is allowed.
+             *
+             * @private
+             */
+            isDrillAllowed: function (targetNode) {
+                var tree = this.tree, firstChild = tree.children[0];
+                // The sunburst series looks exactly the same on the level ''
+                // and level 1 if there’s only one element on level 1. Disable
+                // drilling up/down when it doesn't perform any visual
+                // difference (#13388).
+                return !(tree.children.length === 1 && ((this.rootNode === '' && targetNode === firstChild.id) ||
+                    (this.rootNode === firstChild.id && targetNode === '')));
+            },
             renderTraverseUpButton: function (rootId) {
                 var series = this, nodeMap = series.nodeMap, node = nodeMap[rootId], name = node.name, buttonOptions = series.options.traverseUpButton, backText = pick(buttonOptions.text, name, '< Back'), attr, states;
-                if (rootId === '') {
+                if (rootId === '' ||
+                    (series.isDrillAllowed ?
+                        !(isString(node.parent) && series.isDrillAllowed(node.parent)) : false)) {
                     if (series.drillUpButton) {
                         series.drillUpButton =
                             series.drillUpButton.destroy();
@@ -1630,35 +1650,17 @@
                 }
             },
             buildKDTree: noop,
-            drawLegendSymbol: H.LegendSymbolMixin.drawRectangle,
+            drawLegendSymbol: LegendSymbolMixin.drawRectangle,
             getExtremes: function () {
                 // Get the extremes from the value data
-                Series.prototype.getExtremes.call(this, this.colorValueData);
-                this.valueMin = this.dataMin;
-                this.valueMax = this.dataMax;
+                var _a = Series.prototype.getExtremes
+                    .call(this, this.colorValueData), dataMin = _a.dataMin, dataMax = _a.dataMax;
+                this.valueMin = dataMin;
+                this.valueMax = dataMax;
                 // Get the extremes from the y data
-                Series.prototype.getExtremes.call(this);
+                return Series.prototype.getExtremes.call(this);
             },
             getExtremesFromAll: true,
-            bindAxes: function () {
-                var treeAxis = {
-                    endOnTick: false,
-                    gridLineWidth: 0,
-                    lineWidth: 0,
-                    min: 0,
-                    dataMin: 0,
-                    minPadding: 0,
-                    max: AXIS_MAX,
-                    dataMax: AXIS_MAX,
-                    maxPadding: 0,
-                    startOnTick: false,
-                    title: null,
-                    tickPositions: []
-                };
-                Series.prototype.bindAxes.call(this);
-                extend(this.yAxis.options, treeAxis);
-                extend(this.xAxis.options, treeAxis);
-            },
             /**
              * Workaround for `inactive` state. Since `series.opacity` option is
              * already reserved, don't use that state at all by disabling
@@ -1680,7 +1682,7 @@
             setVisible: seriesTypes.pie.prototype.pointClass.prototype.setVisible,
             /* eslint-disable no-invalid-this, valid-jsdoc */
             getClassName: function () {
-                var className = H.Point.prototype.getClassName.call(this), series = this.series, options = series.options;
+                var className = Point.prototype.getClassName.call(this), series = this.series, options = series.options;
                 // Above the current level
                 if (this.node.level <= series.nodeMap[series.rootNode].level) {
                     className += ' highcharts-above-level';
@@ -1705,7 +1707,7 @@
                 return this.id || isNumber(this.value);
             },
             setState: function (state) {
-                H.Point.prototype.setState.call(this, state);
+                Point.prototype.setState.call(this, state);
                 // Graphic does not exist when point is not visible.
                 if (this.graphic) {
                     this.graphic.attr({
@@ -1717,14 +1719,43 @@
                 var point = this;
                 return isNumber(point.plotY) && point.y !== null;
             }
-            /* eslint-enable no-invalid-this, valid-jsdoc */
         });
+        addEvent(H.Series, 'afterBindAxes', function () {
+            var series = this, xAxis = series.xAxis, yAxis = series.yAxis, treeAxis;
+            if (xAxis && yAxis) {
+                if (series.is('treemap')) {
+                    treeAxis = {
+                        endOnTick: false,
+                        gridLineWidth: 0,
+                        lineWidth: 0,
+                        min: 0,
+                        dataMin: 0,
+                        minPadding: 0,
+                        max: AXIS_MAX,
+                        dataMax: AXIS_MAX,
+                        maxPadding: 0,
+                        startOnTick: false,
+                        title: null,
+                        tickPositions: []
+                    };
+                    extend(yAxis.options, treeAxis);
+                    extend(xAxis.options, treeAxis);
+                    treemapAxisDefaultValues = true;
+                }
+                else if (treemapAxisDefaultValues) {
+                    yAxis.setOptions(yAxis.userOptions);
+                    xAxis.setOptions(xAxis.userOptions);
+                    treemapAxisDefaultValues = false;
+                }
+            }
+        });
+        /* eslint-enable no-invalid-this, valid-jsdoc */
         /**
          * A `treemap` series. If the [type](#series.treemap.type) option is
          * not specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.treemap
-         * @excluding dataParser, dataURL, stack
+         * @excluding dataParser, dataURL, stack, dataSorting
          * @product   highcharts
          * @requires  modules/treemap
          * @apioption series.treemap
@@ -1809,7 +1840,7 @@
          *
          *  This module implements sunburst charts in Highcharts.
          *
-         *  (c) 2016-2019 Highsoft AS
+         *  (c) 2016-2020 Highsoft AS
          *
          *  Authors: Jon Arild Nygard
          *
@@ -1818,10 +1849,10 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var correctFloat = U.correctFloat, extend = U.extend, isNumber = U.isNumber, isObject = U.isObject, isString = U.isString, splat = U.splat;
+        var correctFloat = U.correctFloat, error = U.error, extend = U.extend, isNumber = U.isNumber, isObject = U.isObject, isString = U.isString, merge = U.merge, seriesType = U.seriesType, splat = U.splat;
         var CenteredSeriesMixin = H.CenteredSeriesMixin, Series = H.Series, getCenter = CenteredSeriesMixin.getCenter, getColor = mixinTreeSeries.getColor, getLevelOptions = mixinTreeSeries.getLevelOptions, getStartAndEndRadians = CenteredSeriesMixin.getStartAndEndRadians, isBoolean = function (x) {
             return typeof x === 'boolean';
-        }, merge = H.merge, noop = H.noop, rad2deg = 180 / Math.PI, seriesType = H.seriesType, seriesTypes = H.seriesTypes, setTreeValues = mixinTreeSeries.setTreeValues, updateRootId = mixinTreeSeries.updateRootId;
+        }, noop = H.noop, rad2deg = 180 / Math.PI, seriesTypes = H.seriesTypes, setTreeValues = mixinTreeSeries.setTreeValues, updateRootId = mixinTreeSeries.updateRootId;
         // TODO introduce step, which should default to 1.
         var range = function range(from, to) {
             var result = [], i;
@@ -2307,14 +2338,19 @@
                 defer: true,
                 /**
                  * Decides how the data label will be rotated relative to the perimeter
-                 * of the sunburst. Valid values are `auto`, `parallel` and
-                 * `perpendicular`. When `auto`, the best fit will be computed for the
-                 * point.
+                 * of the sunburst. Valid values are `auto`, `circular`, `parallel` and
+                 * `perpendicular`. When `auto`, the best fit will be
+                 * computed for the point. The `circular` option works similiar
+                 * to `auto`, but uses the `textPath` feature - labels are curved,
+                 * resulting in a better layout, however multiple lines and
+                 * `textOutline` are not supported.
                  *
                  * The `series.rotation` option takes precedence over `rotationMode`.
                  *
                  * @type       {string}
-                 * @validvalue ["auto", "perpendicular", "parallel"]
+                 * @sample {highcharts} highcharts/plotoptions/sunburst-datalabels-rotationmode-circular/
+                 *         Circular rotation mode
+                 * @validvalue ["auto", "perpendicular", "parallel", "circular"]
                  * @since      6.0.0
                  */
                 rotationMode: 'auto',
@@ -2583,7 +2619,7 @@
                 // #10669 - verify if all nodes have unique ids
                 series.data.forEach(function (child) {
                     if (nodeIds[child.id]) {
-                        H.error(31, false, series.chart);
+                        error(31, false, series.chart);
                     }
                     // map
                     nodeIds[child.id] = true;
@@ -2628,8 +2664,6 @@
                         opacity: 1
                     };
                     group.animate(attribs, this.options.animation);
-                    // Delete this function to allow it only once
-                    this.animate = null;
                 }
             },
             utils: {
@@ -2692,7 +2726,7 @@
          * not specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.sunburst
-         * @excluding dataParser, dataURL, stack
+         * @excluding dataParser, dataURL, stack, dataSorting
          * @product   highcharts
          * @requires  modules/sunburst.js
          * @apioption series.sunburst

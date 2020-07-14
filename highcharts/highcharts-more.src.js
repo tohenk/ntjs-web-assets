@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * (c) 2009-2018 Torstein Honsi
  *
@@ -26,23 +26,23 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'parts-more/Pane.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/Pane.js', [_modules['parts/Chart.js'], _modules['parts/Globals.js'], _modules['parts/Pointer.js'], _modules['parts/Utilities.js']], function (Chart, H, Pointer, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
+        var addEvent = U.addEvent, extend = U.extend, merge = U.merge, pick = U.pick, splat = U.splat;
         /**
          * @typedef {"arc"|"circle"|"solid"} Highcharts.PaneBackgroundShapeValue
          */
-        var extend = U.extend, splat = U.splat;
-        var CenteredSeriesMixin = H.CenteredSeriesMixin, merge = H.merge;
-        /* eslint-disable valid-jsdoc */
-        H.Chart.prototype.collectionsWithUpdate.push('pane');
+        var CenteredSeriesMixin = H.CenteredSeriesMixin;
+        /* eslint-disable no-invalid-this, valid-jsdoc */
+        Chart.prototype.collectionsWithUpdate.push('pane');
         /**
          * The Pane object allows options that are common to a set of X and Y axes.
          *
@@ -54,12 +54,177 @@
          * @param {Highcharts.PaneOptions} options
          * @param {Highcharts.Chart} chart
          */
-        function Pane(options, chart) {
-            this.init(options, chart);
-        }
-        // Extend the Pane prototype
-        extend(Pane.prototype, {
-            coll: 'pane',
+        var Pane = /** @class */ (function () {
+            function Pane(options, chart) {
+                this.background = void 0;
+                this.center = void 0;
+                this.chart = void 0;
+                this.options = void 0;
+                this.coll = 'pane'; // Member of chart.pane
+                /**
+                 * The pane serves as a container for axes and backgrounds for circular
+                 * gauges and polar charts.
+                 *
+                 * @since        2.3.0
+                 * @product      highcharts
+                 * @requires     highcharts-more
+                 * @optionparent pane
+                 */
+                this.defaultOptions = {
+                    /**
+                     * The end angle of the polar X axis or gauge value axis, given in
+                     * degrees where 0 is north. Defaults to [startAngle](#pane.startAngle)
+                     * + 360.
+                     *
+                     * @sample {highcharts} highcharts/demo/gauge-vu-meter/
+                     *         VU-meter with custom start and end angle
+                     *
+                     * @type      {number}
+                     * @since     2.3.0
+                     * @product   highcharts
+                     * @apioption pane.endAngle
+                     */
+                    /**
+                     * The center of a polar chart or angular gauge, given as an array
+                     * of [x, y] positions. Positions can be given as integers that
+                     * transform to pixels, or as percentages of the plot area size.
+                     *
+                     * @sample {highcharts} highcharts/demo/gauge-vu-meter/
+                     *         Two gauges with different center
+                     *
+                     * @type    {Array<string|number>}
+                     * @default ["50%", "50%"]
+                     * @since   2.3.0
+                     * @product highcharts
+                     */
+                    center: ['50%', '50%'],
+                    /**
+                     * The size of the pane, either as a number defining pixels, or a
+                     * percentage defining a percentage of the available plot area (the
+                     * smallest of the plot height or plot width).
+                     *
+                     * @sample {highcharts} highcharts/demo/gauge-vu-meter/
+                     *         Smaller size
+                     *
+                     * @type    {number|string}
+                     * @product highcharts
+                     */
+                    size: '85%',
+                    /**
+                     * The inner size of the pane, either as a number defining pixels, or a
+                     * percentage defining a percentage of the pane's size.
+                     *
+                     * @sample {highcharts} highcharts/series-polar/column-inverted-inner
+                     *         The inner size set to 20%
+                     *
+                     * @type    {number|string}
+                     * @product highcharts
+                     */
+                    innerSize: '0%',
+                    /**
+                     * The start angle of the polar X axis or gauge axis, given in degrees
+                     * where 0 is north. Defaults to 0.
+                     *
+                     * @sample {highcharts} highcharts/demo/gauge-vu-meter/
+                     *         VU-meter with custom start and end angle
+                     *
+                     * @since   2.3.0
+                     * @product highcharts
+                     */
+                    startAngle: 0
+                };
+                /**
+                 * An array of background items for the pane.
+                 *
+                 * @sample {highcharts} highcharts/demo/gauge-speedometer/
+                 *         Speedometer gauge with multiple backgrounds
+                 *
+                 * @type         {Array<*>}
+                 * @optionparent pane.background
+                 */
+                this.defaultBackgroundOptions = {
+                    /**
+                     * The class name for this background.
+                     *
+                     * @sample {highcharts} highcharts/css/pane/
+                     *         Panes styled by CSS
+                     * @sample {highstock} highcharts/css/pane/
+                     *         Panes styled by CSS
+                     * @sample {highmaps} highcharts/css/pane/
+                     *         Panes styled by CSS
+                     *
+                     * @type      {string}
+                     * @default   highcharts-pane
+                     * @since     5.0.0
+                     * @apioption pane.background.className
+                     */
+                    /**
+                     * The shape of the pane background. When `solid`, the background
+                     * is circular. When `arc`, the background extends only from the min
+                     * to the max of the value axis.
+                     *
+                     * @type    {Highcharts.PaneBackgroundShapeValue}
+                     * @since   2.3.0
+                     * @product highcharts
+                     */
+                    shape: 'circle',
+                    /**
+                     * The pixel border width of the pane background.
+                     *
+                     * @since 2.3.0
+                     * @product highcharts
+                     */
+                    borderWidth: 1,
+                    /**
+                     * The pane background border color.
+                     *
+                     * @type    {Highcharts.ColorString|Highcharts.GradientColorObject|Highcharts.PatternObject}
+                     * @since   2.3.0
+                     * @product highcharts
+                     */
+                    borderColor: '#cccccc',
+                    /**
+                     * The background color or gradient for the pane.
+                     *
+                     * @type    {Highcharts.ColorString|Highcharts.GradientColorObject|Highcharts.PatternObject}
+                     * @default { linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, stops: [[0, #ffffff], [1, #e6e6e6]] }
+                     * @since   2.3.0
+                     * @product highcharts
+                     */
+                    backgroundColor: {
+                        /** @ignore-option */
+                        linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                        /** @ignore-option */
+                        stops: [
+                            [0, '#ffffff'],
+                            [1, '#e6e6e6']
+                        ]
+                    },
+                    /** @ignore-option */
+                    from: -Number.MAX_VALUE,
+                    /**
+                     * The inner radius of the pane background. Can be either numeric
+                     * (pixels) or a percentage string.
+                     *
+                     * @type    {number|string}
+                     * @since   2.3.0
+                     * @product highcharts
+                     */
+                    innerRadius: 0,
+                    /** @ignore-option */
+                    to: Number.MAX_VALUE,
+                    /**
+                     * The outer radius of the circular pane background. Can be either
+                     * numeric (pixels) or a percentage string.
+                     *
+                     * @type     {number|string}
+                     * @since    2.3.0
+                     * @product  highcharts
+                     */
+                    outerRadius: '105%'
+                };
+                this.init(options, chart);
+            }
             /**
              * Initialize the Pane object
              *
@@ -70,29 +235,29 @@
              *
              * @param {Highcharts.Chart} chart
              */
-            init: function (options, chart) {
+            Pane.prototype.init = function (options, chart) {
                 this.chart = chart;
                 this.background = [];
                 chart.pane.push(this);
                 this.setOptions(options);
-            },
+            };
             /**
              * @private
              * @function Highcharts.Pane#setOptions
              *
              * @param {Highcharts.PaneOptions} options
              */
-            setOptions: function (options) {
+            Pane.prototype.setOptions = function (options) {
                 // Set options. Angular charts have a default background (#3318)
                 this.options = options = merge(this.defaultOptions, this.chart.angular ? { background: {} } : void 0, options);
-            },
+            };
             /**
              * Render the pane with its backgrounds.
              *
              * @private
              * @function Highcharts.Pane#render
              */
-            render: function () {
+            Pane.prototype.render = function () {
                 var options = this.options, backgroundOption = this.options.background, renderer = this.chart.renderer, len, i;
                 if (!this.group) {
                     this.group = renderer.g('pane-group')
@@ -116,7 +281,7 @@
                         }
                     }
                 }
-            },
+            };
             /**
              * Render an individual pane background.
              *
@@ -129,7 +294,7 @@
              * @param {number} i
              *        The index of the background in this.backgrounds
              */
-            renderBackground: function (backgroundOptions, i) {
+            Pane.prototype.renderBackground = function (backgroundOptions, i) {
                 var method = 'animate', attribs = {
                     'class': 'highcharts-pane ' + (backgroundOptions.className || '')
                 };
@@ -149,170 +314,20 @@
                 this.background[i][method]({
                     'd': this.axis.getPlotBandPath(backgroundOptions.from, backgroundOptions.to, backgroundOptions)
                 }).attr(attribs);
-            },
-            /**
-             * The pane serves as a container for axes and backgrounds for circular
-             * gauges and polar charts.
-             *
-             * @since        2.3.0
-             * @product      highcharts
-             * @requires     highcharts-more
-             * @optionparent pane
-             */
-            defaultOptions: {
-                /**
-                 * The end angle of the polar X axis or gauge value axis, given in
-                 * degrees where 0 is north. Defaults to [startAngle](#pane.startAngle)
-                 * + 360.
-                 *
-                 * @sample {highcharts} highcharts/demo/gauge-vu-meter/
-                 *         VU-meter with custom start and end angle
-                 *
-                 * @type      {number}
-                 * @since     2.3.0
-                 * @product   highcharts
-                 * @apioption pane.endAngle
-                 */
-                /**
-                 * The center of a polar chart or angular gauge, given as an array
-                 * of [x, y] positions. Positions can be given as integers that
-                 * transform to pixels, or as percentages of the plot area size.
-                 *
-                 * @sample {highcharts} highcharts/demo/gauge-vu-meter/
-                 *         Two gauges with different center
-                 *
-                 * @type    {Array<string|number>}
-                 * @default ["50%", "50%"]
-                 * @since   2.3.0
-                 * @product highcharts
-                 */
-                center: ['50%', '50%'],
-                /**
-                 * The size of the pane, either as a number defining pixels, or a
-                 * percentage defining a percentage of the plot are.
-                 *
-                 * @sample {highcharts} highcharts/demo/gauge-vu-meter/
-                 *         Smaller size
-                 *
-                 * @type    {number|string}
-                 * @product highcharts
-                 */
-                size: '85%',
-                /**
-                 * The start angle of the polar X axis or gauge axis, given in degrees
-                 * where 0 is north. Defaults to 0.
-                 *
-                 * @sample {highcharts} highcharts/demo/gauge-vu-meter/
-                 *         VU-meter with custom start and end angle
-                 *
-                 * @since   2.3.0
-                 * @product highcharts
-                 */
-                startAngle: 0
-            },
-            /**
-             * An array of background items for the pane.
-             *
-             * @sample {highcharts} highcharts/demo/gauge-speedometer/
-             *         Speedometer gauge with multiple backgrounds
-             *
-             * @type         {Array<*>}
-             * @optionparent pane.background
-             */
-            defaultBackgroundOptions: {
-                /**
-                 * The class name for this background.
-                 *
-                 * @sample {highcharts} highcharts/css/pane/
-                 *         Panes styled by CSS
-                 * @sample {highstock} highcharts/css/pane/
-                 *         Panes styled by CSS
-                 * @sample {highmaps} highcharts/css/pane/
-                 *         Panes styled by CSS
-                 *
-                 * @type      {string}
-                 * @default   highcharts-pane
-                 * @since     5.0.0
-                 * @apioption pane.background.className
-                 */
-                /**
-                 * The shape of the pane background. When `solid`, the background
-                 * is circular. When `arc`, the background extends only from the min
-                 * to the max of the value axis.
-                 *
-                 * @type    {Highcharts.PaneBackgroundShapeValue}
-                 * @since   2.3.0
-                 * @product highcharts
-                 */
-                shape: 'circle',
-                /**
-                 * The pixel border width of the pane background.
-                 *
-                 * @since 2.3.0
-                 * @product highcharts
-                 */
-                borderWidth: 1,
-                /**
-                 * The pane background border color.
-                 *
-                 * @type    {Highcharts.ColorString|Highcharts.GradientColorObject|Highcharts.PatternObject}
-                 * @since   2.3.0
-                 * @product highcharts
-                 */
-                borderColor: '#cccccc',
-                /**
-                 * The background color or gradient for the pane.
-                 *
-                 * @type    {Highcharts.ColorString|Highcharts.GradientColorObject|Highcharts.PatternObject}
-                 * @default { linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, stops: [[0, #ffffff], [1, #e6e6e6]] }
-                 * @since   2.3.0
-                 * @product highcharts
-                 */
-                backgroundColor: {
-                    /** @ignore-option */
-                    linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-                    /** @ignore-option */
-                    stops: [
-                        [0, '#ffffff'],
-                        [1, '#e6e6e6']
-                    ]
-                },
-                /** @ignore-option */
-                from: -Number.MAX_VALUE,
-                /**
-                 * The inner radius of the pane background. Can be either numeric
-                 * (pixels) or a percentage string.
-                 *
-                 * @type    {number|string}
-                 * @since   2.3.0
-                 * @product highcharts
-                 */
-                innerRadius: 0,
-                /** @ignore-option */
-                to: Number.MAX_VALUE,
-                /**
-                 * The outer radius of the circular pane background. Can be either
-                 * numeric (pixels) or a percentage string.
-                 *
-                 * @type     {number|string}
-                 * @since    2.3.0
-                 * @product  highcharts
-                 */
-                outerRadius: '105%'
-            },
+            };
             /**
              * Gets the center for the pane and its axis.
              *
              * @private
              * @function Highcharts.Pane#updateCenter
-             * @param {Highcharts.RadialAxis} [axis]
+             * @param {Highcharts.Axis} [axis]
              * @return {void}
              */
-            updateCenter: function (axis) {
+            Pane.prototype.updateCenter = function (axis) {
                 this.center = (axis ||
                     this.axis ||
                     {}).center = CenteredSeriesMixin.getCenter.call(this);
-            },
+            };
             /**
              * Destroy the pane item
              *
@@ -321,7 +336,7 @@
              * @function Highcharts.Pane#destroy
              * /
             destroy: function () {
-                H.erase(this.chart.pane, this);
+                erase(this.chart.pane, this);
                 this.background.forEach(function (background) {
                     background.destroy();
                 });
@@ -339,7 +354,7 @@
              * @param {boolean} [redraw]
              * @return {void}
              */
-            update: function (options, redraw) {
+            Pane.prototype.update = function (options, redraw) {
                 merge(true, this.options, options);
                 merge(true, this.chart.options.pane, options); // #9917
                 this.setOptions(this.options);
@@ -350,48 +365,898 @@
                         axis.update({}, redraw);
                     }
                 }, this);
+            };
+            return Pane;
+        }());
+        /**
+         * Check whether element is inside or outside pane.
+         * @private
+         * @param  {number} x Element's x coordinate
+         * @param  {number} y Element's y coordinate
+         * @param  {Array<number>} center Pane's center (x, y) and diameter
+         * @return {boolean}
+         */
+        function isInsidePane(x, y, center) {
+            return Math.sqrt(Math.pow(x - center[0], 2) + Math.pow(y - center[1], 2)) < center[2] / 2;
+        }
+        H.Chart.prototype.getHoverPane = function (eventArgs) {
+            var chart = this;
+            var hoverPane;
+            if (eventArgs) {
+                chart.pane.forEach(function (pane) {
+                    var plotX = eventArgs.chartX - chart.plotLeft, plotY = eventArgs.chartY - chart.plotTop, x = chart.inverted ? plotY : plotX, y = chart.inverted ? plotX : plotY;
+                    if (isInsidePane(x, y, pane.center)) {
+                        hoverPane = pane;
+                    }
+                });
+            }
+            return hoverPane;
+        };
+        addEvent(Chart, 'afterIsInsidePlot', function (e) {
+            var chart = this;
+            if (chart.polar) {
+                e.isInsidePlot = chart.pane.some(function (pane) { return isInsidePane(e.x, e.y, pane.center); });
+            }
+        });
+        addEvent(Pointer, 'beforeGetHoverData', function (eventArgs) {
+            var chart = this.chart;
+            if (chart.polar) {
+                // Find pane we are currently hovering over.
+                chart.hoverPane = chart.getHoverPane(eventArgs);
+                // Edit filter method to handle polar
+                eventArgs.filter = function (s) {
+                    return (s.visible &&
+                        !(!eventArgs.shared && s.directTouch) && // #3821
+                        pick(s.options.enableMouseTracking, true) &&
+                        (!chart.hoverPane || s.xAxis.pane === chart.hoverPane));
+                };
+            }
+        });
+        addEvent(Pointer, 'afterGetHoverData', function (eventArgs) {
+            var chart = this.chart;
+            if (eventArgs.hoverPoint &&
+                eventArgs.hoverPoint.plotX &&
+                eventArgs.hoverPoint.plotY &&
+                chart.hoverPane &&
+                !isInsidePane(eventArgs.hoverPoint.plotX, eventArgs.hoverPoint.plotY, chart.hoverPane.center)) {
+                eventArgs.hoverPoint = void 0;
             }
         });
         H.Pane = Pane;
 
+        return H.Pane;
     });
-    _registerModule(_modules, 'parts-more/RadialAxis.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/HiddenAxis.js', [], function () {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var correctFloat = U.correctFloat, defined = U.defined, extend = U.extend, pick = U.pick, pInt = U.pInt, relativeLength = U.relativeLength, wrap = U.wrap;
-        var addEvent = H.addEvent, Axis = H.Axis, merge = H.merge, noop = H.noop, Tick = H.Tick, 
-        // @todo Extract this to a new file:
-        hiddenAxisMixin, 
-        // @todo Extract this to a new file
-        radialAxisMixin, axisProto = Axis.prototype, tickProto = Tick.prototype;
-        // Augmented methods for the x axis in order to hide it completely, used for
-        // the X axis in gauges
-        hiddenAxisMixin = {
-            getOffset: noop,
-            redraw: function () {
-                this.isDirty = false; // prevent setting Y axis dirty
-            },
-            render: function () {
-                this.isDirty = false; // prevent setting Y axis dirty
-            },
-            createLabelCollector: function () {
-                return false;
-            },
-            setScale: noop,
-            setCategories: noop,
-            setTitle: noop
-        };
-        // Augmented methods for the value axis
-        radialAxisMixin = {
-            // The default options extend defaultYAxisOptions
-            defaultRadialGaugeOptions: {
+        /**
+         * @private
+         * @class
+         */
+        var HiddenAxis = /** @class */ (function () {
+            function HiddenAxis() {
+            }
+            /**
+             * Augments methods for the x axis in order to hide it completely. Used for
+             * the X axis in gauges
+             *
+             * @private
+             *
+             * @param {Highcharts.Axis} axis
+             * Radial axis to augment.
+             */
+            HiddenAxis.init = function (axis) {
+                axis.getOffset = function () { };
+                axis.redraw = function () {
+                    this.isDirty = false; // prevent setting Y axis dirty
+                };
+                axis.render = function () {
+                    this.isDirty = false; // prevent setting Y axis dirty
+                };
+                axis.createLabelCollector = function () {
+                    return function () {
+                        return;
+                    };
+                };
+                axis.setScale = function () { };
+                axis.setCategories = function () { };
+                axis.setTitle = function () { };
+                axis.isHidden = true;
+            };
+            return HiddenAxis;
+        }());
+
+        return HiddenAxis;
+    });
+    _registerModule(_modules, 'parts-more/RadialAxis.js', [_modules['parts/Axis.js'], _modules['parts/Tick.js'], _modules['parts-more/HiddenAxis.js'], _modules['parts/Utilities.js']], function (Axis, Tick, HiddenAxis, U) {
+        /* *
+         *
+         *  (c) 2010-2020 Torstein Honsi
+         *
+         *  License: www.highcharts.com/license
+         *
+         *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
+         *
+         * */
+        var addEvent = U.addEvent, correctFloat = U.correctFloat, defined = U.defined, extend = U.extend, fireEvent = U.fireEvent, isNumber = U.isNumber, merge = U.merge, pick = U.pick, pInt = U.pInt, relativeLength = U.relativeLength, wrap = U.wrap;
+        /**
+         * @private
+         * @class
+         */
+        var RadialAxis = /** @class */ (function () {
+            function RadialAxis() {
+            }
+            /* *
+             *
+             *  Static Functions
+             *
+             * */
+            RadialAxis.init = function (axis) {
+                var axisProto = Axis.prototype;
+                // Merge and set options.
+                axis.setOptions = function (userOptions) {
+                    var options = this.options = merge(axis.constructor.defaultOptions, this.defaultPolarOptions, userOptions);
+                    // Make sure the plotBands array is instanciated for each Axis
+                    // (#2649)
+                    if (!options.plotBands) {
+                        options.plotBands = [];
+                    }
+                    fireEvent(this, 'afterSetOptions');
+                };
+                // Wrap the getOffset method to return zero offset for title or labels
+                // in a radial axis.
+                axis.getOffset = function () {
+                    // Call the Axis prototype method (the method we're in now is on the
+                    // instance)
+                    axisProto.getOffset.call(this);
+                    // Title or label offsets are not counted
+                    this.chart.axisOffset[this.side] = 0;
+                };
+                /**
+                 * Get the path for the axis line. This method is also referenced in the
+                 * getPlotLinePath method.
+                 *
+                 * @private
+                 *
+                 * @param {number} _lineWidth
+                 * Line width is not used.
+                 *
+                 * @param {number} [radius]
+                 * Radius of radial path.
+                 *
+                 * @param {number} [innerRadius]
+                 * Inner radius of radial path.
+                 *
+                 * @return {RadialAxisPath}
+                 */
+                axis.getLinePath = function (_lineWidth, radius, innerRadius) {
+                    var center = this.pane.center, end, chart = this.chart, r = pick(radius, center[2] / 2 - this.offset), path;
+                    if (typeof innerRadius === 'undefined') {
+                        innerRadius = this.horiz ? 0 : this.center && -this.center[3] / 2;
+                    }
+                    // In case when innerSize of pane is set, it must be included
+                    if (innerRadius) {
+                        r += innerRadius;
+                    }
+                    if (this.isCircular || typeof radius !== 'undefined') {
+                        path = this.chart.renderer.symbols.arc(this.left + center[0], this.top + center[1], r, r, {
+                            start: this.startAngleRad,
+                            end: this.endAngleRad,
+                            open: true,
+                            innerR: 0
+                        });
+                        // Bounds used to position the plotLine label next to the line
+                        // (#7117)
+                        path.xBounds = [this.left + center[0]];
+                        path.yBounds = [this.top + center[1] - r];
+                    }
+                    else {
+                        end = this.postTranslate(this.angleRad, r);
+                        path = [
+                            ['M', this.center[0] + chart.plotLeft, this.center[1] + chart.plotTop],
+                            ['L', end.x, end.y]
+                        ];
+                    }
+                    return path;
+                };
+                /**
+                 * Override setAxisTranslation by setting the translation to the
+                 * difference in rotation. This allows the translate method to return
+                 * angle for any given value.
+                 *
+                 * @private
+                 */
+                axis.setAxisTranslation = function () {
+                    // Call uber method
+                    axisProto.setAxisTranslation.call(this);
+                    // Set transA and minPixelPadding
+                    if (this.center) { // it's not defined the first time
+                        if (this.isCircular) {
+                            this.transA = (this.endAngleRad - this.startAngleRad) /
+                                ((this.max - this.min) || 1);
+                        }
+                        else {
+                            // The transA here is the length of the axis, so in case
+                            // of inner radius, the length must be decreased by it
+                            this.transA = ((this.center[2] - this.center[3]) / 2) /
+                                ((this.max - this.min) || 1);
+                        }
+                        if (this.isXAxis) {
+                            this.minPixelPadding = this.transA * this.minPointOffset;
+                        }
+                        else {
+                            // This is a workaround for regression #2593, but categories
+                            // still don't position correctly.
+                            this.minPixelPadding = 0;
+                        }
+                    }
+                };
+                /**
+                 * In case of auto connect, add one closestPointRange to the max value
+                 * right before tickPositions are computed, so that ticks will extend
+                 * passed the real max.
+                 * @private
+                 */
+                axis.beforeSetTickPositions = function () {
+                    // If autoConnect is true, polygonal grid lines are connected, and
+                    // one closestPointRange is added to the X axis to prevent the last
+                    // point from overlapping the first.
+                    this.autoConnect = (this.isCircular &&
+                        typeof pick(this.userMax, this.options.max) === 'undefined' &&
+                        correctFloat(this.endAngleRad - this.startAngleRad) ===
+                            correctFloat(2 * Math.PI));
+                    // This will lead to add an extra tick to xAxis in order to display
+                    // a correct range on inverted polar
+                    if (!this.isCircular && this.chart.inverted) {
+                        this.max++;
+                    }
+                    if (this.autoConnect) {
+                        this.max += ((this.categories && 1) ||
+                            this.pointRange ||
+                            this.closestPointRange ||
+                            0); // #1197, #2260
+                    }
+                };
+                /**
+                 * Override the setAxisSize method to use the arc's circumference as
+                 * length. This allows tickPixelInterval to apply to pixel lengths along
+                 * the perimeter.
+                 * @private
+                 */
+                axis.setAxisSize = function () {
+                    var center, start;
+                    axisProto.setAxisSize.call(this);
+                    if (this.isRadial) {
+                        // Set the center array
+                        this.pane.updateCenter(this);
+                        // In case when the innerSize is set in a polar chart, the axis'
+                        // center cannot be a reference to pane's center
+                        center = this.center = extend([], this.pane.center);
+                        // The sector is used in Axis.translate to compute the
+                        // translation of reversed axis points (#2570)
+                        if (this.isCircular) {
+                            this.sector = this.endAngleRad - this.startAngleRad;
+                        }
+                        else {
+                            // When the pane's startAngle or the axis' angle is set then
+                            // new x and y values for vertical axis' center must be
+                            // calulated
+                            start = this.postTranslate(this.angleRad, center[3] / 2);
+                            center[0] = start.x - this.chart.plotLeft;
+                            center[1] = start.y - this.chart.plotTop;
+                        }
+                        // Axis len is used to lay out the ticks
+                        this.len = this.width = this.height =
+                            (center[2] - center[3]) * pick(this.sector, 1) / 2;
+                    }
+                };
+                /**
+                 * Returns the x, y coordinate of a point given by a value and a pixel
+                 * distance from center.
+                 *
+                 * @private
+                 *
+                 * @param {number} value
+                 * Point value.
+                 *
+                 * @param {number} [length]
+                 * Distance from center.
+                 *
+                 * @return {Highcharts.PositionObject}
+                 */
+                axis.getPosition = function (value, length) {
+                    var translatedVal = this.translate(value);
+                    return this.postTranslate(this.isCircular ? translatedVal : this.angleRad, // #2848
+                    // In case when translatedVal is negative, the 0 value must be
+                    // used instead, in order to deal with lines and labels that
+                    // fall out of the visible range near the center of a pane
+                    pick(this.isCircular ?
+                        length :
+                        (translatedVal < 0 ? 0 : translatedVal), this.center[2] / 2) - this.offset);
+                };
+                /**
+                 * Translate from intermediate plotX (angle), plotY (axis.len - radius)
+                 * to final chart coordinates.
+                 *
+                 * @private
+                 *
+                 * @param {number} angle
+                 * Translation angle.
+                 *
+                 * @param {number} radius
+                 * Translation radius.
+                 *
+                 * @return {Highcharts.PositionObject}
+                 */
+                axis.postTranslate = function (angle, radius) {
+                    var chart = this.chart, center = this.center;
+                    angle = this.startAngleRad + angle;
+                    return {
+                        x: chart.plotLeft + center[0] + Math.cos(angle) * radius,
+                        y: chart.plotTop + center[1] + Math.sin(angle) * radius
+                    };
+                };
+                /**
+                 * Find the path for plot bands along the radial axis.
+                 *
+                 * @private
+                 *
+                 * @param {number} from
+                 * From value.
+                 *
+                 * @param {number} to
+                 * To value.
+                 *
+                 * @param {Highcharts.AxisPlotBandsOptions} options
+                 * Band options.
+                 *
+                 * @return {RadialAxisPath}
+                 */
+                axis.getPlotBandPath = function (from, to, options) {
+                    var radiusToPixels = function (radius) {
+                        if (typeof radius === 'string') {
+                            var r = parseInt(radius, 10);
+                            if (percentRegex.test(radius)) {
+                                r = (r * fullRadius) / 100;
+                            }
+                            return r;
+                        }
+                        return radius;
+                    };
+                    var center = this.center, startAngleRad = this.startAngleRad, fullRadius = center[2] / 2, offset = Math.min(this.offset, 0), percentRegex = /%$/, start, end, angle, xOnPerimeter, open, isCircular = this.isCircular, // X axis in a polar chart
+                    path, outerRadius = pick(radiusToPixels(options.outerRadius), fullRadius), innerRadius = radiusToPixels(options.innerRadius), thickness = pick(radiusToPixels(options.thickness), 10);
+                    // Polygonal plot bands
+                    if (this.options.gridLineInterpolation === 'polygon') {
+                        path = this.getPlotLinePath({ value: from }).concat(this.getPlotLinePath({ value: to, reverse: true }));
+                        // Circular grid bands
+                    }
+                    else {
+                        // Keep within bounds
+                        from = Math.max(from, this.min);
+                        to = Math.min(to, this.max);
+                        var transFrom = this.translate(from);
+                        var transTo = this.translate(to);
+                        // Plot bands on Y axis (radial axis) - inner and outer
+                        // radius depend on to and from
+                        if (!isCircular) {
+                            outerRadius = transFrom || 0;
+                            innerRadius = transTo || 0;
+                        }
+                        // Handle full circle
+                        if (options.shape === 'circle' || !isCircular) {
+                            start = -Math.PI / 2;
+                            end = Math.PI * 1.5;
+                            open = true;
+                        }
+                        else {
+                            start = startAngleRad + (transFrom || 0);
+                            end = startAngleRad + (transTo || 0);
+                        }
+                        outerRadius -= offset; // #5283
+                        thickness -= offset; // #5283
+                        path = this.chart.renderer.symbols.arc(this.left + center[0], this.top + center[1], outerRadius, outerRadius, {
+                            // Math is for reversed yAxis (#3606)
+                            start: Math.min(start, end),
+                            end: Math.max(start, end),
+                            innerR: pick(innerRadius, outerRadius - thickness),
+                            open: open
+                        });
+                        // Provide positioning boxes for the label (#6406)
+                        if (isCircular) {
+                            angle = (end + start) / 2;
+                            xOnPerimeter = (this.left +
+                                center[0] +
+                                (center[2] / 2) * Math.cos(angle));
+                            path.xBounds = angle > -Math.PI / 2 && angle < Math.PI / 2 ?
+                                // Right hemisphere
+                                [xOnPerimeter, this.chart.plotWidth] :
+                                // Left hemisphere
+                                [0, xOnPerimeter];
+                            path.yBounds = [
+                                this.top + center[1] + (center[2] / 2) * Math.sin(angle)
+                            ];
+                            // Shift up or down to get the label clear of the perimeter
+                            path.yBounds[0] += ((angle > -Math.PI && angle < 0) ||
+                                (angle > Math.PI)) ? -10 : 10;
+                        }
+                    }
+                    return path;
+                };
+                // Find the correct end values of crosshair in polar.
+                axis.getCrosshairPosition = function (options, x1, y1) {
+                    var axis = this, value = options.value, center = axis.pane.center, shapeArgs, end, x2, y2;
+                    if (axis.isCircular) {
+                        if (!defined(value)) {
+                            // When the snap is set to false
+                            x2 = options.chartX || 0;
+                            y2 = options.chartY || 0;
+                            value = axis.translate(Math.atan2(y2 - y1, x2 - x1) - axis.startAngleRad, true);
+                        }
+                        else if (options.point) {
+                            // When the snap is set to true
+                            shapeArgs = options.point.shapeArgs || {};
+                            if (shapeArgs.start) {
+                                // Find a true value of the point based on the
+                                // angle
+                                value = axis.chart.inverted ?
+                                    axis.translate(options.point.rectPlotY, true) :
+                                    options.point.x;
+                            }
+                        }
+                        end = axis.getPosition(value);
+                        x2 = end.x;
+                        y2 = end.y;
+                    }
+                    else {
+                        if (!defined(value)) {
+                            x2 = options.chartX;
+                            y2 = options.chartY;
+                        }
+                        if (defined(x2) && defined(y2)) {
+                            // Calculate radius of non-circular axis' crosshair
+                            y1 = center[1] + axis.chart.plotTop;
+                            value = axis.translate(Math.min(Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)), center[2] / 2) - center[3] / 2, true);
+                        }
+                    }
+                    return [value, x2 || 0, y2 || 0];
+                };
+                // Find the path for plot lines perpendicular to the radial axis.
+                axis.getPlotLinePath = function (options) {
+                    var axis = this, center = axis.pane.center, chart = axis.chart, inverted = chart.inverted, value = options.value, reverse = options.reverse, end = axis.getPosition(value), background = axis.pane.options.background ?
+                        (axis.pane.options.background[0] ||
+                            axis.pane.options.background) :
+                        {}, innerRadius = background.innerRadius || '0%', outerRadius = background.outerRadius || '100%', x1 = center[0] + chart.plotLeft, y1 = center[1] + chart.plotTop, x2 = end.x, y2 = end.y, height = axis.height, isCrosshair = options.isCrosshair, paneInnerR = center[3] / 2, innerRatio, distance, a, b, otherAxis, xy, tickPositions, crossPos, path;
+                    // Crosshair logic
+                    if (isCrosshair) {
+                        // Find crosshair's position and perform destructuring
+                        // assignment
+                        crossPos = this.getCrosshairPosition(options, x1, y1);
+                        value = crossPos[0];
+                        x2 = crossPos[1];
+                        y2 = crossPos[2];
+                    }
+                    // Spokes
+                    if (axis.isCircular) {
+                        distance =
+                            Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                        a = (typeof innerRadius === 'string') ?
+                            relativeLength(innerRadius, 1) : (innerRadius / distance);
+                        b = (typeof outerRadius === 'string') ?
+                            relativeLength(outerRadius, 1) : (outerRadius / distance);
+                        // To ensure that gridlines won't be displayed in area
+                        // defined by innerSize in case of custom radiuses of pane's
+                        // background
+                        if (center && paneInnerR) {
+                            innerRatio = paneInnerR / distance;
+                            if (a < innerRatio) {
+                                a = innerRatio;
+                            }
+                            if (b < innerRatio) {
+                                b = innerRatio;
+                            }
+                        }
+                        path = [
+                            ['M', x1 + a * (x2 - x1), y1 - a * (y1 - y2)],
+                            ['L', x2 - (1 - b) * (x2 - x1), y2 + (1 - b) * (y1 - y2)]
+                        ];
+                        // Concentric circles
+                    }
+                    else {
+                        // Pick the right values depending if it is grid line or
+                        // crosshair
+                        value = axis.translate(value);
+                        // This is required in case when xAxis is non-circular to
+                        // prevent grid lines (or crosshairs, if enabled) from
+                        // rendering above the center after they supposed to be
+                        // displayed below the center point
+                        if (value) {
+                            if (value < 0 || value > height) {
+                                value = 0;
+                            }
+                        }
+                        if (axis.options.gridLineInterpolation === 'circle') {
+                            // A value of 0 is in the center, so it won't be
+                            // visible, but draw it anyway for update and animation
+                            // (#2366)
+                            path = axis.getLinePath(0, value, paneInnerR);
+                            // Concentric polygons
+                        }
+                        else {
+                            path = [];
+                            // Find the other axis (a circular one) in the same pane
+                            chart[inverted ? 'yAxis' : 'xAxis'].forEach(function (a) {
+                                if (a.pane === axis.pane) {
+                                    otherAxis = a;
+                                }
+                            });
+                            if (otherAxis) {
+                                tickPositions = otherAxis.tickPositions;
+                                if (otherAxis.autoConnect) {
+                                    tickPositions =
+                                        tickPositions.concat([tickPositions[0]]);
+                                }
+                                // Reverse the positions for concatenation of polygonal
+                                // plot bands
+                                if (reverse) {
+                                    tickPositions = tickPositions.slice().reverse();
+                                }
+                                if (value) {
+                                    value += paneInnerR;
+                                }
+                                for (var i = 0; i < tickPositions.length; i++) {
+                                    xy = otherAxis.getPosition(tickPositions[i], value);
+                                    path.push(i ? ['L', xy.x, xy.y] : ['M', xy.x, xy.y]);
+                                }
+                            }
+                        }
+                    }
+                    return path;
+                };
+                // Find the position for the axis title, by default inside the gauge.
+                axis.getTitlePosition = function () {
+                    var center = this.center, chart = this.chart, titleOptions = this.options.title;
+                    return {
+                        x: chart.plotLeft + center[0] + (titleOptions.x || 0),
+                        y: (chart.plotTop +
+                            center[1] -
+                            ({
+                                high: 0.5,
+                                middle: 0.25,
+                                low: 0
+                            }[titleOptions.align] *
+                                center[2]) +
+                            (titleOptions.y || 0))
+                    };
+                };
+                /**
+                 * Attach and return collecting function for labels in radial axis for
+                 * anti-collision.
+                 *
+                 * @private
+                 *
+                 * @return {Highcharts.ChartLabelCollectorFunction}
+                 */
+                axis.createLabelCollector = function () {
+                    var axis = this;
+                    return function () {
+                        if (axis.isRadial &&
+                            axis.tickPositions &&
+                            // undocumented option for now, but working
+                            axis.options.labels.allowOverlap !== true) {
+                            return axis.tickPositions
+                                .map(function (pos) {
+                                return axis.ticks[pos] && axis.ticks[pos].label;
+                            })
+                                .filter(function (label) {
+                                return Boolean(label);
+                            });
+                        }
+                    };
+                };
+            };
+            /**
+             * Augments methods for the value axis.
+             *
+             * @private
+             *
+             * @param {Highcharts.Axis} AxisClass
+             * Axis class to extend.
+             *
+             * @param {Highcharts.Tick} TickClass
+             * Tick class to use.
+             */
+            RadialAxis.compose = function (AxisClass, TickClass) {
+                /* eslint-disable no-invalid-this */
+                // Actions before axis init.
+                addEvent(AxisClass, 'init', function (e) {
+                    var axis = this;
+                    var chart = axis.chart;
+                    var inverted = chart.inverted, angular = chart.angular, polar = chart.polar, isX = axis.isXAxis, coll = axis.coll, isHidden = angular && isX, isCircular, chartOptions = chart.options, paneIndex = e.userOptions.pane || 0, pane = this.pane =
+                        chart.pane && chart.pane[paneIndex];
+                    // Prevent changes for colorAxis
+                    if (coll === 'colorAxis') {
+                        this.isRadial = false;
+                        return;
+                    }
+                    // Before prototype.init
+                    if (angular) {
+                        if (isHidden) {
+                            HiddenAxis.init(axis);
+                        }
+                        else {
+                            RadialAxis.init(axis);
+                        }
+                        isCircular = !isX;
+                        if (isCircular) {
+                            axis.defaultPolarOptions = RadialAxis.defaultRadialGaugeOptions;
+                        }
+                    }
+                    else if (polar) {
+                        RadialAxis.init(axis);
+                        // Check which axis is circular
+                        isCircular = axis.horiz;
+                        axis.defaultPolarOptions = isCircular ?
+                            RadialAxis.defaultCircularOptions :
+                            merge(coll === 'xAxis' ?
+                                AxisClass.defaultOptions :
+                                AxisClass.defaultYAxisOptions, RadialAxis.defaultRadialOptions);
+                        // Apply the stack labels for yAxis in case of inverted chart
+                        if (inverted && coll === 'yAxis') {
+                            axis.defaultPolarOptions.stackLabels = AxisClass.defaultYAxisOptions.stackLabels;
+                        }
+                    }
+                    // Disable certain features on angular and polar axes
+                    if (angular || polar) {
+                        axis.isRadial = true;
+                        chartOptions.chart.zoomType = null;
+                        if (!axis.labelCollector) {
+                            axis.labelCollector = axis.createLabelCollector();
+                        }
+                        if (axis.labelCollector) {
+                            // Prevent overlapping axis labels (#9761)
+                            chart.labelCollectors.push(axis.labelCollector);
+                        }
+                    }
+                    else {
+                        this.isRadial = false;
+                    }
+                    // A pointer back to this axis to borrow geometry
+                    if (pane && isCircular) {
+                        pane.axis = axis;
+                    }
+                    axis.isCircular = isCircular;
+                });
+                addEvent(AxisClass, 'afterInit', function () {
+                    var axis = this;
+                    var chart = axis.chart, options = axis.options, isHidden = chart.angular && axis.isXAxis, pane = axis.pane, paneOptions = pane && pane.options;
+                    if (!isHidden && pane && (chart.angular || chart.polar)) {
+                        // Start and end angle options are given in degrees relative to
+                        // top, while internal computations are in radians relative to
+                        // right (like SVG).
+                        // Y axis in polar charts
+                        axis.angleRad = (options.angle || 0) * Math.PI / 180;
+                        // Gauges
+                        axis.startAngleRad =
+                            (paneOptions.startAngle - 90) * Math.PI / 180;
+                        axis.endAngleRad = (pick(paneOptions.endAngle, paneOptions.startAngle + 360) - 90) * Math.PI / 180; // Gauges
+                        axis.offset = options.offset || 0;
+                    }
+                });
+                // Wrap auto label align to avoid setting axis-wide rotation on radial
+                // axes. (#4920)
+                addEvent(AxisClass, 'autoLabelAlign', function (e) {
+                    if (this.isRadial) {
+                        e.align = void 0;
+                        e.preventDefault();
+                    }
+                });
+                // Remove label collector function on axis remove/update
+                addEvent(AxisClass, 'destroy', function () {
+                    var axis = this;
+                    if (axis.chart &&
+                        axis.chart.labelCollectors) {
+                        var index = (axis.labelCollector ?
+                            axis.chart.labelCollectors.indexOf(axis.labelCollector) :
+                            -1);
+                        if (index >= 0) {
+                            axis.chart.labelCollectors.splice(index, 1);
+                        }
+                    }
+                });
+                addEvent(AxisClass, 'initialAxisTranslation', function () {
+                    var axis = this;
+                    if (axis.isRadial) {
+                        axis.beforeSetTickPositions();
+                    }
+                });
+                // Add special cases within the Tick class' methods for radial axes.
+                addEvent(TickClass, 'afterGetPosition', function (e) {
+                    var tick = this;
+                    if (tick.axis.getPosition) {
+                        extend(e.pos, tick.axis.getPosition(this.pos));
+                    }
+                });
+                // Find the center position of the label based on the distance option.
+                addEvent(TickClass, 'afterGetLabelPosition', function (e) {
+                    var tick = this;
+                    var axis = tick.axis;
+                    var label = tick.label;
+                    if (!label) {
+                        return;
+                    }
+                    var labelBBox = label.getBBox(), labelOptions = axis.options.labels, optionsY = labelOptions.y, ret, centerSlot = 20, // 20 degrees to each side at the top and bottom
+                    align = labelOptions.align, angle = ((axis.translate(this.pos) + axis.startAngleRad +
+                        Math.PI / 2) / Math.PI * 180) % 360, correctAngle = Math.round(angle), labelDir = 'end', // Direction of the label 'start' or 'end'
+                    reducedAngle1 = correctAngle < 0 ?
+                        correctAngle + 360 : correctAngle, reducedAngle2 = reducedAngle1, translateY = 0, translateX = 0, labelYPosCorrection = labelOptions.y === null ? -labelBBox.height * 0.3 : 0;
+                    if (axis.isRadial) { // Both X and Y axes in a polar chart
+                        ret = axis.getPosition(this.pos, (axis.center[2] / 2) +
+                            relativeLength(pick(labelOptions.distance, -25), axis.center[2] / 2, -axis.center[2] / 2));
+                        // Automatically rotated
+                        if (labelOptions.rotation === 'auto') {
+                            label.attr({
+                                rotation: angle
+                            });
+                            // Vertically centered
+                        }
+                        else if (optionsY === null) {
+                            optionsY = (axis.chart.renderer
+                                .fontMetrics(label.styles && label.styles.fontSize).b -
+                                labelBBox.height / 2);
+                        }
+                        // Automatic alignment
+                        if (align === null) {
+                            if (axis.isCircular) { // Y axis
+                                if (labelBBox.width >
+                                    axis.len * axis.tickInterval / (axis.max - axis.min)) { // #3506
+                                    centerSlot = 0;
+                                }
+                                if (angle > centerSlot && angle < 180 - centerSlot) {
+                                    align = 'left'; // right hemisphere
+                                }
+                                else if (angle > 180 + centerSlot &&
+                                    angle < 360 - centerSlot) {
+                                    align = 'right'; // left hemisphere
+                                }
+                                else {
+                                    align = 'center'; // top or bottom
+                                }
+                            }
+                            else {
+                                align = 'center';
+                            }
+                            label.attr({
+                                align: align
+                            });
+                        }
+                        // Auto alignment for solid-gauges with two labels (#10635)
+                        if (align === 'auto' &&
+                            axis.tickPositions.length === 2 &&
+                            axis.isCircular) {
+                            // Angles reduced to 0 - 90 or 180 - 270
+                            if (reducedAngle1 > 90 && reducedAngle1 < 180) {
+                                reducedAngle1 = 180 - reducedAngle1;
+                            }
+                            else if (reducedAngle1 > 270 && reducedAngle1 <= 360) {
+                                reducedAngle1 = 540 - reducedAngle1;
+                            }
+                            // Angles reduced to 0 - 180
+                            if (reducedAngle2 > 180 && reducedAngle2 <= 360) {
+                                reducedAngle2 = 360 - reducedAngle2;
+                            }
+                            if ((axis.pane.options.startAngle === correctAngle) ||
+                                (axis.pane.options.startAngle === correctAngle + 360) ||
+                                (axis.pane.options.startAngle === correctAngle - 360)) {
+                                labelDir = 'start';
+                            }
+                            if ((correctAngle >= -90 && correctAngle <= 90) ||
+                                (correctAngle >= -360 && correctAngle <= -270) ||
+                                (correctAngle >= 270 && correctAngle <= 360)) {
+                                align = (labelDir === 'start') ? 'right' : 'left';
+                            }
+                            else {
+                                align = (labelDir === 'start') ? 'left' : 'right';
+                            }
+                            // For angles beetwen (90 + n * 180) +- 20
+                            if (reducedAngle2 > 70 && reducedAngle2 < 110) {
+                                align = 'center';
+                            }
+                            // auto Y translation
+                            if (reducedAngle1 < 15 ||
+                                (reducedAngle1 >= 180 && reducedAngle1 < 195)) {
+                                translateY = labelBBox.height * 0.3;
+                            }
+                            else if (reducedAngle1 >= 15 && reducedAngle1 <= 35) {
+                                translateY = labelDir === 'start' ?
+                                    0 : labelBBox.height * 0.75;
+                            }
+                            else if (reducedAngle1 >= 195 && reducedAngle1 <= 215) {
+                                translateY = labelDir === 'start' ?
+                                    labelBBox.height * 0.75 : 0;
+                            }
+                            else if (reducedAngle1 > 35 && reducedAngle1 <= 90) {
+                                translateY = labelDir === 'start' ?
+                                    -labelBBox.height * 0.25 : labelBBox.height;
+                            }
+                            else if (reducedAngle1 > 215 && reducedAngle1 <= 270) {
+                                translateY = labelDir === 'start' ?
+                                    labelBBox.height : -labelBBox.height * 0.25;
+                            }
+                            // auto X translation
+                            if (reducedAngle2 < 15) {
+                                translateX = labelDir === 'start' ?
+                                    -labelBBox.height * 0.15 : labelBBox.height * 0.15;
+                            }
+                            else if (reducedAngle2 > 165 && reducedAngle2 <= 180) {
+                                translateX = labelDir === 'start' ?
+                                    labelBBox.height * 0.15 : -labelBBox.height * 0.15;
+                            }
+                            label.attr({ align: align });
+                            label.translate(translateX, translateY + labelYPosCorrection);
+                        }
+                        e.pos.x = ret.x + labelOptions.x;
+                        e.pos.y = ret.y + optionsY;
+                    }
+                });
+                // Wrap the getMarkPath function to return the path of the radial marker
+                wrap(TickClass.prototype, 'getMarkPath', function (proceed, x, y, tickLength, tickWidth, horiz, renderer) {
+                    var tick = this;
+                    var axis = tick.axis;
+                    var endPoint, ret;
+                    if (axis.isRadial) {
+                        endPoint = axis.getPosition(this.pos, axis.center[2] / 2 + tickLength);
+                        ret = [
+                            'M',
+                            x,
+                            y,
+                            'L',
+                            endPoint.x,
+                            endPoint.y
+                        ];
+                    }
+                    else {
+                        ret = proceed.call(this, x, y, tickLength, tickWidth, horiz, renderer);
+                    }
+                    return ret;
+                });
+            };
+            /* *
+             *
+             *  Static Properties
+             *
+             * */
+            /**
+             * Circular axis around the perimeter of a polar chart.
+             * @private
+             */
+            RadialAxis.defaultCircularOptions = {
+                gridLineWidth: 1,
+                labels: {
+                    align: null,
+                    distance: 15,
+                    x: 0,
+                    y: null,
+                    style: {
+                        textOverflow: 'none' // wrap lines by default (#7248)
+                    }
+                },
+                maxPadding: 0,
+                minPadding: 0,
+                showLastLabel: false,
+                tickLength: 0
+            };
+            /**
+             * The default options extend defaultYAxisOptions.
+             * @private
+             */
+            RadialAxis.defaultRadialGaugeOptions = {
                 labels: {
                     align: 'center',
                     x: 0,
@@ -409,26 +1274,12 @@
                     rotation: 0
                 },
                 zIndex: 2 // behind dials, points in the series group
-            },
-            // Circular axis around the perimeter of a polar chart
-            defaultCircularOptions: {
-                gridLineWidth: 1,
-                labels: {
-                    align: null,
-                    distance: 15,
-                    x: 0,
-                    y: null,
-                    style: {
-                        textOverflow: 'none' // wrap lines by default (#7248)
-                    }
-                },
-                maxPadding: 0,
-                minPadding: 0,
-                showLastLabel: false,
-                tickLength: 0
-            },
-            // Radial axis, like a spoke in a polar chart
-            defaultRadialOptions: {
+            };
+            /**
+             * Radial axis, like a spoke in a polar chart.
+             * @private
+             */
+            RadialAxis.defaultRadialOptions = {
                 /**
                  * In a polar chart, this is the angle of the Y axis in degrees, where
                  * 0 is up and 90 is right. The angle determines the position of the
@@ -478,639 +1329,25 @@
                     text: null,
                     rotation: 90
                 }
-            },
-            /* eslint-disable valid-jsdoc */
-            /**
-             * Merge and set options.
-             * @private
-             */
-            setOptions: function (userOptions) {
-                var options = this.options = merge(this.defaultOptions, this.defaultPolarOptions, userOptions);
-                // Make sure the plotBands array is instanciated for each Axis
-                // (#2649)
-                if (!options.plotBands) {
-                    options.plotBands = [];
-                }
-                H.fireEvent(this, 'afterSetOptions');
-            },
-            /**
-             * Wrap the getOffset method to return zero offset for title or labels in a
-             * radial axis.
-             * @private
-             */
-            getOffset: function () {
-                // Call the Axis prototype method (the method we're in now is on the
-                // instance)
-                axisProto.getOffset.call(this);
-                // Title or label offsets are not counted
-                this.chart.axisOffset[this.side] = 0;
-            },
-            /**
-             * Get the path for the axis line. This method is also referenced in the
-             * getPlotLinePath method.
-             * @private
-             */
-            getLinePath: function (lineWidth, radius) {
-                var center = this.center, end, chart = this.chart, r = pick(radius, center[2] / 2 - this.offset), path;
-                if (this.isCircular || typeof radius !== 'undefined') {
-                    path = this.chart.renderer.symbols.arc(this.left + center[0], this.top + center[1], r, r, {
-                        start: this.startAngleRad,
-                        end: this.endAngleRad,
-                        open: true,
-                        innerR: 0
-                    });
-                    // Bounds used to position the plotLine label next to the line
-                    // (#7117)
-                    path.xBounds = [this.left + center[0]];
-                    path.yBounds = [this.top + center[1] - r];
-                }
-                else {
-                    end = this.postTranslate(this.angleRad, r);
-                    path = [
-                        'M',
-                        center[0] + chart.plotLeft,
-                        center[1] + chart.plotTop,
-                        'L',
-                        end.x,
-                        end.y
-                    ];
-                }
-                return path;
-            },
-            /**
-             * Override setAxisTranslation by setting the translation to the
-             * difference in rotation. This allows the translate method to return
-             * angle for any given value.
-             * @private
-             */
-            setAxisTranslation: function () {
-                // Call uber method
-                axisProto.setAxisTranslation.call(this);
-                // Set transA and minPixelPadding
-                if (this.center) { // it's not defined the first time
-                    if (this.isCircular) {
-                        this.transA = (this.endAngleRad - this.startAngleRad) /
-                            ((this.max - this.min) || 1);
-                    }
-                    else {
-                        this.transA = ((this.center[2] / 2) /
-                            ((this.max - this.min) || 1));
-                    }
-                    if (this.isXAxis) {
-                        this.minPixelPadding = this.transA * this.minPointOffset;
-                    }
-                    else {
-                        // This is a workaround for regression #2593, but categories
-                        // still don't position correctly.
-                        this.minPixelPadding = 0;
-                    }
-                }
-            },
-            /**
-             * In case of auto connect, add one closestPointRange to the max value
-             * right before tickPositions are computed, so that ticks will extend
-             * passed the real max.
-             * @private
-             */
-            beforeSetTickPositions: function () {
-                // If autoConnect is true, polygonal grid lines are connected, and
-                // one closestPointRange is added to the X axis to prevent the last
-                // point from overlapping the first.
-                this.autoConnect = (this.isCircular &&
-                    typeof pick(this.userMax, this.options.max) === 'undefined' &&
-                    correctFloat(this.endAngleRad - this.startAngleRad) ===
-                        correctFloat(2 * Math.PI));
-                // This will lead to add an extra tick to xAxis in order to display a
-                // correct range on inverted polar
-                if (!this.isCircular && this.chart.inverted) {
-                    this.max++;
-                }
-                if (this.autoConnect) {
-                    this.max += ((this.categories && 1) ||
-                        this.pointRange ||
-                        this.closestPointRange ||
-                        0); // #1197, #2260
-                }
-            },
-            /**
-             * Override the setAxisSize method to use the arc's circumference as
-             * length. This allows tickPixelInterval to apply to pixel lengths along
-             * the perimeter.
-             * @private
-             */
-            setAxisSize: function () {
-                axisProto.setAxisSize.call(this);
-                if (this.isRadial) {
-                    // Set the center array
-                    this.pane.updateCenter(this);
-                    // The sector is used in Axis.translate to compute the
-                    // translation of reversed axis points (#2570)
-                    if (this.isCircular) {
-                        this.sector = this.endAngleRad - this.startAngleRad;
-                    }
-                    // Axis len is used to lay out the ticks
-                    this.len = this.width = this.height =
-                        this.center[2] * pick(this.sector, 1) / 2;
-                }
-            },
-            /**
-             * Returns the x, y coordinate of a point given by a value and a pixel
-             * distance from center
-             * @private
-             */
-            getPosition: function (value, length) {
-                var translatedVal = this.translate(value);
-                return this.postTranslate(this.isCircular ? translatedVal : this.angleRad, // #2848
-                // In case when translatedVal is negative, the 0 value must be
-                // used instead, in order to deal with lines and labels that
-                // fall out of the visible range near the center of a pane
-                pick(this.isCircular ?
-                    length :
-                    (translatedVal < 0 ? 0 : translatedVal), this.center[2] / 2) - this.offset);
-            },
-            /**
-             * Translate from intermediate plotX (angle), plotY (axis.len - radius)
-             * to final chart coordinates.
-             * @private
-             */
-            postTranslate: function (angle, radius) {
-                var chart = this.chart, center = this.center;
-                angle = this.startAngleRad + angle;
-                return {
-                    x: chart.plotLeft + center[0] + Math.cos(angle) * radius,
-                    y: chart.plotTop + center[1] + Math.sin(angle) * radius
-                };
-            },
-            /**
-             * Find the path for plot bands along the radial axis.
-             * @private
-             */
-            getPlotBandPath: function (from, to, options) {
-                var center = this.center, startAngleRad = this.startAngleRad, fullRadius = center[2] / 2, radii = [
-                    pick(options.outerRadius, '100%'),
-                    options.innerRadius,
-                    pick(options.thickness, 10)
-                ], offset = Math.min(this.offset, 0), percentRegex = /%$/, start, end, angle, xOnPerimeter, open, isCircular = this.isCircular, // X axis in a polar chart
-                ret;
-                // Polygonal plot bands
-                if (this.options.gridLineInterpolation === 'polygon') {
-                    ret = this.getPlotLinePath({ value: from }).concat(this.getPlotLinePath({ value: to, reverse: true }));
-                    // Circular grid bands
-                }
-                else {
-                    // Keep within bounds
-                    from = Math.max(from, this.min);
-                    to = Math.min(to, this.max);
-                    // Plot bands on Y axis (radial axis) - inner and outer radius
-                    // depend on to and from
-                    if (!isCircular) {
-                        radii[0] = this.translate(from);
-                        radii[1] = this.translate(to);
-                    }
-                    // Convert percentages to pixel values
-                    radii = radii.map(function (radius) {
-                        if (percentRegex.test(radius)) {
-                            radius = (pInt(radius, 10) * fullRadius) / 100;
-                        }
-                        return radius;
-                    });
-                    // Handle full circle
-                    if (options.shape === 'circle' || !isCircular) {
-                        start = -Math.PI / 2;
-                        end = Math.PI * 1.5;
-                        open = true;
-                    }
-                    else {
-                        start = startAngleRad + this.translate(from);
-                        end = startAngleRad + this.translate(to);
-                    }
-                    radii[0] -= offset; // #5283
-                    radii[2] -= offset; // #5283
-                    ret = this.chart.renderer.symbols.arc(this.left + center[0], this.top + center[1], radii[0], radii[0], {
-                        // Math is for reversed yAxis (#3606)
-                        start: Math.min(start, end),
-                        end: Math.max(start, end),
-                        innerR: pick(radii[1], radii[0] - radii[2]),
-                        open: open
-                    });
-                    // Provide positioning boxes for the label (#6406)
-                    if (isCircular) {
-                        angle = (end + start) / 2;
-                        xOnPerimeter = (this.left +
-                            center[0] +
-                            (center[2] / 2) * Math.cos(angle));
-                        ret.xBounds = angle > -Math.PI / 2 && angle < Math.PI / 2 ?
-                            // Right hemisphere
-                            [xOnPerimeter, this.chart.plotWidth] :
-                            // Left hemisphere
-                            [0, xOnPerimeter];
-                        ret.yBounds = [
-                            this.top + center[1] + (center[2] / 2) * Math.sin(angle)
-                        ];
-                        // Shift up or down to get the label clear of the perimeter
-                        ret.yBounds[0] += ((angle > -Math.PI && angle < 0) ||
-                            (angle > Math.PI)) ? -10 : 10;
-                    }
-                }
-                return ret;
-            },
-            /* *
-             * Find the correct end values of crosshair in polar.
-             */
-            getCrosshairPosition: function (options, x1, y1) {
-                var axis = this, value = options.value, shapeArgs, end, x2, y2;
-                if (axis.isCircular) {
-                    if (!defined(value)) {
-                        // When the snap is set to false
-                        x2 = options.chartX || 0;
-                        y2 = options.chartY || 0;
-                        value = axis.translate(Math.atan2(y2 - y1, x2 - x1) - axis.startAngleRad, true);
-                    }
-                    else if (options.point) {
-                        // When the snap is set to true
-                        shapeArgs = options.point.shapeArgs || {};
-                        if (shapeArgs.start) {
-                            // Find a true value of the point based on the
-                            // angle
-                            value = axis.translate(options.point.rectPlotY, true);
-                        }
-                    }
-                    end = axis.getPosition(value);
-                    x2 = end.x;
-                    y2 = end.y;
-                }
-                else {
-                    if (!defined(value)) {
-                        x2 = options.chartX;
-                        y2 = options.chartY;
-                    }
-                    if (defined(x2) && defined(y2)) {
-                        // Calculate radius of non-circular axis' crosshair
-                        value = axis.translate(Math.min(Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)), axis.len), true);
-                    }
-                }
-                return [value, x2 || 0, y2 || 0];
-            },
-            /* *
-             * Find the path for plot lines perpendicular to the radial axis.
-             */
-            getPlotLinePath: function (options) {
-                var axis = this, center = axis.center, chart = axis.chart, inverted = chart.inverted, value = options.value, reverse = options.reverse, end = axis.getPosition(value), background = axis.pane.options.background ?
-                    (axis.pane.options.background[0] ||
-                        axis.pane.options.background) :
-                    {}, innerRadius = background.innerRadius || '0%', outerRadius = background.outerRadius || '100%', x1 = center[0] + chart.plotLeft, y1 = center[1] + chart.plotTop, x2 = end.x, y2 = end.y, a, b, otherAxis, xy, tickPositions, crossPos, ret;
-                // Crosshair logic
-                if (options.isCrosshair) {
-                    // Find crosshair's position and perform destructuring assignment
-                    crossPos = this.getCrosshairPosition(options, x1, y1);
-                    value = crossPos[0];
-                    x2 = crossPos[1];
-                    y2 = crossPos[2];
-                }
-                // Spokes
-                if (axis.isCircular) {
-                    a = (typeof innerRadius === 'string') ?
-                        relativeLength(innerRadius, 1) : (innerRadius /
-                        Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)));
-                    b = (typeof outerRadius === 'string') ?
-                        relativeLength(outerRadius, 1) : (outerRadius /
-                        Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)));
-                    ret = [
-                        'M',
-                        x1 + a * (x2 - x1),
-                        y1 - a * (y1 - y2),
-                        'L',
-                        x2 - (1 - b) * (x2 - x1),
-                        y2 + (1 - b) * (y1 - y2)
-                    ];
-                    // Concentric circles
-                }
-                else {
-                    // Pick the right values depending if it is grid line or
-                    // crosshair
-                    value = axis.translate(value);
-                    // This is required in case when xAxis is non-circular to
-                    // prevent grid lines (or crosshairs, if enabled) from
-                    // rendering above the center after they supposed to be
-                    // displayed below the center point
-                    if (!options.isCrosshair &&
-                        (value < 0 || value > axis.height) && inverted) {
-                        value = 0;
-                    }
-                    if (axis.options.gridLineInterpolation === 'circle') {
-                        // A value of 0 is in the center, so it won't be
-                        // visible, but draw it anyway for update and animation
-                        // (#2366)
-                        ret = axis.getLinePath(0, value);
-                        // Concentric polygons
-                    }
-                    else {
-                        // Find the other axis (a circular one) in the same pane
-                        chart[inverted ? 'yAxis' : 'xAxis'].forEach(function (a) {
-                            if (a.pane === axis.pane) {
-                                otherAxis = a;
-                            }
-                        });
-                        ret = [];
-                        tickPositions = otherAxis.tickPositions;
-                        if (otherAxis.autoConnect) {
-                            tickPositions =
-                                tickPositions.concat([tickPositions[0]]);
-                        }
-                        // Reverse the positions for concatenation of polygonal
-                        // plot bands
-                        if (reverse) {
-                            tickPositions = [].concat(tickPositions).reverse();
-                        }
-                        tickPositions.forEach(function (pos, i) {
-                            xy = otherAxis.getPosition(pos, value);
-                            ret.push(i ? 'L' : 'M', xy.x, xy.y);
-                        });
-                    }
-                }
-                return ret;
-            },
-            /* *
-             * Find the position for the axis title, by default inside the gauge
-             */
-            getTitlePosition: function () {
-                var center = this.center, chart = this.chart, titleOptions = this.options.title;
-                return {
-                    x: chart.plotLeft + center[0] + (titleOptions.x || 0),
-                    y: (chart.plotTop +
-                        center[1] -
-                        ({
-                            high: 0.5,
-                            middle: 0.25,
-                            low: 0
-                        }[titleOptions.align] *
-                            center[2]) +
-                        (titleOptions.y || 0))
-                };
-            },
-            /* *
-             * Attach and return collecting function for labels in radial axis for
-             * anti-collision.
-             */
-            createLabelCollector: function () {
-                var axis = this;
-                return function () {
-                    if (axis.isRadial &&
-                        axis.tickPositions &&
-                        // undocumented option for now, but working
-                        axis.options.labels.allowOverlap !== true) {
-                        return axis.tickPositions
-                            .map(function (pos) {
-                            return axis.ticks[pos] && axis.ticks[pos].label;
-                        })
-                            .filter(function (label) {
-                            return Boolean(label);
-                        });
-                    }
-                };
-            }
-            /* eslint-enable valid-jsdoc */
-        };
-        /* eslint-disable no-invalid-this */
-        // Actions before axis init.
-        addEvent(Axis, 'init', function (e) {
-            var chart = this.chart, inverted = chart.inverted, angular = chart.angular, polar = chart.polar, isX = this.isXAxis, coll = this.coll, isHidden = angular && isX, isCircular, chartOptions = chart.options, paneIndex = e.userOptions.pane || 0, pane = this.pane =
-                chart.pane && chart.pane[paneIndex];
-            // Prevent changes for colorAxis
-            if (coll === 'colorAxis') {
-                this.isRadial = false;
-                return;
-            }
-            // Before prototype.init
-            if (angular) {
-                extend(this, isHidden ? hiddenAxisMixin : radialAxisMixin);
-                isCircular = !isX;
-                if (isCircular) {
-                    this.defaultPolarOptions = this.defaultRadialGaugeOptions;
-                }
-            }
-            else if (polar) {
-                extend(this, radialAxisMixin);
-                // Check which axis is circular
-                isCircular = this.horiz;
-                this.defaultPolarOptions = isCircular ?
-                    this.defaultCircularOptions :
-                    merge(coll === 'xAxis' ?
-                        this.defaultOptions : this.defaultYAxisOptions, this.defaultRadialOptions);
-                // Apply the stack labels for yAxis in case of inverted chart
-                if (inverted && coll === 'yAxis') {
-                    this.defaultPolarOptions.stackLabels =
-                        this.defaultYAxisOptions.stackLabels;
-                }
-            }
-            // Disable certain features on angular and polar axes
-            if (angular || polar) {
-                this.isRadial = true;
-                chartOptions.chart.zoomType = null;
-                if (!this.labelCollector) {
-                    this.labelCollector = this.createLabelCollector();
-                }
-                if (this.labelCollector) {
-                    // Prevent overlapping axis labels (#9761)
-                    chart.labelCollectors.push(this.labelCollector);
-                }
-            }
-            else {
-                this.isRadial = false;
-            }
-            // A pointer back to this axis to borrow geometry
-            if (pane && isCircular) {
-                pane.axis = this;
-            }
-            this.isCircular = isCircular;
-        });
-        addEvent(Axis, 'afterInit', function () {
-            var chart = this.chart, options = this.options, isHidden = chart.angular && this.isXAxis, pane = this.pane, paneOptions = pane && pane.options;
-            if (!isHidden && pane && (chart.angular || chart.polar)) {
-                // Start and end angle options are
-                // given in degrees relative to top, while internal computations are
-                // in radians relative to right (like SVG).
-                // Y axis in polar charts
-                this.angleRad = (options.angle || 0) * Math.PI / 180;
-                // Gauges
-                this.startAngleRad =
-                    (paneOptions.startAngle - 90) * Math.PI / 180;
-                this.endAngleRad = (pick(paneOptions.endAngle, paneOptions.startAngle + 360) - 90) * Math.PI / 180; // Gauges
-                this.offset = options.offset || 0;
-            }
-        });
-        // Wrap auto label align to avoid setting axis-wide rotation on radial axes
-        // (#4920)
-        addEvent(Axis, 'autoLabelAlign', function (e) {
-            if (this.isRadial) {
-                e.align = void 0;
-                e.preventDefault();
-            }
-        });
-        // Remove label collector function on axis remove/update
-        addEvent(Axis, 'destroy', function () {
-            if (this.chart && this.chart.labelCollectors) {
-                var index = this.chart.labelCollectors.indexOf(this.labelCollector);
-                if (index >= 0) {
-                    this.chart.labelCollectors.splice(index, 1);
-                }
-            }
-        });
-        // Add special cases within the Tick class' methods for radial axes.
-        addEvent(Tick, 'afterGetPosition', function (e) {
-            if (this.axis.getPosition) {
-                extend(e.pos, this.axis.getPosition(this.pos));
-            }
-        });
-        // Find the center position of the label based on the distance option.
-        addEvent(Tick, 'afterGetLabelPosition', function (e) {
-            var axis = this.axis, label = this.label, labelBBox = label.getBBox(), labelOptions = axis.options.labels, optionsY = labelOptions.y, ret, centerSlot = 20, // 20 degrees to each side at the top and bottom
-            align = labelOptions.align, angle = ((axis.translate(this.pos) + axis.startAngleRad +
-                Math.PI / 2) / Math.PI * 180) % 360, correctAngle = Math.round(angle), labelDir = 'end', // Direction of the label 'start' or 'end'
-            reducedAngle1 = correctAngle < 0 ?
-                correctAngle + 360 : correctAngle, reducedAngle2 = reducedAngle1, translateY = 0, translateX = 0, labelYPosCorrection = labelOptions.y === null ? -labelBBox.height * 0.3 : 0;
-            if (axis.isRadial) { // Both X and Y axes in a polar chart
-                ret = axis.getPosition(this.pos, (axis.center[2] / 2) +
-                    relativeLength(pick(labelOptions.distance, -25), axis.center[2] / 2, -axis.center[2] / 2));
-                // Automatically rotated
-                if (labelOptions.rotation === 'auto') {
-                    label.attr({
-                        rotation: angle
-                    });
-                    // Vertically centered
-                }
-                else if (optionsY === null) {
-                    optionsY = (axis.chart.renderer
-                        .fontMetrics(label.styles && label.styles.fontSize).b -
-                        labelBBox.height / 2);
-                }
-                // Automatic alignment
-                if (align === null) {
-                    if (axis.isCircular) { // Y axis
-                        if (labelBBox.width >
-                            axis.len * axis.tickInterval / (axis.max - axis.min)) { // #3506
-                            centerSlot = 0;
-                        }
-                        if (angle > centerSlot && angle < 180 - centerSlot) {
-                            align = 'left'; // right hemisphere
-                        }
-                        else if (angle > 180 + centerSlot &&
-                            angle < 360 - centerSlot) {
-                            align = 'right'; // left hemisphere
-                        }
-                        else {
-                            align = 'center'; // top or bottom
-                        }
-                    }
-                    else {
-                        align = 'center';
-                    }
-                    label.attr({
-                        align: align
-                    });
-                }
-                // Auto alignment for solid-gauges with two labels (#10635)
-                if (align === 'auto' &&
-                    axis.tickPositions.length === 2 &&
-                    axis.isCircular) {
-                    // Angles reduced to 0 - 90 or 180 - 270
-                    if (reducedAngle1 > 90 && reducedAngle1 < 180) {
-                        reducedAngle1 = 180 - reducedAngle1;
-                    }
-                    else if (reducedAngle1 > 270 && reducedAngle1 <= 360) {
-                        reducedAngle1 = 540 - reducedAngle1;
-                    }
-                    // Angles reduced to 0 - 180
-                    if (reducedAngle2 > 180 && reducedAngle2 <= 360) {
-                        reducedAngle2 = 360 - reducedAngle2;
-                    }
-                    if ((axis.pane.options.startAngle === correctAngle) ||
-                        (axis.pane.options.startAngle === correctAngle + 360) ||
-                        (axis.pane.options.startAngle === correctAngle - 360)) {
-                        labelDir = 'start';
-                    }
-                    if ((correctAngle >= -90 && correctAngle <= 90) ||
-                        (correctAngle >= -360 && correctAngle <= -270) ||
-                        (correctAngle >= 270 && correctAngle <= 360)) {
-                        align = (labelDir === 'start') ? 'right' : 'left';
-                    }
-                    else {
-                        align = (labelDir === 'start') ? 'left' : 'right';
-                    }
-                    // For angles beetwen (90 + n * 180) +- 20
-                    if (reducedAngle2 > 70 && reducedAngle2 < 110) {
-                        align = 'center';
-                    }
-                    // auto Y translation
-                    if (reducedAngle1 < 15 ||
-                        (reducedAngle1 >= 180 && reducedAngle1 < 195)) {
-                        translateY = labelBBox.height * 0.3;
-                    }
-                    else if (reducedAngle1 >= 15 && reducedAngle1 <= 35) {
-                        translateY = labelDir === 'start' ?
-                            0 : labelBBox.height * 0.75;
-                    }
-                    else if (reducedAngle1 >= 195 && reducedAngle1 <= 215) {
-                        translateY = labelDir === 'start' ?
-                            labelBBox.height * 0.75 : 0;
-                    }
-                    else if (reducedAngle1 > 35 && reducedAngle1 <= 90) {
-                        translateY = labelDir === 'start' ?
-                            -labelBBox.height * 0.25 : labelBBox.height;
-                    }
-                    else if (reducedAngle1 > 215 && reducedAngle1 <= 270) {
-                        translateY = labelDir === 'start' ?
-                            labelBBox.height : -labelBBox.height * 0.25;
-                    }
-                    // auto X translation
-                    if (reducedAngle2 < 15) {
-                        translateX = labelDir === 'start' ?
-                            -labelBBox.height * 0.15 : labelBBox.height * 0.15;
-                    }
-                    else if (reducedAngle2 > 165 && reducedAngle2 <= 180) {
-                        translateX = labelDir === 'start' ?
-                            labelBBox.height * 0.15 : -labelBBox.height * 0.15;
-                    }
-                    label.attr({ align: align });
-                    label.translate(translateX, translateY + labelYPosCorrection);
-                }
-                e.pos.x = ret.x + labelOptions.x;
-                e.pos.y = ret.y + optionsY;
-            }
-        });
-        // Wrap the getMarkPath function to return the path of the radial marker
-        wrap(tickProto, 'getMarkPath', function (proceed, x, y, tickLength, tickWidth, horiz, renderer) {
-            var axis = this.axis, endPoint, ret;
-            if (axis.isRadial) {
-                endPoint = axis.getPosition(this.pos, axis.center[2] / 2 + tickLength);
-                ret = [
-                    'M',
-                    x,
-                    y,
-                    'L',
-                    endPoint.x,
-                    endPoint.y
-                ];
-            }
-            else {
-                ret = proceed.call(this, x, y, tickLength, tickWidth, horiz, renderer);
-            }
-            return ret;
-        });
+            };
+            return RadialAxis;
+        }());
+        RadialAxis.compose(Axis, Tick); // @todo move outside
 
+        return RadialAxis;
     });
-    _registerModule(_modules, 'parts-more/AreaRangeSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/AreaRangeSeries.js', [_modules['parts/Globals.js'], _modules['parts/Point.js'], _modules['parts/Utilities.js']], function (H, Point, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined, extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, pick = U.pick;
-        var noop = H.noop, Series = H.Series, seriesType = H.seriesType, seriesTypes = H.seriesTypes, seriesProto = Series.prototype, pointProto = H.Point.prototype;
+        var defined = U.defined, extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, pick = U.pick, seriesType = U.seriesType;
+        var noop = H.noop, Series = H.Series, seriesTypes = H.seriesTypes, seriesProto = Series.prototype, pointProto = Point.prototype;
         /**
          * The area range series is a carteseian series with higher and lower values for
          * each point along an X axis, where the area between the values is shaded.
@@ -1176,8 +1413,8 @@
              * @private
              */
             dataLabels: {
-                align: null,
-                verticalAlign: null,
+                align: void 0,
+                verticalAlign: void 0,
                 /**
                  * X offset of the lower data labels relative to the point value.
                  *
@@ -1335,9 +1572,10 @@
                 linePath = []
                     .concat(lowerPath, higherPath);
                 // For the area path, we need to change the 'move' statement
-                // into 'lineTo' or 'curveTo'
-                if (!this.chart.polar && higherAreaPath[0] === 'M') {
-                    higherAreaPath[0] = 'L'; // this probably doesn't work for spline
+                // into 'lineTo'
+                if (!this.chart.polar && higherAreaPath[0] && higherAreaPath[0][0] === 'M') {
+                    // This probably doesn't work for spline
+                    higherAreaPath[0] = ['L', higherAreaPath[0][1], higherAreaPath[0][2]];
                 }
                 this.graphPath = linePath;
                 this.areaPath = lowerPath.concat(higherAreaPath);
@@ -1718,17 +1956,18 @@
         ''; // adds doclets above to tranpiled file
 
     });
-    _registerModule(_modules, 'parts-more/AreaSplineRangeSeries.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'parts-more/AreaSplineRangeSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var seriesType = U.seriesType;
+        var seriesTypes = H.seriesTypes;
         /**
          * The area spline range is a cartesian series type with higher and
          * lower Y values along an X axis. The area inside the range is colored, and
@@ -1752,7 +1991,7 @@
          * option is not specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.areasplinerange
-         * @excluding dataParser, dataURL, stack
+         * @excluding dataParser, dataURL, stack, step
          * @product   highcharts highstock
          * @requires  highcharts-more
          * @apioption series.areasplinerange
@@ -1814,18 +2053,19 @@
         ''; // adds doclets above to transpiled file
 
     });
-    _registerModule(_modules, 'parts-more/ColumnRangeSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/ColumnRangeSeries.js', [_modules['parts/Globals.js'], _modules['parts/Options.js'], _modules['parts/Utilities.js']], function (H, O, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var clamp = U.clamp, pick = U.pick;
-        var defaultPlotOptions = H.defaultPlotOptions, merge = H.merge, noop = H.noop, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var defaultOptions = O.defaultOptions;
+        var clamp = U.clamp, merge = U.merge, pick = U.pick, seriesType = U.seriesType;
+        var noop = H.noop, seriesTypes = H.seriesTypes;
         var colProto = seriesTypes.column.prototype;
         /**
          * The column range is a cartesian series type with higher and lower
@@ -1874,7 +2114,7 @@
          *
          * @augments Highcharts.Series
          */
-        seriesType('columnrange', 'arearange', merge(defaultPlotOptions.column, defaultPlotOptions.arearange, columnRangeOptions), {
+        seriesType('columnrange', 'arearange', merge(defaultOptions.plotOptions.column, defaultOptions.plotOptions.arearange, columnRangeOptions), {
             // eslint-disable-next-line valid-jsdoc
             /**
              * Translate data points from raw values x and y to plotX and plotY
@@ -1912,10 +2152,8 @@
                     }
                     if (isRadial) {
                         start = point.barX + startAngleRad;
-                        point.shapeType = 'path';
-                        point.shapeArgs = {
-                            d: series.polarArc(y + height, y, start, start + point.pointWidth)
-                        };
+                        point.shapeType = 'arc';
+                        point.shapeArgs = series.polarArc(y + height, y, start, start + point.pointWidth);
                     }
                     else {
                         shapeArgs.height = height;
@@ -2058,15 +2296,15 @@
     _registerModule(_modules, 'parts-more/ColumnPyramidSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
-         *  (c) 2010-2019 Sebastian Bochan
+         *  (c) 2010-2020 Sebastian Bochan
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var clamp = U.clamp, pick = U.pick;
-        var seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var clamp = U.clamp, pick = U.pick, seriesType = U.seriesType;
+        var seriesTypes = H.seriesTypes;
         var colProto = seriesTypes.column.prototype;
         /**
          * The ColumnPyramidSeries class
@@ -2165,9 +2403,10 @@
                             (chart.plotHeight - translatedThreshold);
                     // topXwidth and bottomXwidth = width of lines from the center
                     // calculated from tanges proportion.
-                    topXwidth = (barW * (barY - topPointY)) / stackHeight;
+                    // Can not be a NaN #12514
+                    topXwidth = stackHeight ? (barW * (barY - topPointY)) / stackHeight : 0;
                     // like topXwidth, but with height of point
-                    bottomXwidth = (barW * (barY + barH - topPointY)) / stackHeight;
+                    bottomXwidth = stackHeight ? (barW * (barY + barH - topPointY)) / stackHeight : 0;
                     /*
                             /\
                            /  \
@@ -2215,13 +2454,12 @@
                         width: x2 - x1,
                         height: barH,
                         // path of pyramid
-                        d: ['M',
-                            x1, y1,
-                            'L',
-                            x2, y1,
-                            x3, y2,
-                            x4, y2,
-                            'Z'
+                        d: [
+                            ['M', x1, y1],
+                            ['L', x2, y1],
+                            ['L', x3, y2],
+                            ['L', x4, y2],
+                            ['Z']
                         ]
                     };
                 });
@@ -2313,15 +2551,15 @@
     _registerModule(_modules, 'parts-more/GaugeSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var clamp = U.clamp, isNumber = U.isNumber, pick = U.pick, pInt = U.pInt;
-        var merge = H.merge, noop = H.noop, Series = H.Series, seriesType = H.seriesType, TrackerMixin = H.TrackerMixin;
+        var clamp = U.clamp, isNumber = U.isNumber, merge = U.merge, pick = U.pick, pInt = U.pInt, seriesType = U.seriesType;
+        var noop = H.noop, Series = H.Series, TrackerMixin = H.TrackerMixin;
         /**
          * Gauges are circular plots displaying one or more values with a dial pointing
          * to values along the perimeter.
@@ -2334,7 +2572,7 @@
          *               connectEnds, connectNulls, cropThreshold, dashStyle, dragDrop,
          *               findNearestPointBy, getExtremesFromAll, marker, negativeColor,
          *               pointPlacement, shadow, softThreshold, stacking, states, step,
-         *               threshold, turboThreshold, xAxis, zoneAxis, zones
+         *               threshold, turboThreshold, xAxis, zoneAxis, zones, dataSorting
          * @product      highcharts
          * @requires     highcharts-more
          * @optionparent plotOptions.gauge
@@ -2611,18 +2849,17 @@
                     }
                     rotation = rotation * 180 / Math.PI;
                     point.shapeType = 'path';
+                    var d = dialOptions.path || [
+                        ['M', -rearLength, -baseWidth / 2],
+                        ['L', baseLength, -baseWidth / 2],
+                        ['L', radius, -topWidth / 2],
+                        ['L', radius, topWidth / 2],
+                        ['L', baseLength, baseWidth / 2],
+                        ['L', -rearLength, baseWidth / 2],
+                        ['Z']
+                    ];
                     point.shapeArgs = {
-                        d: dialOptions.path || [
-                            'M',
-                            -rearLength, -baseWidth / 2,
-                            'L',
-                            baseLength, -baseWidth / 2,
-                            radius, -topWidth / 2,
-                            radius, topWidth / 2,
-                            baseLength, baseWidth / 2,
-                            -rearLength, baseWidth / 2,
-                            'z'
-                        ],
+                        d: d,
                         translateX: center[0],
                         translateY: center[1],
                         rotation: rotation
@@ -2713,8 +2950,6 @@
                             }, series.options.animation);
                         }
                     });
-                    // delete this function to allow it only once
-                    series.animate = null;
                 }
             },
             /**
@@ -2770,7 +3005,7 @@
          *            cropThreshold, dashStyle, dataParser, dataURL, findNearestPointBy,
          *            getExtremesFromAll, marker, negativeColor, pointPlacement, shadow,
          *            softThreshold, stack, stacking, states, step, threshold,
-         *            turboThreshold, zoneAxis, zones
+         *            turboThreshold, zoneAxis, zones, dataSorting
          * @product   highcharts
          * @requires  highcharts-more
          * @apioption series.gauge
@@ -2821,15 +3056,15 @@
     _registerModule(_modules, 'parts-more/BoxPlotSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var pick = U.pick;
-        var noop = H.noop, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var pick = U.pick, seriesType = U.seriesType;
+        var noop = H.noop, seriesTypes = H.seriesTypes;
         /**
          * The boxplot series type.
          *
@@ -2940,6 +3175,7 @@
              * @sample {highcharts} highcharts/css/boxplot/
              *         Box plot in styled mode
              *
+             * @type    {number|null}
              * @since   3.0
              * @product highcharts
              */
@@ -2973,6 +3209,34 @@
              * @apioption plotOptions.boxplot.stemColor
              */
             /**
+             * The dash style of the box.
+             *
+             * @sample {highcharts} highcharts/plotoptions/box-plot-styling/
+             *         Box plot styling
+             * @sample {highcharts} highcharts/css/boxplot/
+             *         Box plot in styled mode
+             *
+             * @type      {Highcharts.DashStyleValue}
+             * @default   Solid
+             * @since 8.1.0
+             * @product   highcharts
+             * @apioption plotOptions.boxplot.boxDashStyle
+             */
+            /**
+             * The dash style of the median.
+             *
+             * @sample {highcharts} highcharts/plotoptions/box-plot-styling/
+             *         Box plot styling
+             * @sample {highcharts} highcharts/css/boxplot/
+             *         Box plot in styled mode
+             *
+             * @type      {Highcharts.DashStyleValue}
+             * @default   Solid
+             * @since 8.1.0
+             * @product   highcharts
+             * @apioption plotOptions.boxplot.medianDashStyle
+             */
+            /**
              * The dash style of the stem, the vertical line extending from the
              * box to the whiskers.
              *
@@ -2988,6 +3252,20 @@
              * @since     3.0
              * @product   highcharts
              * @apioption plotOptions.boxplot.stemDashStyle
+             */
+            /**
+             * The dash style of the whiskers.
+             *
+             * @sample {highcharts} highcharts/plotoptions/box-plot-styling/
+             *         Box plot styling
+             * @sample {highcharts} highcharts/css/boxplot/
+             *         Box plot in styled mode
+             *
+             * @type      {Highcharts.DashStyleValue}
+             * @default   Solid
+             * @since 8.1.0
+             * @product   highcharts
+             * @apioption plotOptions.boxplot.whiskerDashStyle
              */
             /**
              * The width of the stem, the vertical line extending from the box to
@@ -3074,6 +3352,7 @@
                             point[key + 'Plot'] = yAxis.translate(point[key], 0, 1, 0, 1);
                         }
                     });
+                    point.plotHigh = point.highPlot; // For data label validation
                 });
             },
             // eslint-disable-next-line valid-jsdoc
@@ -3089,7 +3368,7 @@
                     var graphic = point.graphic, verb = graphic ? 'animate' : 'attr', shapeArgs = point.shapeArgs, boxAttr = {}, stemAttr = {}, whiskersAttr = {}, medianAttr = {}, color = point.color || series.color;
                     if (typeof point.plotY !== 'undefined') {
                         // crisp vector coordinates
-                        width = shapeArgs.width;
+                        width = Math.round(shapeArgs.width);
                         left = Math.floor(shapeArgs.x);
                         right = left + width;
                         halfWidth = Math.round(width / 2);
@@ -3122,8 +3401,9 @@
                             stemAttr.stroke =
                                 point.stemColor || options.stemColor || color;
                             stemAttr['stroke-width'] = pick(point.stemWidth, options.stemWidth, options.lineWidth);
-                            stemAttr.dashstyle =
-                                point.stemDashStyle || options.stemDashStyle;
+                            stemAttr.dashstyle = (point.stemDashStyle ||
+                                options.stemDashStyle ||
+                                options.dashStyle);
                             point.stem.attr(stemAttr);
                             // Whiskers attributes
                             if (whiskerLength) {
@@ -3131,6 +3411,9 @@
                                     options.whiskerColor ||
                                     color);
                                 whiskersAttr['stroke-width'] = pick(point.whiskerWidth, options.whiskerWidth, options.lineWidth);
+                                whiskersAttr.dashstyle = (point.whiskerDashStyle ||
+                                    options.whiskerDashStyle ||
+                                    options.dashStyle);
                                 point.whiskers.attr(whiskersAttr);
                             }
                             if (doQuartiles) {
@@ -3139,6 +3422,9 @@
                                     color);
                                 boxAttr.stroke = options.lineColor || color;
                                 boxAttr['stroke-width'] = options.lineWidth || 0;
+                                boxAttr.dashstyle = (point.boxDashStyle ||
+                                    options.boxDashStyle ||
+                                    options.dashStyle);
                                 point.box.attr(boxAttr);
                             }
                             // Median attributes
@@ -3146,25 +3432,24 @@
                                 options.medianColor ||
                                 color);
                             medianAttr['stroke-width'] = pick(point.medianWidth, options.medianWidth, options.lineWidth);
+                            medianAttr.dashstyle = (point.medianDashStyle ||
+                                options.medianDashStyle ||
+                                options.dashStyle);
                             point.medianShape.attr(medianAttr);
                         }
+                        var d = void 0;
                         // The stem
                         crispCorr = (point.stem.strokeWidth() % 2) / 2;
                         crispX = left + halfWidth + crispCorr;
-                        point.stem[verb]({
-                            d: [
-                                // stem up
-                                'M',
-                                crispX, q3Plot,
-                                'L',
-                                crispX, highPlot,
-                                // stem down
-                                'M',
-                                crispX, q1Plot,
-                                'L',
-                                crispX, lowPlot
-                            ]
-                        });
+                        d = [
+                            // stem up
+                            ['M', crispX, q3Plot],
+                            ['L', crispX, highPlot],
+                            // stem down
+                            ['M', crispX, q1Plot],
+                            ['L', crispX, lowPlot]
+                        ];
+                        point.stem[verb]({ d: d });
                         // The box
                         if (doQuartiles) {
                             crispCorr = (point.box.strokeWidth() % 2) / 2;
@@ -3172,21 +3457,15 @@
                             q3Plot = Math.floor(q3Plot) + crispCorr;
                             left += crispCorr;
                             right += crispCorr;
-                            point.box[verb]({
-                                d: [
-                                    'M',
-                                    left, q3Plot,
-                                    'L',
-                                    left, q1Plot,
-                                    'L',
-                                    right, q1Plot,
-                                    'L',
-                                    right, q3Plot,
-                                    'L',
-                                    left, q3Plot,
-                                    'z'
-                                ]
-                            });
+                            d = [
+                                ['M', left, q3Plot],
+                                ['L', left, q1Plot],
+                                ['L', right, q1Plot],
+                                ['L', right, q3Plot],
+                                ['L', left, q3Plot],
+                                ['Z']
+                            ];
+                            point.box[verb]({ d: d });
                         }
                         // The whiskers
                         if (whiskerLength) {
@@ -3196,39 +3475,25 @@
                             pointWiskerLength = (/%$/).test(whiskerLength) ?
                                 halfWidth * parseFloat(whiskerLength) / 100 :
                                 whiskerLength / 2;
-                            point.whiskers[verb]({
-                                d: [
-                                    // High whisker
-                                    'M',
-                                    crispX - pointWiskerLength,
-                                    highPlot,
-                                    'L',
-                                    crispX + pointWiskerLength,
-                                    highPlot,
-                                    // Low whisker
-                                    'M',
-                                    crispX - pointWiskerLength,
-                                    lowPlot,
-                                    'L',
-                                    crispX + pointWiskerLength,
-                                    lowPlot
-                                ]
-                            });
+                            d = [
+                                // High whisker
+                                ['M', crispX - pointWiskerLength, highPlot],
+                                ['L', crispX + pointWiskerLength, highPlot],
+                                // Low whisker
+                                ['M', crispX - pointWiskerLength, lowPlot],
+                                ['L', crispX + pointWiskerLength, lowPlot]
+                            ];
+                            point.whiskers[verb]({ d: d });
                         }
                         // The median
                         medianPlot = Math.round(point.medianPlot);
                         crispCorr = (point.medianShape.strokeWidth() % 2) / 2;
                         medianPlot = medianPlot + crispCorr;
-                        point.medianShape[verb]({
-                            d: [
-                                'M',
-                                left,
-                                medianPlot,
-                                'L',
-                                right,
-                                medianPlot
-                            ]
-                        });
+                        d = [
+                            ['M', left, medianPlot],
+                            ['L', right, medianPlot]
+                        ];
+                        point.medianShape[verb]({ d: d });
                     }
                 });
             },
@@ -3344,20 +3609,77 @@
          * @product   highcharts
          * @apioption series.boxplot.data.q3
          */
+        /**
+         * The dash style of the box.
+         *
+         * @sample {highcharts} highcharts/plotoptions/box-plot-styling/
+         *         Box plot styling
+         * @sample {highcharts} highcharts/css/boxplot/
+         *         Box plot in styled mode
+         *
+         * @type      {Highcharts.DashStyleValue}
+         * @default   Solid
+         * @since 8.1.0
+         * @product   highcharts
+         * @apioption series.boxplot.data.boxDashStyle
+         */
+        /**
+         * The dash style of the median.
+         *
+         * @sample {highcharts} highcharts/plotoptions/box-plot-styling/
+         *         Box plot styling
+         * @sample {highcharts} highcharts/css/boxplot/
+         *         Box plot in styled mode
+         *
+         * @type      {Highcharts.DashStyleValue}
+         * @default   Solid
+         * @since 8.1.0
+         * @product   highcharts
+         * @apioption series.boxplot.data.medianDashStyle
+         */
+        /**
+         * The dash style of the stem.
+         *
+         * @sample {highcharts} highcharts/plotoptions/box-plot-styling/
+         *         Box plot styling
+         * @sample {highcharts} highcharts/css/boxplot/
+         *         Box plot in styled mode
+         *
+         * @type      {Highcharts.DashStyleValue}
+         * @default   Solid
+         * @since 8.1.0
+         * @product   highcharts
+         * @apioption series.boxplot.data.stemDashStyle
+         */
+        /**
+         * The dash style of the whiskers.
+         *
+         * @sample {highcharts} highcharts/plotoptions/box-plot-styling/
+         *         Box plot styling
+         * @sample {highcharts} highcharts/css/boxplot/
+         *         Box plot in styled mode
+         *
+         * @type      {Highcharts.DashStyleValue}
+         * @default   Solid
+         * @since 8.1.0
+         * @product   highcharts
+         * @apioption series.boxplot.data.whiskerDashStyle
+         */
         ''; // adds doclets above to transpiled file
 
     });
-    _registerModule(_modules, 'parts-more/ErrorBarSeries.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'parts-more/ErrorBarSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var noop = H.noop, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var seriesType = U.seriesType;
+        var noop = H.noop, seriesTypes = H.seriesTypes;
         /**
          * Error bars are a graphical representation of the variability of data and are
          * used on graphs to indicate the error, or uncertainty in a reported
@@ -3510,18 +3832,18 @@
         ''; // adds doclets above to transpiled file
 
     });
-    _registerModule(_modules, 'parts-more/WaterfallSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/WaterfallSeries.js', [_modules['parts/Axis.js'], _modules['parts/Chart.js'], _modules['parts/Globals.js'], _modules['parts/Point.js'], _modules['parts/Stacking.js'], _modules['parts/Utilities.js']], function (Axis, Chart, H, Point, StackItem, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, correctFloat = U.correctFloat, isNumber = U.isNumber, objectEach = U.objectEach, pick = U.pick;
-        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, Point = H.Point, Series = H.Series, StackItem = H.StackItem, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var addEvent = U.addEvent, arrayMax = U.arrayMax, arrayMin = U.arrayMin, correctFloat = U.correctFloat, isNumber = U.isNumber, objectEach = U.objectEach, pick = U.pick, seriesType = U.seriesType;
+        var Series = H.Series, seriesTypes = H.seriesTypes;
         /**
          * Returns true if the key is a direct property of the object.
          * @private
@@ -3532,63 +3854,135 @@
         function ownProp(obj, key) {
             return Object.hasOwnProperty.call(obj, key);
         }
-        /* eslint-disable no-invalid-this */
-        addEvent(Axis, 'afterInit', function () {
-            if (!this.isXAxis) {
-                this.waterfallStacks = {
-                    changed: false
-                };
-            }
-        });
-        addEvent(Axis, 'afterBuildStacks', function () {
-            this.waterfallStacks.changed = false;
-            delete this.waterfallStacks.alreadyChanged;
-        });
-        addEvent(Chart, 'beforeRedraw', function () {
-            var axes = this.axes, series = this.series, i = series.length;
-            while (i--) {
-                if (series[i].options.stacking) {
-                    axes.forEach(function (axis) {
-                        if (!axis.isXAxis) {
-                            axis.waterfallStacks.changed = true;
-                        }
+        /**
+         * @private
+         */
+        var WaterfallAxis;
+        (function (WaterfallAxis) {
+            /* *
+             *
+             *  Interfaces
+             *
+             * */
+            /* *
+             *
+             *  Classes
+             *
+             * */
+            /**
+             * @private
+             */
+            var Composition = /** @class */ (function () {
+                /* *
+                 *
+                 *  Constructors
+                 *
+                 * */
+                /**
+                 * @private
+                 */
+                function Composition(axis) {
+                    this.axis = axis;
+                    this.stacks = {
+                        changed: false
+                    };
+                }
+                /* *
+                 *
+                 *  Functions
+                 *
+                 * */
+                /**
+                 * Calls StackItem.prototype.render function that creates and renders
+                 * stack total label for each waterfall stack item.
+                 *
+                 * @private
+                 * @function Highcharts.Axis#renderWaterfallStackTotals
+                 */
+                Composition.prototype.renderStackTotals = function () {
+                    var yAxis = this.axis, waterfallStacks = yAxis.waterfall.stacks, stackTotalGroup = yAxis.stacking && yAxis.stacking.stackTotalGroup, dummyStackItem = new StackItem(yAxis, yAxis.options.stackLabels, false, 0, void 0);
+                    this.dummyStackItem = dummyStackItem;
+                    // Render each waterfall stack total
+                    objectEach(waterfallStacks, function (type) {
+                        objectEach(type, function (stackItem) {
+                            dummyStackItem.total = stackItem.stackTotal;
+                            if (stackItem.label) {
+                                dummyStackItem.label = stackItem.label;
+                            }
+                            StackItem.prototype.render.call(dummyStackItem, stackTotalGroup);
+                            stackItem.label = dummyStackItem.label;
+                            delete dummyStackItem.label;
+                        });
                     });
-                    i = 0;
+                    dummyStackItem.total = null;
+                };
+                return Composition;
+            }());
+            WaterfallAxis.Composition = Composition;
+            /* *
+             *
+             *  Functions
+             *
+             * */
+            /**
+             * @private
+             */
+            function compose(AxisClass, ChartClass) {
+                addEvent(AxisClass, 'init', onInit);
+                addEvent(AxisClass, 'afterBuildStacks', onAfterBuildStacks);
+                addEvent(AxisClass, 'afterRender', onAfterRender);
+                addEvent(ChartClass, 'beforeRedraw', onBeforeRedraw);
+            }
+            WaterfallAxis.compose = compose;
+            /**
+             * @private
+             */
+            function onAfterBuildStacks() {
+                var axis = this;
+                var stacks = axis.waterfall.stacks;
+                if (stacks) {
+                    stacks.changed = false;
+                    delete stacks.alreadyChanged;
                 }
             }
-        });
-        addEvent(Axis, 'afterRender', function () {
-            var stackLabelOptions = this.options.stackLabels;
-            if (stackLabelOptions && stackLabelOptions.enabled &&
-                this.waterfallStacks) {
-                this.renderWaterfallStackTotals();
+            /**
+             * @private
+             */
+            function onAfterRender() {
+                var axis = this;
+                var stackLabelOptions = axis.options.stackLabels;
+                if (stackLabelOptions && stackLabelOptions.enabled &&
+                    axis.waterfall.stacks) {
+                    axis.waterfall.renderStackTotals();
+                }
             }
-        });
-        // eslint-disable-next-line valid-jsdoc
-        /**
-         * Calls StackItem.prototype.render function that creates and renders stack
-         * total label for each waterfall stack item.
-         *
-         * @private
-         * @function Highcharts.Axis#renderWaterfallStackTotals
-         */
-        Axis.prototype.renderWaterfallStackTotals = function () {
-            var yAxis = this, waterfallStacks = yAxis.waterfallStacks, stackTotalGroup = yAxis.stackTotalGroup, dummyStackItem = new StackItem(yAxis, yAxis.options.stackLabels, false, 0, void 0);
-            yAxis.dummyStackItem = dummyStackItem;
-            // Render each waterfall stack total
-            objectEach(waterfallStacks, function (type) {
-                objectEach(type, function (stackItem) {
-                    dummyStackItem.total = stackItem.stackTotal;
-                    if (stackItem.label) {
-                        dummyStackItem.label = stackItem.label;
+            /**
+             * @private
+             */
+            function onBeforeRedraw() {
+                var axes = this.axes, series = this.series, i = series.length;
+                while (i--) {
+                    if (series[i].options.stacking) {
+                        axes.forEach(function (axis) {
+                            if (!axis.isXAxis) {
+                                axis.waterfall.stacks.changed = true;
+                            }
+                        });
+                        i = 0;
                     }
-                    StackItem.prototype.render.call(dummyStackItem, stackTotalGroup);
-                    stackItem.label = dummyStackItem.label;
-                    delete dummyStackItem.label;
-                });
-            });
-            dummyStackItem.total = null;
-        };
+                }
+            }
+            /**
+             * @private
+             */
+            function onInit() {
+                var axis = this;
+                if (!axis.waterfall) {
+                    axis.waterfall = new Composition(axis);
+                }
+            }
+        })(WaterfallAxis || (WaterfallAxis = {}));
+        // eslint-disable-next-line valid-jsdoc
         /**
          * A waterfall chart displays sequentially introduced positive or negative
          * values in cumulative columns.
@@ -3697,7 +4091,7 @@
             },
             // Translate data points from raw values
             translate: function () {
-                var series = this, options = series.options, yAxis = series.yAxis, len, i, points, point, shapeArgs, y, yValue, previousY, previousIntermediate, range, minPointLength = pick(options.minPointLength, 5), halfMinPointLength = minPointLength / 2, threshold = options.threshold, stacking = options.stacking, tooltipY, actualStack = yAxis.waterfallStacks[series.stackKey], actualStackX, dummyStackItem, total, pointY, yPos, hPos;
+                var series = this, options = series.options, yAxis = series.yAxis, len, i, points, point, shapeArgs, y, yValue, previousY, previousIntermediate, range, minPointLength = pick(options.minPointLength, 5), halfMinPointLength = minPointLength / 2, threshold = options.threshold, stacking = options.stacking, tooltipY, actualStack = yAxis.waterfall.stacks[series.stackKey], actualStackX, dummyStackItem, total, pointY, yPos, hPos;
                 // run column series translate
                 seriesTypes.column.prototype.translate.apply(series);
                 previousY = previousIntermediate = threshold;
@@ -3773,7 +4167,7 @@
                             shapeArgs.height = Math.abs(shapeArgs.y -
                                 yAxis.translate(hPos, 0, 1, 0, 1));
                         }
-                        dummyStackItem = yAxis.dummyStackItem;
+                        dummyStackItem = yAxis.waterfall.dummyStackItem;
                         if (dummyStackItem) {
                             dummyStackItem.x = i;
                             dummyStackItem.label = actualStack[i].label;
@@ -3926,18 +4320,18 @@
             // Return an empty path initially, because we need to know the stroke-width
             // in order to set the final path.
             getGraphPath: function () {
-                return ['M', 0, 0];
+                return [['M', 0, 0]];
             },
             // Draw columns' connector lines
             getCrispPath: function () {
-                var data = this.data, yAxis = this.yAxis, length = data.length, graphNormalizer = Math.round(this.graph.strokeWidth()) % 2 / 2, borderNormalizer = Math.round(this.borderWidth) % 2 / 2, reversedXAxis = this.xAxis.reversed, reversedYAxis = this.yAxis.reversed, stacking = this.options.stacking, path = [], connectorThreshold, prevStack, prevStackX, prevPoint, yPos, isPos, prevArgs, pointArgs, i, d;
+                var data = this.data, yAxis = this.yAxis, length = data.length, graphNormalizer = Math.round(this.graph.strokeWidth()) % 2 / 2, borderNormalizer = Math.round(this.borderWidth) % 2 / 2, reversedXAxis = this.xAxis.reversed, reversedYAxis = this.yAxis.reversed, stacking = this.options.stacking, path = [], connectorThreshold, prevStack, prevStackX, prevPoint, yPos, isPos, prevArgs, pointArgs, i;
                 for (i = 1; i < length; i++) {
                     pointArgs = data[i].shapeArgs;
                     prevPoint = data[i - 1];
                     prevArgs = data[i - 1].shapeArgs;
-                    prevStack = yAxis.waterfallStacks[this.stackKey];
+                    prevStack = yAxis.waterfall.stacks[this.stackKey];
                     isPos = prevPoint.y > 0 ? -prevArgs.height : 0;
-                    if (prevStack) {
+                    if (prevStack && prevArgs && pointArgs) {
                         prevStackX = prevStack[i - 1];
                         // y position of the connector is different when series are
                         // stacked, yAxis is reversed and it also depends on point's
@@ -3952,26 +4346,28 @@
                                 prevArgs.y + prevPoint.minPointLengthOffset +
                                     borderNormalizer - graphNormalizer;
                         }
-                        d = [
+                        path.push([
                             'M',
-                            prevArgs.x + (reversedXAxis ?
+                            (prevArgs.x || 0) + (reversedXAxis ?
                                 0 :
-                                prevArgs.width),
-                            yPos,
+                                (prevArgs.width || 0)),
+                            yPos
+                        ], [
                             'L',
-                            pointArgs.x + (reversedXAxis ?
-                                pointArgs.width :
+                            (pointArgs.x || 0) + (reversedXAxis ?
+                                (pointArgs.width || 0) :
                                 0),
                             yPos
-                        ];
+                        ]);
                     }
-                    if (!stacking && d &&
-                        (prevPoint.y < 0 && !reversedYAxis) ||
-                        (prevPoint.y > 0 && reversedYAxis)) {
-                        d[2] += prevArgs.height;
-                        d[5] += prevArgs.height;
+                    if (!stacking &&
+                        path.length &&
+                        prevArgs &&
+                        ((prevPoint.y < 0 && !reversedYAxis) ||
+                            (prevPoint.y > 0 && reversedYAxis))) {
+                        path[path.length - 2][2] += prevArgs.height;
+                        path[path.length - 1][2] += prevArgs.height;
                     }
-                    path = path.concat(d);
                 }
                 return path;
             },
@@ -3985,7 +4381,7 @@
             },
             // Waterfall has stacking along the x-values too.
             setStackedPoints: function () {
-                var series = this, options = series.options, waterfallStacks = series.yAxis.waterfallStacks, seriesThreshold = options.threshold, stackThreshold = seriesThreshold || 0, interSum = stackThreshold, stackKey = series.stackKey, xData = series.xData, xLength = xData.length, actualStack, actualStackX, totalYVal, actualSum, prevSum, statesLen, posTotal, negTotal, xPoint, yVal, x, alreadyChanged, changed;
+                var series = this, options = series.options, waterfallStacks = series.yAxis.waterfall.stacks, seriesThreshold = options.threshold, stackThreshold = seriesThreshold || 0, interSum = stackThreshold, stackKey = series.stackKey, xData = series.xData, xLength = xData.length, actualStack, actualStackX, totalYVal, actualSum, prevSum, statesLen, posTotal, negTotal, xPoint, yVal, x, alreadyChanged, changed;
                 // function responsible for calculating correct values for stackState
                 // array of each stack item. The arguments are: firstS - the value for
                 // the first state, nextS - the difference between the previous and the
@@ -4005,7 +4401,7 @@
                     }
                     actualStackX.stackState.push(actualStackX.stackState[statesLen - 1] + nextS);
                 }
-                series.yAxis.usePercentage = false;
+                series.yAxis.stacking.usePercentage = false;
                 totalYVal = actualSum = prevSum = stackThreshold;
                 // code responsible for creating stacks for waterfall series
                 if (series.visible ||
@@ -4092,7 +4488,7 @@
                 var stacking = this.options.stacking, yAxis, waterfallStacks, stackedYNeg, stackedYPos;
                 if (stacking) {
                     yAxis = this.yAxis;
-                    waterfallStacks = yAxis.waterfallStacks;
+                    waterfallStacks = yAxis.waterfall.stacks;
                     stackedYNeg = this.stackedYNeg = [];
                     stackedYPos = this.stackedYPos = [];
                     // the visible y range can be different when stacking is set to
@@ -4109,9 +4505,17 @@
                             stackedYPos.push(stackX.posTotal + stackX.threshold);
                         });
                     }
-                    this.dataMin = arrayMin(stackedYNeg);
-                    this.dataMax = arrayMax(stackedYPos);
+                    return {
+                        dataMin: arrayMin(stackedYNeg),
+                        dataMax: arrayMax(stackedYPos)
+                    };
                 }
+                // When not stacking, data extremes have already been computed in the
+                // processData function.
+                return {
+                    dataMin: this.dataMin,
+                    dataMax: this.dataMax
+                };
             }
             // Point members
         }, {
@@ -4129,7 +4533,7 @@
             isValid: function () {
                 return (isNumber(this.y) ||
                     this.isSum ||
-                    this.isIntermediateSum);
+                    Boolean(this.isIntermediateSum));
             }
         });
         /**
@@ -4228,19 +4632,22 @@
          * @apioption series.waterfall.data.isSum
          */
         ''; // adds doclets above to transpiled file
+        WaterfallAxis.compose(Axis, Chart);
 
+        return WaterfallAxis;
     });
-    _registerModule(_modules, 'parts-more/PolygonSeries.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'parts-more/PolygonSeries.js', [_modules['parts/Globals.js'], _modules['mixins/legend-symbol.js'], _modules['parts/Utilities.js']], function (H, LegendSymbolMixin, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var LegendSymbolMixin = H.LegendSymbolMixin, noop = H.noop, Series = H.Series, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var seriesType = U.seriesType;
+        var noop = H.noop, Series = H.Series, seriesTypes = H.seriesTypes;
         /**
          * A polygon series can be used to draw any freeform shape in the cartesian
          * coordinate system. A fill is applied with the `color` option, and
@@ -4280,8 +4687,8 @@
                 var graphPath = Series.prototype.getGraphPath.call(this), i = graphPath.length + 1;
                 // Close all segments
                 while (i--) {
-                    if ((i === graphPath.length || graphPath[i] === 'M') && i > 0) {
-                        graphPath.splice(i, 0, 'z');
+                    if ((i === graphPath.length || graphPath[i][0] === 'M') && i > 0) {
+                        graphPath.splice(i, 0, ['Z']);
                     }
                 }
                 this.areaPath = graphPath;
@@ -4368,10 +4775,10 @@
         ''; // adds doclets above to transpiled file
 
     });
-    _registerModule(_modules, 'parts-more/BubbleLegend.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/BubbleLegend.js', [_modules['parts/Chart.js'], _modules['parts/Color.js'], _modules['parts/Globals.js'], _modules['parts/Legend.js'], _modules['parts/Utilities.js']], function (Chart, Color, H, Legend, U) {
         /* *
          *
-         *  (c) 2010-2019 Highsoft AS
+         *  (c) 2010-2020 Highsoft AS
          *
          *  Author: Paweł Potaczek
          *
@@ -4380,6 +4787,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
+        var color = Color.parse;
+        var addEvent = U.addEvent, arrayMax = U.arrayMax, arrayMin = U.arrayMin, isNumber = U.isNumber, merge = U.merge, objectEach = U.objectEach, pick = U.pick, setOptions = U.setOptions, stableSort = U.stableSort, wrap = U.wrap;
         /**
          * @interface Highcharts.BubbleLegendFormatterContextObject
          */ /**
@@ -4395,8 +4804,8 @@
         * @name Highcharts.BubbleLegendFormatterContextObject#value
         * @type {number}
         */
-        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, isNumber = U.isNumber, objectEach = U.objectEach, pick = U.pick, wrap = U.wrap;
-        var Series = H.Series, Legend = H.Legend, Chart = H.Chart, addEvent = H.addEvent, color = H.color, merge = H.merge, noop = H.noop, stableSort = H.stableSort, setOptions = H.setOptions;
+        ''; // detach doclets above
+        var Series = H.Series, noop = H.noop;
         setOptions({
             legend: {
                 /**
@@ -4509,9 +4918,8 @@
                          */
                         allowOverlap: false,
                         /**
-                         * A [format string](http://docs.highcharts.com/#formatting)
-                         * for the bubble legend labels. Available variables are the
-                         * same as for `formatter`.
+                         * A format string for the bubble legend labels. Available
+                         * variables are the same as for `formatter`.
                          *
                          * @sample highcharts/bubble-legend/format/
                          *         Add a unit
@@ -4657,10 +5065,25 @@
          * @param {Highcharts.Legend} legend
          *        Legend
          */
-        H.BubbleLegend = function (options, legend) {
-            this.init(options, legend);
-        };
-        H.BubbleLegend.prototype = {
+        var BubbleLegend = /** @class */ (function () {
+            function BubbleLegend(options, legend) {
+                this.chart = void 0;
+                this.fontMetrics = void 0;
+                this.legend = void 0;
+                this.legendGroup = void 0;
+                this.legendItem = void 0;
+                this.legendItemHeight = void 0;
+                this.legendItemWidth = void 0;
+                this.legendSymbol = void 0;
+                this.maxLabel = void 0;
+                this.movementX = void 0;
+                this.ranges = void 0;
+                this.visible = void 0;
+                this.symbols = void 0;
+                this.options = void 0;
+                this.setState = noop;
+                this.init(options, legend);
+            }
             /**
              * Create basic bubbleLegend properties similar to item in legend.
              *
@@ -4672,13 +5095,12 @@
              *        Legend
              * @return {void}
              */
-            init: function (options, legend) {
+            BubbleLegend.prototype.init = function (options, legend) {
                 this.options = options;
                 this.visible = true;
                 this.chart = legend.chart;
                 this.legend = legend;
-            },
-            setState: noop,
+            };
             /**
              * Depending on the position option, add bubbleLegend to legend items.
              *
@@ -4688,10 +5110,10 @@
              *        All legend items
              * @return {void}
              */
-            addToLegend: function (items) {
+            BubbleLegend.prototype.addToLegend = function (items) {
                 // Insert bubbleLegend into legend items
                 items.splice(this.options.legendIndex, 0, this);
-            },
+            };
             /**
              * Calculate ranges, sizes and call the next steps of bubbleLegend
              * creation.
@@ -4702,7 +5124,7 @@
              *        Legend instance
              * @return {void}
              */
-            drawLegendSymbol: function (legend) {
+            BubbleLegend.prototype.drawLegendSymbol = function (legend) {
                 var chart = this.chart, options = this.options, size, itemDistance = pick(legend.options.itemDistance, 20), connectorSpace, ranges = options.ranges, radius, maxLabel, connectorDistance = options.connectorDistance;
                 // Predict label dimensions
                 this.fontMetrics = chart.renderer.fontMetrics(options.labels.style.fontSize.toString() + 'px');
@@ -4732,7 +5154,7 @@
                     connectorSpace : 0;
                 this.legendItemWidth = size + connectorSpace + itemDistance;
                 this.legendItemHeight = size + this.fontMetrics.h / 2;
-            },
+            };
             /**
              * Set style options for each bubbleLegend range.
              *
@@ -4740,7 +5162,7 @@
              * @function Highcharts.BubbleLegend#setOptions
              * @return {void}
              */
-            setOptions: function () {
+            BubbleLegend.prototype.setOptions = function () {
                 var ranges = this.ranges, options = this.options, series = this.chart.series[options.seriesIndex], baseline = this.legend.baseline, bubbleStyle = {
                     'z-index': options.zIndex,
                     'stroke-width': options.borderWidth
@@ -4772,7 +5194,7 @@
                         });
                     }
                 }, this);
-            },
+            };
             /**
              * Merge options for bubbleLegend labels.
              *
@@ -4780,7 +5202,7 @@
              * @function Highcharts.BubbleLegend#getLabelStyles
              * @return {Highcharts.CSSObject}
              */
-            getLabelStyles: function () {
+            BubbleLegend.prototype.getLabelStyles = function () {
                 var options = this.options, additionalLabelsStyle = {}, labelsOnLeft = options.labels.align === 'left', rtl = this.legend.options.rtl;
                 // To separate additional style options
                 objectEach(options.labels.style, function (value, key) {
@@ -4796,7 +5218,7 @@
                     'z-index': options.zIndex,
                     align: rtl || labelsOnLeft ? 'right' : 'left'
                 });
-            },
+            };
             /**
              * Calculate radius for each bubble range,
              * used code from BubbleSeries.js 'getRadius' method.
@@ -4808,10 +5230,10 @@
              * @return {number|null}
              *         Radius for one range
              */
-            getRangeRadius: function (value) {
+            BubbleLegend.prototype.getRangeRadius = function (value) {
                 var options = this.options, seriesIndex = this.options.seriesIndex, bubbleSeries = this.chart.series[seriesIndex], zMax = options.ranges[0].value, zMin = options.ranges[options.ranges.length - 1].value, minSize = options.minSize, maxSize = options.maxSize;
                 return bubbleSeries.getRadius.call(this, zMin, zMax, minSize, maxSize, value);
-            },
+            };
             /**
              * Render the legendSymbol group.
              *
@@ -4819,7 +5241,7 @@
              * @function Highcharts.BubbleLegend#render
              * @return {void}
              */
-            render: function () {
+            BubbleLegend.prototype.render = function () {
                 var renderer = this.chart.renderer, zThreshold = this.options.zThreshold;
                 if (!this.symbols) {
                     this.symbols = {
@@ -4843,7 +5265,7 @@
                 this.legendSymbol.add(this.legendItem);
                 this.legendItem.add(this.legendGroup);
                 this.hideOverlappingLabels();
-            },
+            };
             /**
              * Render one range, consisting of bubble symbol, connector and label.
              *
@@ -4853,9 +5275,9 @@
              *        Range options
              * @return {void}
              */
-            renderRange: function (range) {
-                var mainRange = this.ranges[0], legend = this.legend, options = this.options, labelsOptions = options.labels, chart = this.chart, renderer = chart.renderer, symbols = this.symbols, labels = symbols.labels, label, elementCenter = range.center, absoluteRadius = Math.abs(range.radius), connectorDistance = options.connectorDistance, labelsAlign = labelsOptions.align, rtl = legend.options.rtl, fontSize = labelsOptions.style.fontSize, connectorLength = rtl || labelsAlign === 'left' ?
-                    -connectorDistance : connectorDistance, borderWidth = options.borderWidth, connectorWidth = options.connectorWidth, posX = mainRange.radius, posY = elementCenter - absoluteRadius -
+            BubbleLegend.prototype.renderRange = function (range) {
+                var mainRange = this.ranges[0], legend = this.legend, options = this.options, labelsOptions = options.labels, chart = this.chart, renderer = chart.renderer, symbols = this.symbols, labels = symbols.labels, label, elementCenter = range.center, absoluteRadius = Math.abs(range.radius), connectorDistance = options.connectorDistance || 0, labelsAlign = labelsOptions.align, rtl = legend.options.rtl, fontSize = labelsOptions.style.fontSize, connectorLength = rtl || labelsAlign === 'left' ?
+                    -connectorDistance : connectorDistance, borderWidth = options.borderWidth, connectorWidth = options.connectorWidth, posX = mainRange.radius || 0, posY = elementCenter - absoluteRadius -
                     borderWidth / 2 + connectorWidth / 2, labelY, labelX, fontMetrics = this.fontMetrics, labelMovement = fontSize / 2 - (fontMetrics.h - fontSize) / 2, crispMovement = (posY % 1 ? 1 : 0.5) -
                     (connectorWidth % 2 ? 0 : 0.5), styledMode = renderer.styledMode;
                 // Set options for centered labels
@@ -4879,12 +5301,8 @@
                 // Render connector
                 symbols.connectors.push(renderer
                     .path(renderer.crispLine([
-                    'M',
-                    posX,
-                    posY,
-                    'L',
-                    posX + connectorLength,
-                    posY
+                    ['M', posX, posY],
+                    ['L', posX + connectorLength, posY]
                 ], options.connectorWidth))
                     .attr(styledMode ? {} : range.connectorStyle)
                     .addClass((styledMode ?
@@ -4905,7 +5323,7 @@
                     x: labelX,
                     y: labelY + labelMovement
                 };
-            },
+            };
             /**
              * Get the label which takes up the most space.
              *
@@ -4913,7 +5331,7 @@
              * @function Highcharts.BubbleLegend#getMaxLabelSize
              * @return {Highcharts.BBoxObject}
              */
-            getMaxLabelSize: function () {
+            BubbleLegend.prototype.getMaxLabelSize = function () {
                 var labels = this.symbols.labels, maxLabel, labelSize;
                 labels.forEach(function (label) {
                     labelSize = label.getBBox(true);
@@ -4926,7 +5344,7 @@
                     }
                 });
                 return maxLabel || {};
-            },
+            };
             /**
              * Get formatted label for range.
              *
@@ -4937,13 +5355,13 @@
              * @return {string}
              *         Range label text
              */
-            formatLabel: function (range) {
+            BubbleLegend.prototype.formatLabel = function (range) {
                 var options = this.options, formatter = options.labels.formatter, format = options.labels.format;
                 var numberFormatter = this.chart.numberFormatter;
-                return format ? H.format(format, range) :
+                return format ? U.format(format, range) :
                     formatter ? formatter.call(range) :
                         numberFormatter(range.value, 1);
-            },
+            };
             /**
              * By using default chart 'hideOverlappingLabels' method, hide or show
              * labels and connectors.
@@ -4952,7 +5370,7 @@
              * @function Highcharts.BubbleLegend#hideOverlappingLabels
              * @return {void}
              */
-            hideOverlappingLabels: function () {
+            BubbleLegend.prototype.hideOverlappingLabels = function () {
                 var chart = this.chart, allowOverlap = this.options.labels.allowOverlap, symbols = this.symbols;
                 if (!allowOverlap && symbols) {
                     chart.hideOverlappingLabels(symbols.labels);
@@ -4966,7 +5384,7 @@
                         }
                     });
                 }
-            },
+            };
             /**
              * Calculate ranges from created series.
              *
@@ -4975,7 +5393,7 @@
              * @return {Array<Highcharts.LegendBubbleLegendRangesOptions>}
              *         Array of range objects
              */
-            getRanges: function () {
+            BubbleLegend.prototype.getRanges = function () {
                 var bubbleLegend = this.legend.bubbleLegend, series = bubbleLegend.chart.series, ranges, rangesOptions = bubbleLegend.options.ranges, zData, minZ = Number.MAX_VALUE, maxZ = -Number.MAX_VALUE;
                 series.forEach(function (s) {
                     // Find the min and max Z, like in bubble series
@@ -5012,7 +5430,7 @@
                     }
                 });
                 return ranges;
-            },
+            };
             /**
              * Calculate bubble legend sizes from rendered series.
              *
@@ -5021,7 +5439,7 @@
              * @return {Array<number,number>}
              *         Calculated min and max bubble sizes
              */
-            predictBubbleSizes: function () {
+            BubbleLegend.prototype.predictBubbleSizes = function () {
                 var chart = this.chart, fontMetrics = this.fontMetrics, legendOptions = chart.legend.options, floating = legendOptions.floating, horizontal = legendOptions.layout === 'horizontal', lastLineHeight = horizontal ? chart.legend.lastLineHeight : 0, plotSizeX = chart.plotSizeX, plotSizeY = chart.plotSizeY, bubbleSeries = chart.series[this.options.seriesIndex], minSize = Math.ceil(bubbleSeries.minPxSize), maxPxSize = Math.ceil(bubbleSeries.maxPxSize), maxSize = bubbleSeries.options.maxSize, plotSize = Math.min(plotSizeY, plotSizeX), calculatedSize;
                 // Calculate prediceted max size of bubble
                 if (floating || !(/%$/.test(maxSize))) {
@@ -5040,7 +5458,7 @@
                     }
                 }
                 return [minSize, Math.ceil(calculatedSize)];
-            },
+            };
             /**
              * Correct ranges with calculated sizes.
              *
@@ -5050,12 +5468,12 @@
              * @param {number} max
              * @return {void}
              */
-            updateRanges: function (min, max) {
+            BubbleLegend.prototype.updateRanges = function (min, max) {
                 var bubbleLegendOptions = this.legend.options.bubbleLegend;
                 bubbleLegendOptions.minSize = min;
                 bubbleLegendOptions.maxSize = max;
                 bubbleLegendOptions.ranges = this.getRanges();
-            },
+            };
             /**
              * Because of the possibility of creating another legend line, predicted
              * bubble legend sizes may differ by a few pixels, so it is necessary to
@@ -5065,17 +5483,18 @@
              * @function Highcharts.BubbleLegend#correctSizes
              * @return {void}
              */
-            correctSizes: function () {
+            BubbleLegend.prototype.correctSizes = function () {
                 var legend = this.legend, chart = this.chart, bubbleSeries = chart.series[this.options.seriesIndex], bubbleSeriesSize = bubbleSeries.maxPxSize, bubbleLegendSize = this.options.maxSize;
                 if (Math.abs(Math.ceil(bubbleSeriesSize) - bubbleLegendSize) >
                     1) {
                     this.updateRanges(this.options.minSize, bubbleSeries.maxPxSize);
                     legend.render();
                 }
-            }
-        };
+            };
+            return BubbleLegend;
+        }());
         // Start the bubble legend creation process.
-        addEvent(H.Legend, 'afterGetAllItems', function (e) {
+        addEvent(Legend, 'afterGetAllItems', function (e) {
             var legend = this, bubbleLegend = legend.bubbleLegend, legendOptions = legend.options, options = legendOptions.bubbleLegend, bubbleSeriesIndex = legend.chart.getVisibleBubbleSeriesIndex();
             // Remove unnecessary element
             if (bubbleLegend && bubbleLegend.ranges && bubbleLegend.ranges.length) {
@@ -5254,12 +5673,14 @@
                 }
             }
         });
+        H.BubbleLegend = BubbleLegend;
 
+        return H.BubbleLegend;
     });
-    _registerModule(_modules, 'parts-more/BubbleSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/BubbleSeries.js', [_modules['parts/Globals.js'], _modules['parts/Color.js'], _modules['parts/Point.js'], _modules['parts/Utilities.js']], function (H, Color, Point, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
@@ -5269,8 +5690,9 @@
         /**
          * @typedef {"area"|"width"} Highcharts.BubbleSizeByValue
          */
-        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, clamp = U.clamp, extend = U.extend, isNumber = U.isNumber, pick = U.pick, pInt = U.pInt;
-        var Axis = H.Axis, color = H.color, noop = H.noop, Point = H.Point, Series = H.Series, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var color = Color.parse;
+        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, clamp = U.clamp, extend = U.extend, isNumber = U.isNumber, pick = U.pick, pInt = U.pInt, seriesType = U.seriesType;
+        var Axis = H.Axis, noop = H.noop, Series = H.Series, seriesTypes = H.seriesTypes;
         /**
          * A bubble series is a three dimensional series type where each point renders
          * an X, Y and Z value. Each points is drawn as a bubble where the position
@@ -5581,27 +6003,21 @@
                     this.points.length < this.options.animationLimit // #8099
                 ) {
                     this.points.forEach(function (point) {
-                        var graphic = point.graphic, animationTarget;
+                        var graphic = point.graphic;
                         if (graphic && graphic.width) { // URL symbols don't have width
-                            animationTarget = {
-                                x: graphic.x,
-                                y: graphic.y,
-                                width: graphic.width,
-                                height: graphic.height
-                            };
                             // Start values
-                            graphic.attr({
-                                x: point.plotX,
-                                y: point.plotY,
-                                width: 1,
-                                height: 1
-                            });
+                            if (!this.hasRendered) {
+                                graphic.attr({
+                                    x: point.plotX,
+                                    y: point.plotY,
+                                    width: 1,
+                                    height: 1
+                                });
+                            }
                             // Run animation
-                            graphic.animate(animationTarget, this.options.animation);
+                            graphic.animate(this.markerAttribs(point), this.options.animation);
                         }
                     }, this);
-                    // delete this function to allow it only once
-                    this.animate = null;
                 }
             },
             /**
@@ -5716,7 +6132,7 @@
                 }
             });
             // Apply the padding to the min and max properties
-            if (activeSeries.length && range > 0 && !this.isLog) {
+            if (activeSeries.length && range > 0 && !this.logarithmic) {
                 pxMax -= axisLength;
                 transA *= (axisLength +
                     Math.max(0, pxMin) - // #8901
@@ -5823,7 +6239,7 @@
          *
          *  Networkgraph series
          *
-         *  (c) 2010-2019 Paweł Fus
+         *  (c) 2010-2020 Paweł Fus
          *
          *  License: www.highcharts.com/license
          *
@@ -6186,7 +6602,7 @@
          *
          *  Networkgraph series
          *
-         *  (c) 2010-2019 Paweł Fus
+         *  (c) 2010-2020 Paweł Fus
          *
          *  License: www.highcharts.com/license
          *
@@ -6535,20 +6951,19 @@
         });
 
     });
-    _registerModule(_modules, 'modules/networkgraph/layouts.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'modules/networkgraph/layouts.js', [_modules['parts/Chart.js'], _modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (Chart, H, U) {
         /* *
          *
          *  Networkgraph series
          *
-         *  (c) 2010-2019 Paweł Fus
+         *  (c) 2010-2020 Paweł Fus
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var clamp = U.clamp, defined = U.defined, extend = U.extend, pick = U.pick, setAnimation = U.setAnimation;
-        var addEvent = H.addEvent, Chart = H.Chart;
+        var addEvent = U.addEvent, clamp = U.clamp, defined = U.defined, extend = U.extend, isFunction = U.isFunction, pick = U.pick, setAnimation = U.setAnimation;
         /* eslint-disable no-invalid-this, valid-jsdoc */
         H.layouts = {
             'reingold-fruchterman': function () {
@@ -6575,24 +6990,30 @@
                 this.setInitialRendering(true);
                 this.integration =
                     H.networkgraphIntegrations[options.integration];
+                this.enableSimulation = options.enableSimulation;
                 this.attractiveForce = pick(options.attractiveForce, this.integration.attractiveForceFunction);
                 this.repulsiveForce = pick(options.repulsiveForce, this.integration.repulsiveForceFunction);
                 this.approximation = options.approximation;
+            },
+            updateSimulation: function (enable) {
+                this.enableSimulation = pick(enable, this.options.enableSimulation);
             },
             start: function () {
                 var layout = this, series = this.series, options = this.options;
                 layout.currentStep = 0;
                 layout.forces = series[0] && series[0].forces || [];
+                layout.chart = series[0] && series[0].chart;
                 if (layout.initialRendering) {
                     layout.initPositions();
                     // Render elements in initial positions:
                     series.forEach(function (s) {
+                        s.finishedAnimating = true; // #13169
                         s.render();
                     });
                 }
                 layout.setK();
                 layout.resetSimulation(options);
-                if (options.enableSimulation) {
+                if (layout.enableSimulation) {
                     layout.step();
                 }
             },
@@ -6613,7 +7034,7 @@
                 layout.temperature = layout.coolDown(layout.startTemperature, layout.diffTemperature, layout.currentStep);
                 layout.prevSystemTemperature = layout.systemTemperature;
                 layout.systemTemperature = layout.getSystemTemperature();
-                if (options.enableSimulation) {
+                if (layout.enableSimulation) {
                     series.forEach(function (s) {
                         // Chart could be destroyed during the simulation
                         if (s.chart) {
@@ -6679,6 +7100,30 @@
                 this.setTemperature();
                 this.setDiffTemperature();
             },
+            restartSimulation: function () {
+                if (!this.simulation) {
+                    // When dragging nodes, we don't need to calculate
+                    // initial positions and rendering nodes:
+                    this.setInitialRendering(false);
+                    // Start new simulation:
+                    if (!this.enableSimulation) {
+                        // Run only one iteration to speed things up:
+                        this.setMaxIterations(1);
+                    }
+                    else {
+                        this.start();
+                    }
+                    if (this.chart) {
+                        this.chart.redraw();
+                    }
+                    // Restore defaults:
+                    this.setInitialRendering(true);
+                }
+                else {
+                    // Extend current simulation:
+                    this.resetSimulation();
+                }
+            },
             setMaxIterations: function (maxIterations) {
                 this.maxIterations = pick(maxIterations, this.options.maxIterations);
             },
@@ -6699,7 +7144,7 @@
             },
             initPositions: function () {
                 var initialPositions = this.options.initialPositions;
-                if (H.isFunction(initialPositions)) {
+                if (isFunction(initialPositions)) {
                     initialPositions.call(this);
                     this.nodes.forEach(function (node) {
                         if (!defined(node.prevX)) {
@@ -7000,7 +7445,7 @@
                 if (layout.maxIterations-- &&
                     isFinite(layout.temperature) &&
                     !layout.isStable() &&
-                    !layout.options.enableSimulation) {
+                    !layout.enableSimulation) {
                     // Hook similar to build-in addEvent, but instead of
                     // creating whole events logic, use just a function.
                     // It's faster which is important for rAF code.
@@ -7035,21 +7480,40 @@
                 }
             }
         });
+        // disable simulation before print if enabled
+        addEvent(Chart, 'beforePrint', function () {
+            if (this.graphLayoutsLookup) {
+                this.graphLayoutsLookup.forEach(function (layout) {
+                    layout.updateSimulation(false);
+                });
+                this.redraw();
+            }
+        });
+        // re-enable simulation after print
+        addEvent(Chart, 'afterPrint', function () {
+            if (this.graphLayoutsLookup) {
+                this.graphLayoutsLookup.forEach(function (layout) {
+                    // return to default simulation
+                    layout.updateSimulation();
+                });
+            }
+            this.redraw();
+        });
 
     });
-    _registerModule(_modules, 'modules/networkgraph/draggable-nodes.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'modules/networkgraph/draggable-nodes.js', [_modules['parts/Chart.js'], _modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (Chart, H, U) {
         /* *
          *
          *  Networkgraph series
          *
-         *  (c) 2010-2019 Paweł Fus
+         *  (c) 2010-2020 Paweł Fus
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var Chart = H.Chart, addEvent = H.addEvent;
+        var addEvent = U.addEvent;
         /* eslint-disable no-invalid-this, valid-jsdoc */
         H.dragNodesMixin = {
             /**
@@ -7082,7 +7546,7 @@
              */
             onMouseMove: function (point, event) {
                 if (point.fixedPosition && point.inDragMode) {
-                    var series = this, chart = series.chart, normalizedEvent = chart.pointer.normalize(event), diffX = point.fixedPosition.chartX - normalizedEvent.chartX, diffY = point.fixedPosition.chartY - normalizedEvent.chartY, newPlotX, newPlotY;
+                    var series = this, chart = series.chart, normalizedEvent = chart.pointer.normalize(event), diffX = point.fixedPosition.chartX - normalizedEvent.chartX, diffY = point.fixedPosition.chartY - normalizedEvent.chartY, newPlotX, newPlotY, graphLayoutsLookup = chart.graphLayoutsLookup;
                     // At least 5px to apply change (avoids simple click):
                     if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
                         newPlotX = point.fixedPosition.plotX - diffX;
@@ -7092,26 +7556,9 @@
                             point.plotY = newPlotY;
                             point.hasDragged = true;
                             this.redrawHalo(point);
-                            if (!series.layout.simulation) {
-                                // When dragging nodes, we don't need to calculate
-                                // initial positions and rendering nodes:
-                                series.layout.setInitialRendering(false);
-                                // Start new simulation:
-                                if (!series.layout.enableSimulation) {
-                                    // Run only one iteration to speed things up:
-                                    series.layout.setMaxIterations(1);
-                                }
-                                else {
-                                    series.layout.start();
-                                }
-                                series.chart.redraw();
-                                // Restore defaults:
-                                series.layout.setInitialRendering(true);
-                            }
-                            else {
-                                // Extend current simulation:
-                                series.layout.resetSimulation();
-                            }
+                            graphLayoutsLookup.forEach(function (layout) {
+                                layout.restartSimulation();
+                            });
                         }
                     }
                 }
@@ -7187,7 +7634,7 @@
         });
 
     });
-    _registerModule(_modules, 'parts-more/PackedBubbleSeries.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/PackedBubbleSeries.js', [_modules['parts/Chart.js'], _modules['parts/Color.js'], _modules['parts/Globals.js'], _modules['parts/Point.js'], _modules['parts/Utilities.js']], function (Chart, Color, H, Point, U) {
         /* *
          *
          *  (c) 2010-2018 Grzegorz Blachlinski, Sebastian Bochan
@@ -7197,6 +7644,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
+        var color = Color.parse;
+        var addEvent = U.addEvent, clamp = U.clamp, defined = U.defined, extend = U.extend, extendClass = U.extendClass, fireEvent = U.fireEvent, isArray = U.isArray, isNumber = U.isNumber, merge = U.merge, pick = U.pick, seriesType = U.seriesType;
         /**
          * Formatter callback function.
          *
@@ -7212,7 +7661,7 @@
          * Context for the formatter function.
          *
          * @interface Highcharts.SeriesPackedBubbleDataLabelsFormatterContextObject
-         * @extends Highcharts.DataLabelsFormatterContextObject
+         * @extends Highcharts.PointLabelObject
          * @since 7.0.0
          */ /**
         * The color of the node.
@@ -7232,8 +7681,16 @@
         * @type {string}
         * @since 7.0.0
         */
-        var clamp = U.clamp, defined = U.defined, extend = U.extend, extendClass = U.extendClass, isArray = U.isArray, isNumber = U.isNumber, pick = U.pick;
-        var seriesType = H.seriesType, Series = H.Series, Point = H.Point, addEvent = H.addEvent, fireEvent = H.fireEvent, Chart = H.Chart, color = H.Color, Reingold = H.layouts['reingold-fruchterman'], NetworkPoint = H.seriesTypes.bubble.prototype.pointClass, dragNodesMixin = H.dragNodesMixin;
+        var Series = H.Series, Reingold = H.layouts['reingold-fruchterman'], NetworkPoint = H.seriesTypes.bubble.prototype.pointClass, dragNodesMixin = H.dragNodesMixin;
+        Chart.prototype.getSelectedParentNodes = function () {
+            var chart = this, series = chart.series, selectedParentsNodes = [];
+            series.forEach(function (series) {
+                if (series.parentNode && series.parentNode.selected) {
+                    selectedParentsNodes.push(series.parentNode);
+                }
+            });
+            return selectedParentsNodes;
+        };
         H.networkgraphIntegrations.packedbubble = {
             repulsiveForceFunction: function (d, k, node, repNode) {
                 return Math.min(d, (node.marker.radius + repNode.marker.radius) / 2);
@@ -7355,18 +7812,6 @@
                     }
                 }
                 Reingold.prototype.applyLimitBox.apply(this, arguments);
-            },
-            isStable: function () {
-                return Math.abs(this.systemTemperature -
-                    this.prevSystemTemperature) < 0.00001 ||
-                    this.temperature <= 0 ||
-                    (
-                    // In first iteration system does not move:
-                    this.systemTemperature > 0 &&
-                        (this.systemTemperature /
-                            this.nodes.length < 0.02 &&
-                            this.enableSimulation) // Use only when simulation is enabled
-                    );
             }
         });
         /**
@@ -7391,7 +7836,7 @@
          * @extends      plotOptions.bubble
          * @excluding    connectEnds, connectNulls, dragDrop, jitter, keys,
          *               pointPlacement, sizeByAbsoluteValue, step, xAxis, yAxis,
-         *               zMax, zMin
+         *               zMax, zMin, dataSorting
          * @product      highcharts
          * @since        7.0.0
          * @requires     highcharts-more
@@ -7430,6 +7875,7 @@
             maxSize: '50%',
             sizeBy: 'area',
             zoneAxis: 'y',
+            crisp: false,
             tooltip: {
                 pointFormat: 'Value: {point.value}'
             },
@@ -7459,6 +7905,24 @@
              */
             useSimulation: true,
             /**
+             * Series options for parent nodes.
+             *
+             * @since 8.1.1
+             *
+             * @private
+             */
+            parentNode: {
+                /**
+                 * Allow this series' parent nodes to be selected
+                 * by clicking on the graph.
+                 *
+                 * @since 8.1.1
+                 */
+                allowPointSelect: false
+            },
+            /**
+            /**
+             *
              * @declare Highcharts.SeriesPackedBubbleDataLabelsOptionsObject
              *
              * @private
@@ -7473,7 +7937,7 @@
                  *
                  * @type      {string}
                  * @since     7.0.0
-                 * @apioption plotOptions.packedBubble.dataLabels.format
+                 * @apioption plotOptions.packedbubble.dataLabels.format
                  */
                 // eslint-disable-next-line valid-jsdoc
                 /**
@@ -7490,14 +7954,10 @@
                 /**
                  * @type      {string}
                  * @since     7.1.0
-                 * @apioption plotOptions.packedBubble.dataLabels.parentNodeFormat
+                 * @apioption plotOptions.packedbubble.dataLabels.parentNodeFormat
                  */
                 // eslint-disable-next-line valid-jsdoc
                 /**
-                 * Callback to format data labels for _parentNodes_. The
-                 * `parentNodeFormat` option takes precedence over the
-                 * `parentNodeFormatter`.
-                 *
                  * @type  {Highcharts.SeriesPackedBubbleDataLabelsFormatterCallbackFunction}
                  * @since 7.1.0
                  */
@@ -7505,10 +7965,6 @@
                     return this.name;
                 },
                 /**
-                 * Options for a _parentNode_ label text.
-                 *
-                 * **Note:** Only SVG-based renderer supports this option.
-                 *
                  * @sample {highcharts} highcharts/series-packedbubble/packed-dashboard
                  *         Dashboard with dataLabels on parentNodes
                  *
@@ -7521,7 +7977,7 @@
                      *
                      * @type      {Highcharts.SVGAttributes}
                      * @since     7.1.0
-                     * @apioption plotOptions.packedBubble.dataLabels.attributes
+                     * @apioption plotOptions.packedbubble.dataLabels.attributes
                      */
                     /**
                      * Enable or disable `textPath` option for link's or marker's
@@ -7538,9 +7994,12 @@
                  * **Note:** Only SVG-based renderer supports this option.
                  *
                  * @extends   plotOptions.series.dataLabels.textPath
-                 * @apioption plotOptions.packedBubble.dataLabels.textPath
+                 * @apioption plotOptions.packedbubble.dataLabels.textPath
                  */
-                padding: 0
+                padding: 0,
+                style: {
+                    transition: 'opacity 2000ms'
+                }
             },
             /**
              * Options for layout algorithm when simulation is enabled. Inside there
@@ -7685,6 +8144,7 @@
              */
             forces: ['barycenter', 'repulsive'],
             pointArrayMap: ['value'],
+            trackerGroups: ['group', 'dataLabelsGroup', 'parentNodesGroup'],
             pointValKey: 'value',
             isCartesian: false,
             requireSorting: false,
@@ -7704,7 +8164,8 @@
                 var chart = series.chart, allDataPoints = [], i, j;
                 for (i = 0; i < chart.series.length; i++) {
                     series = chart.series[i];
-                    if (series.visible ||
+                    if (series.is('packedbubble') && // #13574
+                        series.visible ||
                         !chart.options.chart.ignoreHiddenSeries) {
                         // add data to array only if series is visible
                         for (j = 0; j < series.yData.length; j++) {
@@ -7750,7 +8211,12 @@
                             });
                         }
                     });
-                    series.chart.hideOverlappingLabels(dataLabels);
+                    // Only hide overlapping dataLabels for layouts that
+                    // use simulation. Spiral packedbubble don't need
+                    // additional dataLabel hiding on every simulation step
+                    if (series.options.useSimulation) {
+                        series.chart.hideOverlappingLabels(dataLabels);
+                    }
                 }
             },
             // Needed because of z-indexing issue if point is added in series.group
@@ -7856,8 +8322,7 @@
                     return;
                 }
                 var series = this, chart = series.chart, parentAttribs = {}, nodeMarker = this.layout.options.parentNodeOptions.marker, parentOptions = {
-                    fill: nodeMarker.fillColor ||
-                        color(series.color).brighten(0.4).get(),
+                    fill: nodeMarker.fillColor || color(series.color).brighten(0.4).get(),
                     opacity: nodeMarker.fillOpacity,
                     stroke: nodeMarker.lineColor || series.color,
                     'stroke-width': nodeMarker.lineWidth
@@ -7870,7 +8335,7 @@
                     });
                 }
                 this.calculateParentRadius();
-                parentAttribs = H.merge({
+                parentAttribs = merge({
                     x: series.parentNode.plotX -
                         series.parentNodeRadius,
                     y: series.parentNode.plotY -
@@ -7891,7 +8356,7 @@
              * @private
              */
             createParentNodes: function () {
-                var series = this, chart = series.chart, parentNodeLayout = series.parentNodeLayout, nodeAdded, parentNode = series.parentNode;
+                var series = this, chart = series.chart, parentNodeLayout = series.parentNodeLayout, nodeAdded, parentNode = series.parentNode, PackedBubblePoint = series.pointClass;
                 series.parentNodeMass = 0;
                 series.points.forEach(function (p) {
                     series.parentNodeMass +=
@@ -7906,7 +8371,7 @@
                 parentNodeLayout.setArea(0, 0, chart.plotWidth, chart.plotHeight);
                 if (!nodeAdded) {
                     if (!parentNode) {
-                        parentNode = (new NetworkPoint()).init(this, {
+                        parentNode = (new PackedBubblePoint()).init(this, {
                             mass: series.parentNodeRadius / 2,
                             marker: {
                                 radius: series.parentNodeRadius
@@ -7929,12 +8394,41 @@
                     parentNodeLayout.addElementsToCollection([parentNode], parentNodeLayout.nodes);
                 }
             },
+            drawTracker: function () {
+                var series = this, chart = series.chart, pointer = chart.pointer, onMouseOver = function (e) {
+                    var point = pointer.getPointFromEvent(e);
+                    // undefined on graph in scatterchart
+                    if (typeof point !== 'undefined') {
+                        pointer.isDirectTouch = true;
+                        point.onMouseOver(e);
+                    }
+                }, parentNode = series.parentNode;
+                var dataLabels;
+                H.TrackerMixin.drawTrackerPoint.call(this);
+                // Add reference to the point
+                if (parentNode) {
+                    dataLabels = (isArray(parentNode.dataLabels) ?
+                        parentNode.dataLabels :
+                        (parentNode.dataLabel ? [parentNode.dataLabel] : []));
+                    if (parentNode.graphic) {
+                        parentNode.graphic.element.point = parentNode;
+                    }
+                    dataLabels.forEach(function (dataLabel) {
+                        if (dataLabel.div) {
+                            dataLabel.div.point = parentNode;
+                        }
+                        else {
+                            dataLabel.element.point = parentNode;
+                        }
+                    });
+                }
+            },
             /**
              * Function responsible for adding series layout, used for parent nodes.
              * @private
              */
             addSeriesLayout: function () {
-                var series = this, layoutOptions = series.options.layoutAlgorithm, graphLayoutsStorage = series.chart.graphLayoutsStorage, graphLayoutsLookup = series.chart.graphLayoutsLookup, parentNodeOptions = H.merge(layoutOptions, layoutOptions.parentNodeOptions, {
+                var series = this, layoutOptions = series.options.layoutAlgorithm, graphLayoutsStorage = series.chart.graphLayoutsStorage, graphLayoutsLookup = series.chart.graphLayoutsLookup, parentNodeOptions = merge(layoutOptions, layoutOptions.parentNodeOptions, {
                     enableSimulation: series.layout.options.enableSimulation
                 }), parentNodeLayout;
                 parentNodeLayout = graphLayoutsStorage[layoutOptions.type + '-series'];
@@ -8336,7 +8830,7 @@
                                     node.marker.radius -
                                     point.marker.radius);
                                 if (distanceR < 0) {
-                                    node.series.addPoint(H.merge(point.options, {
+                                    node.series.addPoint(merge(point.options, {
                                         plotX: point.plotX,
                                         plotY: point.plotY
                                     }), false);
@@ -8378,6 +8872,29 @@
                     this.series.layout.removeElementFromCollection(this, this.series.layout.nodes);
                 }
                 return Point.prototype.destroy.apply(this, arguments);
+            },
+            firePointEvent: function (eventType, eventArgs, defaultFunction) {
+                var point = this, series = this.series, seriesOptions = series.options;
+                if (this.isParentNode && seriesOptions.parentNode) {
+                    var temp = seriesOptions.allowPointSelect;
+                    seriesOptions.allowPointSelect = seriesOptions.parentNode.allowPointSelect;
+                    Point.prototype.firePointEvent.apply(this, arguments);
+                    seriesOptions.allowPointSelect = temp;
+                }
+                else {
+                    Point.prototype.firePointEvent.apply(this, arguments);
+                }
+            },
+            select: function (selected, accumulate) {
+                var point = this, series = this.series, chart = series.chart;
+                if (point.isParentNode) {
+                    chart.getSelectedPoints = chart.getSelectedParentNodes;
+                    Point.prototype.select.apply(this, arguments);
+                    chart.getSelectedPoints = H.Chart.prototype.getSelectedPoints;
+                }
+                else {
+                    Point.prototype.select.apply(this, arguments);
+                }
             }
         });
         // Remove accumulated data points to redistribute all of them again
@@ -8394,8 +8911,8 @@
          *
          * @type      {Object}
          * @extends   series,plotOptions.packedbubble
-         * @excluding dataParser,dataURL,stack
-         * @product   highcharts highstock
+         * @excluding dataParser, dataSorting, dataURL, dragDrop, stack
+         * @product   highcharts
          * @requires  highcharts-more
          * @apioption series.packedbubble
          */
@@ -8447,20 +8964,20 @@
         ''; // adds doclets above to transpiled file
 
     });
-    _registerModule(_modules, 'parts-more/Polar.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'parts-more/Polar.js', [_modules['parts/Chart.js'], _modules['parts/Globals.js'], _modules['parts-more/Pane.js'], _modules['parts/Pointer.js'], _modules['parts/SVGRenderer.js'], _modules['parts/Utilities.js']], function (Chart, H, Pane, Pointer, SVGRenderer, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined, pick = U.pick, splat = U.splat, wrap = U.wrap;
+        var addEvent = U.addEvent, animObject = U.animObject, defined = U.defined, find = U.find, isNumber = U.isNumber, pick = U.pick, splat = U.splat, uniqueKey = U.uniqueKey, wrap = U.wrap;
         // Extensions for polar charts. Additionally, much of the geometry required for
         // polar charts is gathered in RadialAxes.js.
-        var Pointer = H.Pointer, Series = H.Series, seriesTypes = H.seriesTypes, seriesProto = Series.prototype, pointerProto = Pointer.prototype, colProto;
+        var Series = H.Series, seriesTypes = H.seriesTypes, seriesProto = Series.prototype, pointerProto = Pointer.prototype, colProto, arearangeProto;
         /* eslint-disable no-invalid-this, valid-jsdoc */
         /**
          * Search a k-d tree by the point angle, used for shared tooltips in polar
@@ -8550,7 +9067,7 @@
          * @private
          */
         seriesProto.toXY = function (point) {
-            var xy, chart = this.chart, xAxis = this.xAxis, yAxis = this.yAxis, plotX = point.plotX, plotY = point.plotY, series = point.series, inverted = chart.inverted, pointY = point.y, clientX;
+            var xy, chart = this.chart, xAxis = this.xAxis, yAxis = this.yAxis, plotX = point.plotX, plotY = point.plotY, series = point.series, inverted = chart.inverted, pointY = point.y, radius = inverted ? plotX : yAxis.len - plotY, clientX;
             // Corrected y position of inverted series other than column
             if (inverted && series && !series.isRadialBar) {
                 point.plotY = plotY =
@@ -8559,9 +9076,12 @@
             // Save rectangular plotX, plotY for later computation
             point.rectPlotX = plotX;
             point.rectPlotY = plotY;
+            if (yAxis.center) {
+                radius += yAxis.center[3] / 2;
+            }
             // Find the polar plotX and plotY
-            xy = inverted ? xAxis.postTranslate(plotY, plotX) :
-                xAxis.postTranslate(plotX, yAxis.len - plotY);
+            xy = inverted ? yAxis.postTranslate(plotY, radius) :
+                xAxis.postTranslate(plotX, radius);
             point.plotX = point.polarPlotX = xy.x - chart.plotLeft;
             point.plotY = point.polarPlotY = xy.y - chart.plotTop;
             // If shared tooltip, record the angle in degrees in order to align X
@@ -8622,7 +9142,7 @@
          * and (yAxis.len - plotY) is the pixel distance from center.
          * @private
          */
-        H.addEvent(Series, 'afterTranslate', function () {
+        addEvent(Series, 'afterTranslate', function () {
             var series = this;
             var chart = series.chart;
             if (chart.polar && series.xAxis) {
@@ -8654,18 +9174,21 @@
                 }
                 // Perform clip after render
                 if (!this.hasClipCircleSetter) {
-                    this.hasClipCircleSetter = !!series.eventsToUnbind.push(H.addEvent(series, 'afterRender', function () {
+                    this.hasClipCircleSetter = !!series.eventsToUnbind.push(addEvent(series, 'afterRender', function () {
                         var circ;
                         if (chart.polar) {
-                            circ = this.yAxis.center;
+                            // For clipping purposes there is a need for
+                            // coordinates from the absolute center
+                            circ = this.yAxis.pane.center;
                             if (!this.clipCircle) {
-                                this.clipCircle = chart.renderer.clipCircle(circ[0], circ[1], circ[2] / 2);
+                                this.clipCircle = chart.renderer.clipCircle(circ[0], circ[1], circ[2] / 2, circ[3] / 2);
                             }
                             else {
                                 this.clipCircle.animate({
                                     x: circ[0],
                                     y: circ[1],
-                                    r: circ[2] / 2
+                                    r: circ[2] / 2,
+                                    innerR: circ[3] / 2
                                 });
                             }
                             this.group.clip(this.clipCircle);
@@ -8730,49 +9253,73 @@
             return ret;
         });
         var polarAnimate = function (proceed, init) {
-            var chart = this.chart, animation = this.options.animation, group = this.group, markerGroup = this.markerGroup, center = this.xAxis.center, plotLeft = chart.plotLeft, plotTop = chart.plotTop, attribs;
+            var series = this, chart = this.chart, animation = this.options.animation, group = this.group, markerGroup = this.markerGroup, center = this.xAxis.center, plotLeft = chart.plotLeft, plotTop = chart.plotTop, attribs, paneInnerR, graphic, shapeArgs, r, innerR;
             // Specific animation for polar charts
             if (chart.polar) {
-                if (this.isRadialBar) {
+                if (series.isRadialBar) {
                     if (!init) {
                         // Run the pie animation for radial bars
-                        this.startAngleRad = pick(this.translatedThreshold, this.xAxis.startAngleRad);
-                        H.seriesTypes.pie.prototype.animate.call(this, init);
+                        series.startAngleRad = pick(series.translatedThreshold, series.xAxis.startAngleRad);
+                        H.seriesTypes.pie.prototype.animate.call(series, init);
                     }
                 }
                 else {
                     // Enable animation on polar charts only in SVG. In VML, the scaling
                     // is different, plus animation would be so slow it would't matter.
                     if (chart.renderer.isSVG) {
-                        animation = H.animObject(animation);
-                        // Initialize the animation
-                        if (init) {
-                            // Scale down the group and place it in the center
-                            attribs = {
-                                translateX: center[0] + plotLeft,
-                                translateY: center[1] + plotTop,
-                                scaleX: 0.001,
-                                scaleY: 0.001
-                            };
-                            group.attr(attribs);
-                            if (markerGroup) {
-                                markerGroup.attr(attribs);
+                        animation = animObject(animation);
+                        // A different animation needed for column like series
+                        if (series.is('column')) {
+                            if (!init) {
+                                paneInnerR = center[3] / 2;
+                                series.points.forEach(function (point) {
+                                    graphic = point.graphic;
+                                    shapeArgs = point.shapeArgs;
+                                    r = shapeArgs && shapeArgs.r;
+                                    innerR = shapeArgs && shapeArgs.innerR;
+                                    if (graphic && shapeArgs) {
+                                        // start values
+                                        graphic.attr({
+                                            r: paneInnerR,
+                                            innerR: paneInnerR
+                                        });
+                                        // animate
+                                        graphic.animate({
+                                            r: r,
+                                            innerR: innerR
+                                        }, series.options.animation);
+                                    }
+                                });
                             }
-                            // Run the animation
                         }
                         else {
-                            attribs = {
-                                translateX: plotLeft,
-                                translateY: plotTop,
-                                scaleX: 1,
-                                scaleY: 1
-                            };
-                            group.animate(attribs, animation);
-                            if (markerGroup) {
-                                markerGroup.animate(attribs, animation);
+                            // Initialize the animation
+                            if (init) {
+                                // Scale down the group and place it in the center
+                                attribs = {
+                                    translateX: center[0] + plotLeft,
+                                    translateY: center[1] + plotTop,
+                                    scaleX: 0.001,
+                                    scaleY: 0.001
+                                };
+                                group.attr(attribs);
+                                if (markerGroup) {
+                                    markerGroup.attr(attribs);
+                                }
+                                // Run the animation
                             }
-                            // Delete this function to allow it only once
-                            this.animate = null;
+                            else {
+                                attribs = {
+                                    translateX: plotLeft,
+                                    translateY: plotTop,
+                                    scaleX: 1,
+                                    scaleY: 1
+                                };
+                                group.animate(attribs, animation);
+                                if (markerGroup) {
+                                    markerGroup.animate(attribs, animation);
+                                }
+                            }
                         }
                     }
                 }
@@ -8785,14 +9332,28 @@
         // Define the animate method for regular series
         wrap(seriesProto, 'animate', polarAnimate);
         if (seriesTypes.column) {
+            arearangeProto = seriesTypes.arearange.prototype;
             colProto = seriesTypes.column.prototype;
             colProto.polarArc = function (low, high, start, end) {
-                var center = this.xAxis.center, len = this.yAxis.len;
-                return this.chart.renderer.symbols.arc(center[0], center[1], len - high, null, {
+                var center = this.xAxis.center, len = this.yAxis.len, paneInnerR = center[3] / 2, r = len - high + paneInnerR, innerR = len - pick(low, len) + paneInnerR;
+                // Prevent columns from shooting through the pane's center
+                if (this.yAxis.reversed) {
+                    if (r < 0) {
+                        r = paneInnerR;
+                    }
+                    if (innerR < 0) {
+                        innerR = paneInnerR;
+                    }
+                }
+                // Return a new shapeArgs
+                return {
+                    x: center[0],
+                    y: center[1],
+                    r: r,
+                    innerR: innerR,
                     start: start,
-                    end: end,
-                    innerR: len - pick(low, len)
-                });
+                    end: end
+                };
             };
             /**
              * Define the animate method for columnseries
@@ -8804,7 +9365,7 @@
              * @private
              */
             wrap(colProto, 'translate', function (proceed) {
-                var series = this, options = series.options, threshold = options.threshold, stacking = options.stacking, chart = series.chart, xAxis = series.xAxis, yAxis = series.yAxis, reversed = yAxis.reversed, center = xAxis.center, startAngleRad = xAxis.startAngleRad, endAngleRad = xAxis.endAngleRad, visibleRange = endAngleRad - startAngleRad, thresholdAngleRad, points, point, i, yMin, yMax, start, end, tooltipPos, pointX, pointY, stackValues, stack, barX, innerR, r;
+                var series = this, options = series.options, threshold = options.threshold, stacking = options.stacking, chart = series.chart, xAxis = series.xAxis, yAxis = series.yAxis, reversed = yAxis.reversed, center = yAxis.center, startAngleRad = xAxis.startAngleRad, endAngleRad = xAxis.endAngleRad, visibleRange = endAngleRad - startAngleRad, thresholdAngleRad, points, point, i, yMin, yMax, start, end, tooltipPos, pointX, pointY, stackValues, stack, barX, innerR, r;
                 series.preventPostTranslate = true;
                 // Run uber method
                 proceed.call(series);
@@ -8817,7 +9378,7 @@
                     threshold = options.threshold || 0;
                     if (chart.inverted) {
                         // Finding a correct threshold
-                        if (H.isNumber(threshold)) {
+                        if (isNumber(threshold)) {
                             thresholdAngleRad = yAxis.translate(threshold);
                             // Checks if threshold is outside the visible range
                             if (defined(thresholdAngleRad)) {
@@ -8838,11 +9399,11 @@
                         barX = point.barX;
                         pointX = point.x;
                         pointY = point.y;
+                        point.shapeType = 'arc';
                         if (chart.inverted) {
-                            point.shapeType = 'arc';
                             point.plotY = yAxis.translate(pointY);
-                            if (stacking) {
-                                stack = yAxis.stacks[(pointY < 0 ? '-' : '') +
+                            if (stacking && yAxis.stacking) {
+                                stack = yAxis.stacking.stacks[(pointY < 0 ? '-' : '') +
                                     series.stackKey];
                                 if (series.visible && stack && stack[pointX]) {
                                     if (!point.isNull) {
@@ -8896,14 +9457,17 @@
                             }
                             start += startAngleRad;
                             end += startAngleRad;
+                            if (center) {
+                                point.barX = barX += center[3] / 2;
+                            }
                             // In case when radius, inner radius or both are
                             // negative, a point is rendered but partially or as
                             // a center point
                             innerR = Math.max(barX, 0);
                             r = Math.max(barX + point.pointWidth, 0);
                             point.shapeArgs = {
-                                x: center[0],
-                                y: center[1],
+                                x: center && center[0],
+                                y: center && center[1],
                                 r: r,
                                 innerR: innerR,
                                 start: start,
@@ -8918,16 +9482,19 @@
                                 startAngleRad;
                         }
                         else {
-                            point.shapeType = 'path';
                             start = barX + startAngleRad;
-                            point.shapeArgs = {
-                                d: series.polarArc(point.yBottom, point.plotY, start, start + point.pointWidth)
-                            };
+                            // Changed the way polar columns are drawn in order to make
+                            // it more consistent with the drawing of inverted columns
+                            // (they are using the same function now). Also, it was
+                            // essential to make the animation work correctly (the
+                            // scaling of the group) is replaced by animating each
+                            // element separately.
+                            point.shapeArgs = series.polarArc(point.yBottom, point.plotY, start, start + point.pointWidth);
                         }
                         // Provided a correct coordinates for the tooltip
                         series.toXY(point);
                         if (chart.inverted) {
-                            tooltipPos = xAxis.postTranslate(point.rectPlotY, point.barX + point.pointWidth / 2);
+                            tooltipPos = yAxis.postTranslate(point.rectPlotY, barX + point.pointWidth / 2);
                             point.tooltipPos = [
                                 tooltipPos.x - chart.plotLeft,
                                 tooltipPos.y - chart.plotTop
@@ -8936,7 +9503,9 @@
                         else {
                             point.tooltipPos = [point.plotX, point.plotY];
                         }
-                        point.ttBelow = point.plotY > center[1];
+                        if (center) {
+                            point.ttBelow = point.plotY > center[1];
+                        }
                     }
                 }
             });
@@ -8972,20 +9541,22 @@
                 }
                 return options;
             };
+            if (arearangeProto) {
+                arearangeProto.findAlignments = colProto.findAlignments;
+            }
             /**
              * Align column data labels outside the columns. #1199.
              * @private
              */
             wrap(colProto, 'alignDataLabel', function (proceed, point, dataLabel, options, alignTo, isNew) {
-                var chart = this.chart, inside = pick(options.inside, !!this.options.stacking), angle, 
-                // align: Highcharts.AlignValue,
-                // verticalAlign: Highcharts.VerticalAlignValue,
-                shapeArgs, labelPos;
+                var chart = this.chart, inside = pick(options.inside, !!this.options.stacking), angle, shapeArgs, labelPos;
                 if (chart.polar) {
                     angle = point.rectPlotX / Math.PI * 180;
                     if (!chart.inverted) {
                         // Align nicely outside the perimeter of the columns
-                        options = this.findAlignments(angle, options);
+                        if (this.findAlignments) {
+                            options = this.findAlignments(angle, options);
+                        }
                     }
                     else { // Required corrections for data labels of inverted bars
                         // The plotX and plotY are correctly set therefore they
@@ -8997,7 +9568,7 @@
                             // Calculates pixel positions for a data label to be
                             // inside
                             labelPos =
-                                this.xAxis.postTranslate(
+                                this.yAxis.postTranslate(
                                 // angle
                                 (shapeArgs.start + shapeArgs.end) / 2 -
                                     this
@@ -9065,35 +9636,37 @@
             }
             return ret;
         });
-        H.SVGRenderer.prototype.clipCircle = function (x, y, r) {
-            var wrapper, id = H.uniqueKey(), clipPath = this.createElement('clipPath').attr({
+        SVGRenderer.prototype.clipCircle = function (x, y, r, innerR) {
+            var wrapper, id = uniqueKey(), clipPath = this.createElement('clipPath').attr({
                 id: id
             }).add(this.defs);
-            wrapper = this.circle(x, y, r).add(clipPath);
+            wrapper = innerR ?
+                this.arc(x, y, r, innerR, 0, 2 * Math.PI).add(clipPath) :
+                this.circle(x, y, r).add(clipPath);
             wrapper.id = id;
             wrapper.clipPath = clipPath;
             return wrapper;
         };
-        H.addEvent(H.Chart, 'getAxes', function () {
+        addEvent(Chart, 'getAxes', function () {
             if (!this.pane) {
                 this.pane = [];
             }
             splat(this.options.pane).forEach(function (paneOptions) {
-                new H.Pane(// eslint-disable-line no-new
+                new Pane(// eslint-disable-line no-new
                 paneOptions, this);
             }, this);
         });
-        H.addEvent(H.Chart, 'afterDrawChartBox', function () {
+        addEvent(Chart, 'afterDrawChartBox', function () {
             this.pane.forEach(function (pane) {
                 pane.render();
             });
         });
-        H.addEvent(H.Series, 'afterInit', function () {
+        addEvent(H.Series, 'afterInit', function () {
             var chart = this.chart;
             // Add flags that identifies radial inverted series
             if (chart.inverted && chart.polar) {
                 this.isRadialSeries = true;
-                if (this instanceof seriesTypes.column) {
+                if (this.is('column')) {
                     this.isRadialBar = true;
                 }
             }
@@ -9103,8 +9676,8 @@
          * responsiveness and chart.update.
          * @private
          */
-        wrap(H.Chart.prototype, 'get', function (proceed, id) {
-            return H.find(this.pane, function (pane) {
+        wrap(Chart.prototype, 'get', function (proceed, id) {
+            return find(this.pane, function (pane) {
                 return pane.options.id === id;
             }) || proceed.call(this, id);
         });

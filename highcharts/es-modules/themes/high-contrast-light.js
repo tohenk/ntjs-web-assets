@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2010-2019 Highsoft AS
+ *  (c) 2010-2020 Highsoft AS
  *
  *  Author: Øystein Moseng
  *
@@ -15,6 +15,8 @@
  * */
 'use strict';
 import Highcharts from '../parts/Globals.js';
+import U from '../parts/Utilities.js';
+var setOptions = U.setOptions;
 Highcharts.theme = {
     colors: [
         '#5f98cf',
@@ -36,4 +38,4 @@ Highcharts.theme = {
     }
 };
 // Apply the theme
-Highcharts.setOptions(Highcharts.theme);
+setOptions(Highcharts.theme);

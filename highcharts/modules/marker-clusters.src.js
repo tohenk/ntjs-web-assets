@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * Marker clusters module for Highcharts
  *
@@ -28,12 +28,12 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/marker-clusters.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'modules/marker-clusters.src.js', [_modules['parts/Chart.js'], _modules['parts/Globals.js'], _modules['parts/Options.js'], _modules['parts/Point.js'], _modules['parts/SVGRenderer.js'], _modules['parts/Utilities.js']], function (Chart, H, O, Point, SVGRenderer, U) {
         /* *
          *
          *  Marker clusters module.
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  Author: Wojciech Chmiel
          *
@@ -42,22 +42,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var __read = (this && this.__read) || function (o, n) {
-            var m = typeof Symbol === "function" && o[Symbol.iterator];
-            if (!m) return o;
-            var i = m.call(o), r, ar = [], e;
-            try {
-                while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-            }
-            catch (error) { e = { error: error }; }
-            finally {
-                try {
-                    if (r && !r.done && (m = i["return"])) m.call(i);
-                }
-                finally { if (e) throw e.error; }
-            }
-            return ar;
-        };
+        var defaultOptions = O.defaultOptions;
+        var addEvent = U.addEvent, animObject = U.animObject, defined = U.defined, error = U.error, isArray = U.isArray, isFunction = U.isFunction, isObject = U.isObject, isNumber = U.isNumber, merge = U.merge, objectEach = U.objectEach, relativeLength = U.relativeLength, syncTimeout = U.syncTimeout;
         /**
          * Function callback when a cluster is clicked.
          *
@@ -69,8 +55,9 @@
          * @param {Highcharts.PointClickEventObject} event
          *          Event arguments.
          */
+        ''; // detach doclets from following code
         /* eslint-disable no-invalid-this */
-        var Series = H.Series, Scatter = H.seriesTypes.scatter, Point = H.Point, SvgRenderer = H.SVGRenderer, addEvent = H.addEvent, merge = H.merge, defined = U.defined, isArray = U.isArray, isObject = U.isObject, isFunction = H.isFunction, isNumber = U.isNumber, relativeLength = H.relativeLength, error = H.error, objectEach = U.objectEach, syncTimeout = U.syncTimeout, animObject = H.animObject, baseGeneratePoints = Series.prototype.generatePoints, stateIdCounter = 0, 
+        var Series = H.Series, Scatter = H.seriesTypes.scatter, baseGeneratePoints = Series.prototype.generatePoints, stateIdCounter = 0, 
         // Points that ids are included in the oldPointsStateId array
         // are hidden before animation. Other ones are destroyed.
         oldPointsStateId = [];
@@ -97,6 +84,8 @@
          * @product      highcharts highmaps
          * @since 8.0.0
          * @optionparent plotOptions.scatter.cluster
+         *
+         * @private
          */
         var clusterDefaultOptions = {
             /**
@@ -339,7 +328,7 @@
              */
             /**
              * Options for the cluster data labels.
-             * @type    {Highcharts.DataLabelsOptionsObject}
+             * @type    {Highcharts.DataLabelsOptions}
              */
             dataLabels: {
                 /** @internal */
@@ -358,7 +347,7 @@
                 inside: true
             }
         };
-        (H.defaultOptions.plotOptions || {}).series = merge((H.defaultOptions.plotOptions || {}).series, {
+        (defaultOptions.plotOptions || {}).series = merge((defaultOptions.plotOptions || {}).series, {
             cluster: clusterDefaultOptions,
             tooltip: {
                 /**
@@ -563,7 +552,7 @@
         // }
         /* eslint-enable require-jsdoc */
         // Cluster symbol.
-        SvgRenderer.prototype.symbols.cluster = function (x, y, width, height) {
+        SVGRenderer.prototype.symbols.cluster = function (x, y, width, height) {
             var w = width / 2, h = height / 2, outerWidth = 1, space = 1, inner, outer1, outer2;
             inner = this.arc(x + w, y + h, w - space * 4, h - space * 4, {
                 start: Math.PI * 0.5,
@@ -743,10 +732,10 @@
                 xAxis.toValue(chart.plotLeft + chart.plotWidth) : 0, realMinY = yAxis ? yAxis.toValue(chart.plotTop) : 0, realMaxY = yAxis ?
                 yAxis.toValue(chart.plotTop + chart.plotHeight) : 0;
             if (realMinX > realMaxX) {
-                _a = __read([realMinX, realMaxX], 2), realMaxX = _a[0], realMinX = _a[1];
+                _a = [realMinX, realMaxX], realMaxX = _a[0], realMinX = _a[1];
             }
             if (realMinY > realMaxY) {
-                _b = __read([realMinY, realMaxY], 2), realMaxY = _b[0], realMinY = _b[1];
+                _b = [realMinY, realMaxY], realMaxY = _b[0], realMinY = _b[1];
             }
             return {
                 minX: realMinX,
@@ -777,10 +766,10 @@
                     chart.pointer.zoomY = true;
                     // Swap when minus values.
                     if (minX > maxX) {
-                        _a = __read([maxX, minX], 2), minX = _a[0], maxX = _a[1];
+                        _a = [maxX, minX], minX = _a[0], maxX = _a[1];
                     }
                     if (minY > maxY) {
-                        _b = __read([maxY, minY], 2), minY = _b[0], maxY = _b[1];
+                        _b = [maxY, minY], minY = _b[0], maxY = _b[1];
                     }
                     chart.zoom({
                         originalEvent: e,
@@ -1044,7 +1033,7 @@
             }
         };
         Scatter.prototype.preventClusterCollisions = function (props) {
-            var series = this, xAxis = series.xAxis, yAxis = series.yAxis, _a = __read(props.key.split('-').map(parseFloat), 2), gridY = _a[0], gridX = _a[1], gridSize = props.gridSize, groupedData = props.groupedData, defaultRadius = props.defaultRadius, clusterRadius = props.clusterRadius, gridXPx = gridX * gridSize, gridYPx = gridY * gridSize, xPixel = xAxis.toPixels(props.x), yPixel = yAxis.toPixels(props.y), gridsToCheckCollision = [], pointsLen = 0, radius = 0, clusterMarkerOptions = (series.options.cluster || {}).marker, zoneOptions = (series.options.cluster || {}).zones, gridOffset = series.getGridOffset(), nextXPixel, nextYPixel, signX, signY, cornerGridX, cornerGridY, i, j, itemX, itemY, nextClusterPos, maxDist, keys, x, y;
+            var series = this, xAxis = series.xAxis, yAxis = series.yAxis, _a = props.key.split('-').map(parseFloat), gridY = _a[0], gridX = _a[1], gridSize = props.gridSize, groupedData = props.groupedData, defaultRadius = props.defaultRadius, clusterRadius = props.clusterRadius, gridXPx = gridX * gridSize, gridYPx = gridY * gridSize, xPixel = xAxis.toPixels(props.x), yPixel = yAxis.toPixels(props.y), gridsToCheckCollision = [], pointsLen = 0, radius = 0, clusterMarkerOptions = (series.options.cluster || {}).marker, zoneOptions = (series.options.cluster || {}).zones, gridOffset = series.getGridOffset(), nextXPixel, nextYPixel, signX, signY, cornerGridX, cornerGridY, i, j, itemX, itemY, nextClusterPos, maxDist, keys, x, y;
             // Distance to the grid start.
             xPixel -= gridOffset.plotLeft;
             yPixel -= gridOffset.plotTop;
@@ -1078,7 +1067,7 @@
                         gridOffset.plotLeft;
                     nextYPixel = yAxis.toPixels(groupedData[item].posY || 0) -
                         gridOffset.plotTop;
-                    _a = __read(item.split('-').map(parseFloat), 2), itemY = _a[0], itemX = _a[1];
+                    _a = item.split('-').map(parseFloat), itemY = _a[0], itemX = _a[1];
                     if (zoneOptions) {
                         pointsLen = groupedData[item].length;
                         for (i = 0; i < zoneOptions.length; i++) {
@@ -1459,7 +1448,7 @@
             }
         };
         // Handle animation.
-        addEvent(H.Chart, 'render', function () {
+        addEvent(Chart, 'render', function () {
             var chart = this;
             (chart.series || []).forEach(function (series) {
                 if (series.markerClusterInfo) {
@@ -1519,7 +1508,7 @@
                 });
             }
         });
-        addEvent(H.Point, 'drillToCluster', function (event) {
+        addEvent(Point, 'drillToCluster', function (event) {
             var point = event.point || event.target, series = point.series, clusterOptions = series.options.cluster, onDrillToCluster = ((clusterOptions || {}).events || {}).drillToCluster;
             if (isFunction(onDrillToCluster)) {
                 onDrillToCluster.call(this, event);

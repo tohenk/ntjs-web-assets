@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * (c) 2016-2019 Highsoft AS
  * Authors: Jon Arild Nygard
@@ -51,7 +51,8 @@
          * @todo export this function to enable usage
          */
         var draw = function draw(params) {
-            var component = this, graphic = component.graphic, animatableAttribs = params.animatableAttribs, onComplete = params.onComplete, css = params.css, renderer = params.renderer;
+            var _a;
+            var component = this, graphic = component.graphic, animatableAttribs = params.animatableAttribs, onComplete = params.onComplete, css = params.css, renderer = params.renderer, animation = (_a = component.series) === null || _a === void 0 ? void 0 : _a.options.animation;
             if (component.shouldDraw()) {
                 if (!graphic) {
                     component.graphic = graphic =
@@ -61,7 +62,7 @@
                 graphic
                     .css(css)
                     .attr(params.attribs)
-                    .animate(animatableAttribs, params.isNew ? false : void 0, onComplete);
+                    .animate(animatableAttribs, params.isNew ? false : animation, onComplete);
             }
             else if (graphic) {
                 var destroy = function () {
@@ -122,8 +123,8 @@
         * @name Highcharts.PolygonObject#axes
         * @type {Array<PolygonPointObject>}
         */
-        var isArray = U.isArray, isNumber = U.isNumber;
-        var deg2rad = H.deg2rad, find = H.find;
+        var find = U.find, isArray = U.isArray, isNumber = U.isNumber;
+        var deg2rad = H.deg2rad;
         /* eslint-disable no-invalid-this, valid-jsdoc */
         /**
          * Alternative solution to correctFloat.
@@ -363,15 +364,15 @@
          *
          *  Experimental Highcharts module which enables visualization of a word cloud.
          *
-         *  (c) 2016-2019 Highsoft AS
+         *  (c) 2016-2020 Highsoft AS
          *  Authors: Jon Arild Nygard
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          * */
-        var extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject;
-        var merge = H.merge, noop = H.noop, find = H.find, getBoundingBoxFromPolygon = polygon.getBoundingBoxFromPolygon, getPolygon = polygon.getPolygon, isPolygonsColliding = polygon.isPolygonsColliding, movePolygon = polygon.movePolygon, Series = H.Series;
+        var extend = U.extend, find = U.find, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject, merge = U.merge, seriesType = U.seriesType;
+        var noop = H.noop, getBoundingBoxFromPolygon = polygon.getBoundingBoxFromPolygon, getPolygon = polygon.getPolygon, isPolygonsColliding = polygon.isPolygonsColliding, movePolygon = polygon.movePolygon, Series = H.Series;
         /**
          * Detects if there is a collision between two rectangles.
          *
@@ -870,7 +871,8 @@
          *               negativeColor, pointInterval, pointIntervalUnit, pointPadding,
          *               pointPlacement, pointRange, pointStart, pointWidth, pointStart,
          *               pointWidth, shadow, showCheckbox, showInNavigator,
-         *               softThreshold, stacking, threshold, zoneAxis, zones
+         *               softThreshold, stacking, threshold, zoneAxis, zones,
+         *               dataSorting
          * @product      highcharts
          * @since        6.0.0
          * @requires     modules/wordcloud
@@ -1021,9 +1023,20 @@
             drawPoints: function () {
                 var series = this, hasRendered = series.hasRendered, xAxis = series.xAxis, yAxis = series.yAxis, chart = series.chart, group = series.group, options = series.options, animation = options.animation, allowExtendPlayingField = options.allowExtendPlayingField, renderer = chart.renderer, testElement = renderer.text().add(group), placed = [], placementStrategy = series.placementStrategy[options.placementStrategy], spiral, rotation = options.rotation, scale, weights = series.points.map(function (p) {
                     return p.weight;
-                }), maxWeight = Math.max.apply(null, weights), data = series.points.sort(function (a, b) {
+                }), maxWeight = Math.max.apply(null, weights), 
+                // concat() prevents from sorting the original array.
+                data = series.points.concat().sort(function (a, b) {
                     return b.weight - a.weight; // Sort descending
                 }), field;
+                // Reset the scale before finding the dimensions (#11993).
+                // SVGGRaphicsElement.getBBox() (used in SVGElement.getBBox(boolean))
+                // returns slightly different values for the same element depending on
+                // whether it is rendered in a group which has already defined scale
+                // (e.g. 6) or in the group without a scale (scale = 1).
+                series.group.attr({
+                    scaleX: 1,
+                    scaleY: 1
+                });
                 // Get the dimensions for each word.
                 // Used in calculating the playing field.
                 data.forEach(function (point) {
@@ -1209,6 +1222,7 @@
          * specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.wordcloud
+         * @exclude   dataSorting
          * @product   highcharts
          * @requires  modules/wordcloud
          * @apioption series.wordcloud
@@ -1271,7 +1285,7 @@
          *
          * @augments Highcharts.Series
          */
-        H.seriesType('wordcloud', 'column', wordCloudOptions, wordCloudSeries, wordCloudPoint);
+        seriesType('wordcloud', 'column', wordCloudOptions, wordCloudSeries, wordCloudPoint);
 
     });
     _registerModule(_modules, 'masters/modules/wordcloud.src.js', [], function () {

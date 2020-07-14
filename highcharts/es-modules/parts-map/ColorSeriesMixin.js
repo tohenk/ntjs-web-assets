@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2010-2019 Torstein Honsi
+ *  (c) 2010-2020 Torstein Honsi
  *
  *  License: www.highcharts.com/license
  *
@@ -33,6 +33,7 @@ H.colorPointMixin = {
                 point[key][method]();
             }
         });
+        this.series.buildKDTree(); // rebuild kdtree #13195
     }
     /* eslint-enable valid-jsdoc */
 };
@@ -54,15 +55,18 @@ H.colorSeriesMixin = {
     translateColors: function () {
         var series = this, points = this.data.length ? this.data : this.points, nullColor = this.options.nullColor, colorAxis = this.colorAxis, colorKey = this.colorKey;
         points.forEach(function (point) {
-            var value = point[colorKey], color;
+            var value = point.getNestedProperty(colorKey), color;
             color = point.options.color ||
-                (point.isNull ?
+                (point.isNull || point.value === null ?
                     nullColor :
                     (colorAxis && typeof value !== 'undefined') ?
                         colorAxis.toColor(value, point) :
                         point.color || series.color);
-            if (color) {
+            if (color && point.color !== color) {
                 point.color = color;
+                if (series.options.legendType === 'point' && point.legendItem) {
+                    series.chart.legend.colorizeItem(point, point.visible);
+                }
             }
         });
     }

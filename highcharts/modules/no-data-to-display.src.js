@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * Plugin for displaying a message when there is no data visible in chart.
  *
@@ -34,7 +34,7 @@
          *
          *  Plugin for displaying a message when there is no data visible in chart.
          *
-         *  (c) 2010-2019 Highsoft AS
+         *  (c) 2010-2020 Highsoft AS
          *
          *  Author: Oystein Moseng
          *
@@ -43,8 +43,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var extend = U.extend;
-        var chartPrototype = H.Chart.prototype, defaultOptions = H.getOptions();
+        var addEvent = U.addEvent, extend = U.extend, getOptions = U.getOptions;
+        var chartPrototype = H.Chart.prototype, defaultOptions = getOptions();
         // Add language option
         extend(defaultOptions.lang, 
         /**
@@ -204,7 +204,7 @@
         };
         /* eslint-disable no-invalid-this */
         // Add event listener to handle automatic show or hide no-data message.
-        H.addEvent(H.Chart, 'render', function handleNoData() {
+        addEvent(H.Chart, 'render', function handleNoData() {
             if (this.hasData()) {
                 this.hideNoData();
             }

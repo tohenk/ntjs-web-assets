@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2010-2019 Torstein Honsi
+ *  (c) 2010-2020 Torstein Honsi
  *
  *  3D pie series
  *
@@ -109,8 +109,8 @@ wrap(seriesTypes.pie.prototype, 'animate', function (proceed) {
             // Initialize the animation
             if (init) {
                 // Scale down the group and place it in the center
-                group.oldtranslateX = group.translateX;
-                group.oldtranslateY = group.translateY;
+                group.oldtranslateX = pick(group.oldtranslateX, group.translateX);
+                group.oldtranslateY = pick(group.oldtranslateY, group.translateY);
                 attribs = {
                     translateX: center[0],
                     translateY: center[1],
@@ -135,8 +135,6 @@ wrap(seriesTypes.pie.prototype, 'animate', function (proceed) {
                 if (markerGroup) {
                     markerGroup.animate(attribs, animation);
                 }
-                // Delete this function to allow it only once
-                this.animate = null;
             }
         }
     }

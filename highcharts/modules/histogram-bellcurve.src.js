@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * (c) 2010-2019 Highsoft AS
  * Author: Sebastian Domas
@@ -33,8 +33,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined;
-        var Series = H.Series, addEvent = H.addEvent, noop = H.noop;
+        var addEvent = U.addEvent, defined = U.defined;
+        var Series = H.Series, noop = H.noop;
         /* ************************************************************************** *
          *
          * DERIVED SERIES MIXIN
@@ -144,7 +144,7 @@
 
         return derivedSeriesMixin;
     });
-    _registerModule(_modules, 'modules/histogram.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['mixins/derived-series.js']], function (H, U, derivedSeriesMixin) {
+    _registerModule(_modules, 'modules/histogram.src.js', [_modules['parts/Utilities.js'], _modules['mixins/derived-series.js']], function (U, derivedSeriesMixin) {
         /* *
          *
          *  Copyright (c) 2010-2017 Highsoft AS
@@ -155,8 +155,7 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, correctFloat = U.correctFloat, isNumber = U.isNumber, objectEach = U.objectEach;
-        var seriesType = H.seriesType, merge = H.merge;
+        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, correctFloat = U.correctFloat, isNumber = U.isNumber, merge = U.merge, objectEach = U.objectEach, seriesType = U.seriesType;
         /* ************************************************************************** *
          *  HISTOGRAM
          * ************************************************************************** */
@@ -259,9 +258,12 @@
                 // Float correction needed, because first frequency value is not
                 // corrected when generating frequencies (within for loop).
                 min = correctFloat(arrayMin(baseData)), frequencies = [], bins = {}, data = [], x, fitToBin;
-                binWidth = series.binWidth = series.options.pointRange = (correctFloat(isNumber(binWidth) ?
+                binWidth = series.binWidth = (correctFloat(isNumber(binWidth) ?
                     (binWidth || 1) :
                     (max - min) / binsNumber));
+                // #12077 negative pointRange causes wrong calculations,
+                // browser hanging.
+                series.options.pointRange = Math.max(binWidth, 0);
                 // If binWidth is 0 then max and min are equaled,
                 // increment the x with some positive value to quit the loop
                 for (x = min; 
@@ -272,7 +274,11 @@
                 x < max &&
                     (series.userOptions.binWidth ||
                         correctFloat(max - x) >= binWidth ||
-                        correctFloat(min + (frequencies.length * binWidth) - x) <= 0); x = correctFloat(x + binWidth)) {
+                        // #13069 - Every add and subtract operation should
+                        // be corrected, due to general problems with
+                        // operations on float numbers in JS.
+                        correctFloat(correctFloat(min + (frequencies.length * binWidth)) -
+                            x) <= 0); x = correctFloat(x + binWidth)) {
                     frequencies.push(x);
                     bins[x] = 0;
                 }
@@ -331,10 +337,10 @@
         ''; // adds doclets above to transpiled file
 
     });
-    _registerModule(_modules, 'modules/bellcurve.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['mixins/derived-series.js']], function (H, U, derivedSeriesMixin) {
+    _registerModule(_modules, 'modules/bellcurve.src.js', [_modules['parts/Utilities.js'], _modules['mixins/derived-series.js']], function (U, derivedSeriesMixin) {
         /* *
          *
-         *  (c) 2010-2019 Highsoft AS
+         *  (c) 2010-2020 Highsoft AS
          *
          *  Author: Sebastian Domas
          *
@@ -343,8 +349,7 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var correctFloat = U.correctFloat, isNumber = U.isNumber;
-        var seriesType = H.seriesType, merge = H.merge;
+        var correctFloat = U.correctFloat, isNumber = U.isNumber, merge = U.merge, seriesType = U.seriesType;
         /* ************************************************************************** *
          *  BELL CURVE                                                                *
          * ************************************************************************** */

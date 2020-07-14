@@ -2,7 +2,7 @@
  *
  *  Networkgraph series
  *
- *  (c) 2010-2019 Paweł Fus
+ *  (c) 2010-2020 Paweł Fus
  *
  *  License: www.highcharts.com/license
  *
@@ -11,12 +11,15 @@
  * */
 'use strict';
 import H from '../../parts/Globals.js';
+import Point from '../../parts/Point.js';
+import U from '../../parts/Utilities.js';
+var addEvent = U.addEvent, css = U.css, defined = U.defined, pick = U.pick, seriesType = U.seriesType;
 /**
  * Formatter callback function.
  *
  * @callback Highcharts.SeriesNetworkgraphDataLabelsFormatterCallbackFunction
  *
- * @param {Highcharts.SeriesNetworkgraphDataLabelsFormatterContextObject|Highcharts.DataLabelsFormatterContextObject} this
+ * @param {Highcharts.SeriesNetworkgraphDataLabelsFormatterContextObject|Highcharts.PointLabelObject} this
  *        Data label context to format
  *
  * @return {string}
@@ -26,7 +29,7 @@ import H from '../../parts/Globals.js';
  * Context for the formatter function.
  *
  * @interface Highcharts.SeriesNetworkgraphDataLabelsFormatterContextObject
- * @extends Highcharts.DataLabelsFormatterContextObject
+ * @extends Highcharts.PointLabelObject
  * @since 7.0.0
  */ /**
 * The color of the node.
@@ -46,13 +49,12 @@ import H from '../../parts/Globals.js';
 * @type {string}
 * @since 7.0.0
 */
-import U from '../../parts/Utilities.js';
-var defined = U.defined, pick = U.pick;
+''; // detach doclets above
 import '../../parts/Options.js';
 import '../../mixins/nodes.js';
 import './layouts.js';
 import './draggable-nodes.js';
-var addEvent = H.addEvent, seriesType = H.seriesType, seriesTypes = H.seriesTypes, Point = H.Point, Series = H.Series, dragNodesMixin = H.dragNodesMixin;
+var seriesTypes = H.seriesTypes, Series = H.Series, dragNodesMixin = H.dragNodesMixin;
 /**
  * @private
  * @class
@@ -75,7 +77,7 @@ seriesType('networkgraph', 'line',
  *               getExtremesFromAll, label, linecap, negativeColor,
  *               pointInterval, pointIntervalUnit, pointPlacement,
  *               pointStart, softThreshold, stack, stacking, step,
- *               threshold, xAxis, yAxis, zoneAxis
+ *               threshold, xAxis, yAxis, zoneAxis, dataSorting
  * @requires     modules/networkgraph
  * @optionparent plotOptions.networkgraph
  */
@@ -213,6 +215,9 @@ seriesType('networkgraph', 'line',
         },
         textPath: {
             enabled: false
+        },
+        style: {
+            transition: 'opacity 2000ms'
         }
     },
     /**
@@ -502,6 +507,14 @@ seriesType('networkgraph', 'line',
         this.indexateNodes();
     },
     /**
+     * In networkgraph, series.points refers to links,
+     * but series.nodes refers to actual points.
+     * @private
+     */
+    getPointsCollection: function () {
+        return this.nodes || [];
+    },
+    /**
      * Set index for each node. Required for proper `node.update()`.
      * Note that links are indexated out of the box in `generatePoints()`.
      *
@@ -590,28 +603,28 @@ seriesType('networkgraph', 'line',
      * @private
      */
     render: function () {
-        var points = this.points, hoverPoint = this.chart.hoverPoint, dataLabels = [];
+        var series = this, points = series.points, hoverPoint = series.chart.hoverPoint, dataLabels = [];
         // Render markers:
-        this.points = this.nodes;
+        series.points = series.nodes;
         seriesTypes.line.prototype.render.call(this);
-        this.points = points;
+        series.points = points;
         points.forEach(function (point) {
             if (point.fromNode && point.toNode) {
                 point.renderLink();
                 point.redrawLink();
             }
         });
-        if (hoverPoint && hoverPoint.series === this) {
-            this.redrawHalo(hoverPoint);
+        if (hoverPoint && hoverPoint.series === series) {
+            series.redrawHalo(hoverPoint);
         }
-        if (this.chart.hasRendered &&
-            !this.options.dataLabels.allowOverlap) {
-            this.nodes.concat(this.points).forEach(function (node) {
+        if (series.chart.hasRendered &&
+            !series.options.dataLabels.allowOverlap) {
+            series.nodes.concat(series.points).forEach(function (node) {
                 if (node.dataLabel) {
                     dataLabels.push(node.dataLabel);
                 }
             });
-            this.chart.hideOverlappingLabels(dataLabels);
+            series.chart.hideOverlappingLabels(dataLabels);
         }
     },
     // Networkgraph has two separate collecions of nodes and lines, render
@@ -632,8 +645,8 @@ seriesType('networkgraph', 'line',
     // Return the presentational attributes.
     pointAttribs: function (point, state) {
         // By default, only `selected` state is passed on
-        var pointState = state || point.state || 'normal', attribs = Series.prototype.pointAttribs.call(this, point, pointState), stateOptions = this.options.states[pointState];
-        if (!point.isNode) {
+        var pointState = state || point && point.state || 'normal', attribs = Series.prototype.pointAttribs.call(this, point, pointState), stateOptions = this.options.states[pointState];
+        if (point && !point.isNode) {
             attribs = point.getLinkAttributes();
             // For link, get prefixed names:
             if (stateOptions) {
@@ -707,10 +720,10 @@ seriesType('networkgraph', 'line',
         if (this.series.options.draggable &&
             !this.series.chart.styledMode) {
             addEvent(this, 'mouseOver', function () {
-                H.css(this.series.chart.container, { cursor: 'move' });
+                css(this.series.chart.container, { cursor: 'move' });
             });
             addEvent(this, 'mouseOut', function () {
-                H.css(this.series.chart.container, { cursor: 'default' });
+                css(this.series.chart.container, { cursor: 'default' });
             });
         }
         return this;
@@ -787,9 +800,13 @@ seriesType('networkgraph', 'line',
                 });
             }
             this.graphic.animate(this.shapeArgs);
-            // Required for dataLabels:
-            this.plotX = (path[1] + path[4]) / 2;
-            this.plotY = (path[2] + path[5]) / 2;
+            // Required for dataLabels
+            var start = path[0];
+            var end = path[1];
+            if (start[0] === 'M' && end[0] === 'L') {
+                this.plotX = (start[1] + end[1]) / 2;
+                this.plotY = (start[2] + end[2]) / 2;
+            }
         }
     },
     /**
@@ -822,12 +839,8 @@ seriesType('networkgraph', 'line',
             right = this.fromNode;
         }
         return [
-            'M',
-            left.plotX,
-            left.plotY,
-            'L',
-            right.plotX,
-            right.plotY
+            ['M', left.plotX || 0, left.plotY || 0],
+            ['L', right.plotX || 0, right.plotY || 0]
         ];
         /*
         IDEA: different link shapes?
@@ -940,7 +953,7 @@ seriesType('networkgraph', 'line',
  *            connectNulls, dragDrop, getExtremesFromAll, label, linecap,
  *            negativeColor, pointInterval, pointIntervalUnit,
  *            pointPlacement, pointStart, softThreshold, stack, stacking,
- *            step, threshold, xAxis, yAxis, zoneAxis
+ *            step, threshold, xAxis, yAxis, zoneAxis, dataSorting
  * @product   highcharts
  * @requires  modules/networkgraph
  * @apioption series.networkgraph

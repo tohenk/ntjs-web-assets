@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * Variable Pie module for Highcharts
  *
@@ -43,8 +43,8 @@
         /**
          * @typedef {"area"|"radius"} Highcharts.VariablePieSizeByValue
          */
-        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, clamp = U.clamp, pick = U.pick;
-        var fireEvent = H.fireEvent, seriesType = H.seriesType, pieProto = H.seriesTypes.pie.prototype;
+        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, clamp = U.clamp, fireEvent = U.fireEvent, pick = U.pick, seriesType = U.seriesType;
+        var pieProto = H.seriesTypes.pie.prototype;
         /**
          * The variablepie series type.
          *
@@ -344,7 +344,7 @@
          * specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.variablepie
-         * @excluding dataParser, dataURL, stack, xAxis, yAxis
+         * @excluding dataParser, dataURL, stack, xAxis, yAxis, dataSorting
          * @product   highcharts
          * @requires  modules/variable-pie.js
          * @apioption series.variablepie

@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2010-2019 Torstein Honsi
+ *  (c) 2010-2020 Torstein Honsi
  *
  *  License: www.highcharts.com/license
  *
@@ -23,8 +23,6 @@ import H from './Globals.js';
  *
  * @param {Highcharts.ChartAddSeriesEventObject} event
  *        The event that occured.
- *
- * @return {void}
  */
 /**
  * Contains common event information. Through the `options` property you can
@@ -58,8 +56,6 @@ import H from './Globals.js';
  *
  * @param {Highcharts.PointerEventObject} event
  *        The event that occured.
- *
- * @return {void}
  */
 /**
  * Contains an axes of the clicked spot.
@@ -103,8 +99,6 @@ import H from './Globals.js';
  *
  * @param {global.Event} event
  *        The event that occured.
- *
- * @return {void}
  */
 /**
  * Fires when the chart is redrawn, either after a call to `chart.redraw()` or
@@ -118,8 +112,6 @@ import H from './Globals.js';
  *
  * @param {global.Event} event
  *        The event that occured.
- *
- * @return {void}
  */
 /**
  * Gets fired after initial load of the chart (directly after the `load` event),
@@ -132,8 +124,6 @@ import H from './Globals.js';
  *
  * @param {global.Event} event
  *        The event that occured.
- *
- * @return {void}
  */
 /**
  * Gets fired when an area of the chart has been selected. The default action
@@ -185,10 +175,12 @@ import H from './Globals.js';
 * @name Highcharts.ChartSelectionAxisContextObject#min
 * @type {number}
 */
-import './Color.js';
-import './Utilities.js';
-import './Time.js';
-var color = H.color, isTouchDevice = H.isTouchDevice, merge = H.merge, svg = H.svg;
+import Time from './Time.js';
+import Color from './Color.js';
+var color = Color.parse;
+import U from './Utilities.js';
+var merge = U.merge;
+var isTouchDevice = H.isTouchDevice, svg = H.svg;
 /* ************************************************************************** *
  * Handle the options                                                         *
  * ************************************************************************** */
@@ -359,7 +351,7 @@ H.defaultOptions = {
          */
         decimalPoint: '.',
         /**
-         * [Metric prefixes](http://en.wikipedia.org/wiki/Metric_prefix) used
+         * [Metric prefixes](https://en.wikipedia.org/wiki/Metric_prefix) used
          * to shorten high numbers in axis labels. Replacing any of the
          * positions with `null` causes the full number to be written. Setting
          * `numericSymbols` to `null` disables shortening altogether.
@@ -430,7 +422,7 @@ H.defaultOptions = {
      *
      * The URL to the additional file to lazy load for Android 2.x devices.
      * These devices don't support SVG, so we download a helper file that
-     * contains [canvg](http://code.google.com/p/canvg/), its dependency
+     * contains [canvg](https://github.com/canvg/canvg), its dependency
      * rbcolor, and our own CanVG Renderer class. To avoid hotlinking to
      * our site, you can install canvas-tools.js on your own server and
      * change this option accordingly.
@@ -438,7 +430,7 @@ H.defaultOptions = {
      * @deprecated
      *
      * @type      {string}
-     * @default   http://code.highcharts.com/{version}/modules/canvas-tools.js
+     * @default   https://code.highcharts.com/{version}/modules/canvas-tools.js
      * @product   highcharts highmaps
      * @apioption global.canvasToolsURL
      */
@@ -497,7 +489,133 @@ H.defaultOptions = {
      * @apioption global.timezoneOffset
      */
     global: {},
-    time: H.Time.prototype.defaultOptions,
+    /**
+     * Time options that can apply globally or to individual charts. These
+     * settings affect how `datetime` axes are laid out, how tooltips are
+     * formatted, how series
+     * [pointIntervalUnit](#plotOptions.series.pointIntervalUnit) works and how
+     * the Highstock range selector handles time.
+     *
+     * The common use case is that all charts in the same Highcharts object
+     * share the same time settings, in which case the global settings are set
+     * using `setOptions`.
+     *
+     * ```js
+     * // Apply time settings globally
+     * Highcharts.setOptions({
+     *     time: {
+     *         timezone: 'Europe/London'
+     *     }
+     * });
+     * // Apply time settings by instance
+     * var chart = Highcharts.chart('container', {
+     *     time: {
+     *         timezone: 'America/New_York'
+     *     },
+     *     series: [{
+     *         data: [1, 4, 3, 5]
+     *     }]
+     * });
+     *
+     * // Use the Time object
+     * console.log(
+     *        'Current time in New York',
+     *        chart.time.dateFormat('%Y-%m-%d %H:%M:%S', Date.now())
+     * );
+     * ```
+     *
+     * Since v6.0.5, the time options were moved from the `global` obect to the
+     * `time` object, and time options can be set on each individual chart.
+     *
+     * @sample {highcharts|highstock}
+     *         highcharts/time/timezone/
+     *         Set the timezone globally
+     * @sample {highcharts}
+     *         highcharts/time/individual/
+     *         Set the timezone per chart instance
+     * @sample {highstock}
+     *         stock/time/individual/
+     *         Set the timezone per chart instance
+     *
+     * @since     6.0.5
+     * @optionparent time
+     */
+    time: {
+        /**
+         * A custom `Date` class for advanced date handling. For example,
+         * [JDate](https://github.com/tahajahangir/jdate) can be hooked in to
+         * handle Jalali dates.
+         *
+         * @type      {*}
+         * @since     4.0.4
+         * @product   highcharts highstock gantt
+         */
+        Date: void 0,
+        /**
+         * A callback to return the time zone offset for a given datetime. It
+         * takes the timestamp in terms of milliseconds since January 1 1970,
+         * and returns the timezone offset in minutes. This provides a hook
+         * for drawing time based charts in specific time zones using their
+         * local DST crossover dates, with the help of external libraries.
+         *
+         * @see [global.timezoneOffset](#global.timezoneOffset)
+         *
+         * @sample {highcharts|highstock} highcharts/time/gettimezoneoffset/
+         *         Use moment.js to draw Oslo time regardless of browser locale
+         *
+         * @type      {Highcharts.TimezoneOffsetCallbackFunction}
+         * @since     4.1.0
+         * @product   highcharts highstock gantt
+         */
+        getTimezoneOffset: void 0,
+        /**
+         * Requires [moment.js](https://momentjs.com/). If the timezone option
+         * is specified, it creates a default
+         * [getTimezoneOffset](#time.getTimezoneOffset) function that looks
+         * up the specified timezone in moment.js. If moment.js is not included,
+         * this throws a Highcharts error in the console, but does not crash the
+         * chart.
+         *
+         * @see [getTimezoneOffset](#time.getTimezoneOffset)
+         *
+         * @sample {highcharts|highstock} highcharts/time/timezone/
+         *         Europe/Oslo
+         *
+         * @type      {string}
+         * @since     5.0.7
+         * @product   highcharts highstock gantt
+         */
+        timezone: void 0,
+        /**
+         * The timezone offset in minutes. Positive values are west, negative
+         * values are east of UTC, as in the ECMAScript
+         * [getTimezoneOffset](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getTimezoneOffset)
+         * method. Use this to display UTC based data in a predefined time zone.
+         *
+         * @see [time.getTimezoneOffset](#time.getTimezoneOffset)
+         *
+         * @sample {highcharts|highstock} highcharts/time/timezoneoffset/
+         *         Timezone offset
+         *
+         * @since     3.0.8
+         * @product   highcharts highstock gantt
+         */
+        timezoneOffset: 0,
+        /**
+         * Whether to use UTC time for axis scaling, tickmark placement and
+         * time display in `Highcharts.dateFormat`. Advantages of using UTC
+         * is that the time displays equally regardless of the user agent's
+         * time zone settings. Local time can be used when the data is loaded
+         * in real time or when correct Daylight Saving Time transitions are
+         * required.
+         *
+         * @sample {highcharts} highcharts/time/useutc-true/
+         *         True by default
+         * @sample {highcharts} highcharts/time/useutc-false/
+         *         False
+         */
+        useUTC: true
+    },
     /**
      * General options for the chart.
      */
@@ -514,7 +632,7 @@ H.defaultOptions = {
          * @sample    maps/chart/topojson
          *            Loading topoJSON converted to geoJSON
          *
-         * @type      {string|Array<*>}
+         * @type      {string|Array<*>|Highcharts.GeoJSON}
          * @since     5.0.0
          * @product   highmaps
          * @apioption chart.map
@@ -575,6 +693,10 @@ H.defaultOptions = {
          *   `Math` object. See
          *   [the easing demo](https://jsfiddle.net/gh/get/library/pure/highcharts/highcharts/tree/master/samples/highcharts/plotoptions/series-animation-easing/).
          *
+         * When zooming on a series with less than 100 points, the chart redraw
+         * will be done with animation, but in case of more data points, it is
+         * necessary to set this option to ensure animation on zoom.
+         *
          * @sample {highcharts} highcharts/chart/animation-none/
          *         Updating with no animation
          * @sample {highcharts} highcharts/chart/animation-duration/
@@ -587,7 +709,7 @@ H.defaultOptions = {
          *         With a longer duration
          *
          * @type      {boolean|Highcharts.AnimationOptionsObject}
-         * @default   true
+         * @default   undefined
          * @apioption chart.animation
          */
         /**
@@ -881,6 +1003,9 @@ H.defaultOptions = {
         /**
          * Decides in what dimensions the user can pan the chart. Can be
          * one of `x`, `y`, or `xy`.
+         *
+         * @sample {highcharts} highcharts/chart/panning-type
+         *         Zooming and xy panning
          *
          * @type    {string}
          * @validvalue ["x", "y", "xy"]
@@ -2999,6 +3124,8 @@ H.defaultOptions = {
          *         A fixed tooltip position
          * @sample {highstock} stock/tooltip/split-positioner/
          *         Split tooltip with fixed positions
+         * @sample {highstock} stock/tooltip/positioner-scrollable-plotarea/
+         *         Scrollable plot area combined with tooltip positioner
          *
          * @type      {Highcharts.TooltipPositionerCallbackFunction}
          * @since     2.2.4
@@ -3089,6 +3216,17 @@ H.defaultOptions = {
          * @since     5.0.0
          * @product   highcharts highstock
          * @apioption tooltip.split
+         */
+        /**
+         * Prevents the tooltip from switching or closing, when touched or
+         * pointed.
+         *
+         * @sample highcharts/tooltip/stickoncontact/
+         *         Tooltip sticks on pointer contact
+         *
+         * @type      {boolean}
+         * @since     8.0.1
+         * @apioption tooltip.stickOnContact
          */
         /**
          * Use HTML to render the contents of the tooltip instead of SVG. Using
@@ -3398,8 +3536,6 @@ H.defaultOptions = {
             /** @internal */
             fontSize: '12px',
             /** @internal */
-            pointerEvents: 'none',
-            /** @internal */
             whiteSpace: 'nowrap'
         }
     },
@@ -3513,44 +3649,9 @@ H.defaultOptions = {
         text: 'Highcharts.com'
     }
 };
-/**
- * Merge the default options with custom options and return the new options
- * structure. Commonly used for defining reusable templates.
- *
- * @sample highcharts/global/useutc-false Setting a global option
- * @sample highcharts/members/setoptions Applying a global theme
- *
- * @function Highcharts.setOptions
- *
- * @param {Highcharts.Options} options
- *        The new custom chart options.
- *
- * @return {Highcharts.Options}
- *         Updated options.
- */
-H.setOptions = function (options) {
-    // Copy in the default options
-    H.defaultOptions = merge(true, H.defaultOptions, options);
-    // Update the time object
-    if (options.time || options.global) {
-        H.time.update(merge(H.defaultOptions.global, H.defaultOptions.time, options.global, options.time));
-    }
-    return H.defaultOptions;
-};
-/**
- * Get the updated default options. Until 3.0.7, merely exposing defaultOptions
- * for outside modules wasn't enough because the setOptions method created a new
- * object.
- *
- * @function Highcharts.getOptions
- *
- * @return {Highcharts.Options}
- */
-H.getOptions = function () {
-    return H.defaultOptions;
-};
-// Series defaults
-H.defaultPlotOptions = H.defaultOptions.plotOptions;
+/* eslint-disable spaced-comment */
+
+'';
 /**
  * Global `Time` object with default options. Since v6.0.5, time settings can be
  * applied individually for each chart. If no individual settings apply, this
@@ -3559,17 +3660,38 @@ H.defaultPlotOptions = H.defaultOptions.plotOptions;
  * @name Highcharts.time
  * @type {Highcharts.Time}
  */
-H.time = new H.Time(merge(H.defaultOptions.global, H.defaultOptions.time));
+H.time = new Time(merge(H.defaultOptions.global, H.defaultOptions.time));
 /**
  * Formats a JavaScript date timestamp (milliseconds since Jan 1st 1970) into a
  * human readable date string. The format is a subset of the formats for PHP's
- * [strftime](http://www.php.net/manual/en/function.strftime.php) function.
+ * [strftime](https://www.php.net/manual/en/function.strftime.php) function.
  * Additional formats can be given in the {@link Highcharts.dateFormats} hook.
  *
  * Since v6.0.5, all internal dates are formatted through the
  * {@link Highcharts.Chart#time} instance to respect chart-level time settings.
  * The `Highcharts.dateFormat` function only reflects global time settings set
  * with `setOptions`.
+ *
+ * Supported format keys:
+ * - `%a`: Short weekday, like 'Mon'
+ * - `%A`: Long weekday, like 'Monday'
+ * - `%d`: Two digit day of the month, 01 to 31
+ * - `%e`: Day of the month, 1 through 31
+ * - `%w`: Day of the week, 0 through 6
+ * - `%b`: Short month, like 'Jan'
+ * - `%B`: Long month, like 'January'
+ * - `%m`: Two digit month number, 01 through 12
+ * - `%y`: Two digits year, like 09 for 2009
+ * - `%Y`: Four digits year, like 2009
+ * - `%H`: Two digits hours in 24h format, 00 through 23
+ * - `%k`: Hours in 24h format, 0 through 23
+ * - `%I`: Two digits hours in 12h format, 00 through 11
+ * - `%l`: Hours in 12h format, 1 through 12
+ * - `%M`: Two digits minutes, 00 through 59
+ * - `%p`: Upper case AM or PM
+ * - `%P`: Lower case AM or PM
+ * - `%S`: Two digits seconds, 00 through 59
+ * - `%L`: Milliseconds (naming from Ruby)
  *
  * @function Highcharts.dateFormat
  *
@@ -3589,6 +3711,9 @@ H.time = new H.Time(merge(H.defaultOptions.global, H.defaultOptions.time));
 H.dateFormat = function (format, timestamp, capitalize) {
     return H.time.dateFormat(format, timestamp, capitalize);
 };
-/* eslint-disable spaced-comment */
-
-'';
+var optionsModule = {
+    dateFormat: H.dateFormat,
+    defaultOptions: H.defaultOptions,
+    time: H.time
+};
+export default optionsModule;

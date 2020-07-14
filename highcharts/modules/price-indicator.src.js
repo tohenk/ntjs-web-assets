@@ -1,5 +1,5 @@
 /**
- * @license Highstock JS v8.0.0 (2019-12-10)
+ * @license Highstock JS v8.1.2 (2020-06-16)
  *
  * Advanced Highstock tools
  *
@@ -31,7 +31,7 @@
     }
     _registerModule(_modules, 'modules/price-indicator.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /**
-         * (c) 2009-2019 Sebastian Bochann
+         * (c) 2009-2020 Sebastian Bochann
          *
          * Price indicator for Highcharts
          *
@@ -39,8 +39,7 @@
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          */
-        var isArray = U.isArray;
-        var addEvent = H.addEvent, merge = H.merge;
+        var addEvent = U.addEvent, isArray = U.isArray, merge = U.merge;
         /**
          * The line marks the last price from visible range of points.
          *
@@ -132,14 +131,19 @@
                     }, seriesOptions.lastVisiblePrice);
                     yAxis.cross = serie.lastVisiblePrice;
                     lastPoint = points[pLength - crop];
+                    if (serie.crossLabel) {
+                        serie.crossLabel.destroy();
+                        // Set to undefined to avoid collision with
+                        // the yAxis crosshair #11480
+                        delete yAxis.crossLabel;
+                    }
                     // Save price
                     yAxis.drawCrosshair(null, lastPoint);
                     if (yAxis.cross) {
                         serie.lastVisiblePrice = yAxis.cross;
-                        serie.lastVisiblePrice.y = lastPoint.y;
-                    }
-                    if (serie.crossLabel) {
-                        serie.crossLabel.destroy();
+                        if (typeof lastPoint.y === 'number') {
+                            serie.lastVisiblePrice.y = lastPoint.y;
+                        }
                     }
                     serie.crossLabel = yAxis.crossLabel;
                 }

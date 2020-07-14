@@ -1,6 +1,6 @@
 /* *
  *
- *  Copyright (c) 2019-2019 Highsoft AS
+ *  Copyright (c) 2019-2020 Highsoft AS
  *
  *  Boost module: stripped-down renderer for higher performance
  *
@@ -13,10 +13,12 @@
  * */
 'use strict';
 import H from '../../parts/Globals.js';
+var win = H.win, doc = H.doc;
 import '../../parts/Series.js';
 import boostableMap from './boostable-map.js';
 import createAndAttachRenderer from './boost-attach.js';
-var win = H.win, doc = win.document, pick = H.pick;
+import U from '../../parts/Utilities.js';
+var pick = U.pick;
 // This should be a const.
 var CHUNK_SIZE = 3000;
 /**

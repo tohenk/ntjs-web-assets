@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * (c) 2017-2019 Highsoft AS
  * Authors: Jon Arild Nygard
@@ -51,7 +51,8 @@
          * @todo export this function to enable usage
          */
         var draw = function draw(params) {
-            var component = this, graphic = component.graphic, animatableAttribs = params.animatableAttribs, onComplete = params.onComplete, css = params.css, renderer = params.renderer;
+            var _a;
+            var component = this, graphic = component.graphic, animatableAttribs = params.animatableAttribs, onComplete = params.onComplete, css = params.css, renderer = params.renderer, animation = (_a = component.series) === null || _a === void 0 ? void 0 : _a.options.animation;
             if (component.shouldDraw()) {
                 if (!graphic) {
                     component.graphic = graphic =
@@ -61,7 +62,7 @@
                 graphic
                     .css(css)
                     .attr(params.attribs)
-                    .animate(animatableAttribs, params.isNew ? false : void 0, onComplete);
+                    .animate(animatableAttribs, params.isNew ? false : animation, onComplete);
             }
             else if (graphic) {
                 var destroy = function () {
@@ -612,13 +613,13 @@
 
         return content;
     });
-    _registerModule(_modules, 'modules/venn.src.js', [_modules['parts/Globals.js'], _modules['mixins/draw-point.js'], _modules['mixins/geometry.js'], _modules['mixins/geometry-circles.js'], _modules['mixins/nelder-mead.js'], _modules['parts/Utilities.js']], function (H, draw, geometry, GeometryCircleMixin, NelderMeadModule, U) {
+    _registerModule(_modules, 'modules/venn.src.js', [_modules['parts/Color.js'], _modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['mixins/draw-point.js'], _modules['mixins/geometry.js'], _modules['mixins/geometry-circles.js'], _modules['mixins/nelder-mead.js']], function (Color, H, U, draw, geometry, geometryCirclesModule, nelderMeadModule) {
         /* *
          *
          *  Experimental Highcharts module which enables visualization of a Venn
          *  diagram.
          *
-         *  (c) 2016-2019 Highsoft AS
+         *  (c) 2016-2020 Highsoft AS
          *  Authors: Jon Arild Nygard
          *
          *  Layout algorithm by Ben Frederickson:
@@ -629,11 +630,12 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var getAreaOfCircle = GeometryCircleMixin.getAreaOfCircle, getAreaOfIntersectionBetweenCircles = GeometryCircleMixin.getAreaOfIntersectionBetweenCircles, getCircleCircleIntersection = GeometryCircleMixin.getCircleCircleIntersection, getCirclesIntersectionPolygon = GeometryCircleMixin.getCirclesIntersectionPolygon, getOverlapBetweenCirclesByDistance = GeometryCircleMixin.getOverlapBetweenCircles, isCircle1CompletelyOverlappingCircle2 = GeometryCircleMixin.isCircle1CompletelyOverlappingCircle2, isPointInsideAllCircles = GeometryCircleMixin.isPointInsideAllCircles, isPointInsideCircle = GeometryCircleMixin.isPointInsideCircle, isPointOutsideAllCircles = GeometryCircleMixin.isPointOutsideAllCircles;
+        var color = Color.parse;
+        var addEvent = U.addEvent, animObject = U.animObject, extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject, isString = U.isString, merge = U.merge, seriesType = U.seriesType;
+        var getAreaOfCircle = geometryCirclesModule.getAreaOfCircle, getAreaOfIntersectionBetweenCircles = geometryCirclesModule.getAreaOfIntersectionBetweenCircles, getCircleCircleIntersection = geometryCirclesModule.getCircleCircleIntersection, getCirclesIntersectionPolygon = geometryCirclesModule.getCirclesIntersectionPolygon, getOverlapBetweenCirclesByDistance = geometryCirclesModule.getOverlapBetweenCircles, isCircle1CompletelyOverlappingCircle2 = geometryCirclesModule.isCircle1CompletelyOverlappingCircle2, isPointInsideAllCircles = geometryCirclesModule.isPointInsideAllCircles, isPointInsideCircle = geometryCirclesModule.isPointInsideCircle, isPointOutsideAllCircles = geometryCirclesModule.isPointOutsideAllCircles;
         // TODO: replace with individual imports
-        var nelderMead = NelderMeadModule.nelderMead;
-        var animObject = U.animObject, isArray = U.isArray, isNumber = U.isNumber, isObject = U.isObject, isString = U.isString;
-        var addEvent = H.addEvent, color = H.Color, extend = H.extend, getCenterOfPoints = geometry.getCenterOfPoints, getDistanceBetweenPoints = geometry.getDistanceBetweenPoints, merge = H.merge, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var nelderMead = nelderMeadModule.nelderMead;
+        var getCenterOfPoints = geometry.getCenterOfPoints, getDistanceBetweenPoints = geometry.getDistanceBetweenPoints, seriesTypes = H.seriesTypes;
         var objectValues = function objectValues(obj) {
             return Object.keys(obj).map(function (x) {
                 return obj[x];
@@ -1288,7 +1290,8 @@
          *               findNearestPointBy, getExtremesFromAll, jitter, label, linecap,
          *               lineWidth, linkedTo, marker, negativeColor, pointInterval,
          *               pointIntervalUnit, pointPlacement, pointStart, softThreshold,
-         *               stacking, steps, threshold, xAxis, yAxis, zoneAxis, zones
+         *               stacking, steps, threshold, xAxis, yAxis, zoneAxis, zones,
+         *               dataSorting
          * @product      highcharts
          * @requires     modules/venn
          * @optionparent plotOptions.venn
@@ -1330,6 +1333,9 @@
                     color: '#cccccc',
                     borderColor: '#000000',
                     animation: false
+                },
+                inactive: {
+                    opacity: 0.075
                 }
             },
             tooltip: {
@@ -1341,6 +1347,11 @@
             axisTypes: [],
             directTouch: true,
             pointArrayMap: ['value'],
+            init: function () {
+                seriesTypes.scatter.prototype.init.apply(this, arguments);
+                // Venn's opacity is a different option from other series
+                delete this.opacity;
+            },
             translate: function () {
                 var chart = this.chart;
                 this.processedXData = this.xData;
@@ -1370,24 +1381,20 @@
                             };
                         }
                         else if (shape.d) {
-                            // TODO: find a better way to handle scaling of a path.
-                            var d = shape.d.reduce(function (path, arr) {
-                                if (arr[0] === 'M') {
-                                    arr[1] = centerX + arr[1] * scale;
-                                    arr[2] = centerY + arr[2] * scale;
+                            var d = shape.d;
+                            d.forEach(function (seg) {
+                                if (seg[0] === 'M') {
+                                    seg[1] = centerX + seg[1] * scale;
+                                    seg[2] = centerY + seg[2] * scale;
                                 }
-                                else if (arr[0] === 'A') {
-                                    arr[1] = arr[1] * scale;
-                                    arr[2] = arr[2] * scale;
-                                    arr[6] = centerX + arr[6] * scale;
-                                    arr[7] = centerY + arr[7] * scale;
+                                else if (seg[0] === 'A') {
+                                    seg[1] = seg[1] * scale;
+                                    seg[2] = seg[2] * scale;
+                                    seg[6] = centerX + seg[6] * scale;
+                                    seg[7] = centerY + seg[7] * scale;
                                 }
-                                return path.concat(arr);
-                            }, [])
-                                .join(' ');
-                            shapeArgs = {
-                                d: d
-                            };
+                            });
+                            shapeArgs = { d: d };
                         }
                         // Scale the position for the data label.
                         if (dataLabelPosition) {
@@ -1507,19 +1514,18 @@
                             }
                         }
                     }, series);
-                    series.animate = null;
                 }
             },
             utils: {
                 addOverlapToSets: addOverlapToSets,
                 geometry: geometry,
-                geometryCircles: GeometryCircleMixin,
+                geometryCircles: geometryCirclesModule,
                 getLabelWidth: getLabelWidth,
                 getMarginFromCircles: getMarginFromCircles,
                 getDistanceBetweenCirclesByOverlap: getDistanceBetweenCirclesByOverlap,
                 layoutGreedyVenn: layoutGreedyVenn,
                 loss: loss,
-                nelderMead: NelderMeadModule,
+                nelderMead: nelderMeadModule,
                 processVennData: processVennData,
                 sortByTotalOverlap: sortByTotalOverlap
             }
@@ -1544,7 +1550,7 @@
          *            findNearestPointBy, getExtremesFromAll, label, linecap, lineWidth,
          *            linkedTo, marker, negativeColor, pointInterval, pointIntervalUnit,
          *            pointPlacement, pointStart, softThreshold, stack, stacking, steps,
-         *            threshold, xAxis, yAxis, zoneAxis, zones
+         *            threshold, xAxis, yAxis, zoneAxis, zones, dataSorting
          * @product   highcharts
          * @requires  modules/venn
          * @apioption series.venn
@@ -1620,7 +1626,7 @@
         // Modify final series options.
         addEvent(seriesTypes.venn, 'afterSetOptions', function (e) {
             var options = e.options, states = options.states;
-            if (this instanceof seriesTypes.venn) {
+            if (this.is('venn')) {
                 // Explicitly disable all halo options.
                 Object.keys(states).forEach(function (state) {
                     states[state].halo = false;

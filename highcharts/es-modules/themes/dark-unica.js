@@ -1,6 +1,6 @@
 /* *
  *
- *  (c) 2010-2019 Torstein Honsi
+ *  (c) 2010-2020 Torstein Honsi
  *
  *  License: www.highcharts.com/license
  *
@@ -13,6 +13,8 @@
 /* global document */
 // Load the fonts
 import Highcharts from '../parts/Globals.js';
+import U from '../parts/Utilities.js';
+var setOptions = U.setOptions;
 Highcharts.createElement('link', {
     href: 'https://fonts.googleapis.com/css?family=Unica+One',
     rel: 'stylesheet',
@@ -212,4 +214,4 @@ Highcharts.theme = {
     }
 };
 // Apply the theme
-Highcharts.setOptions(Highcharts.theme);
+setOptions(Highcharts.theme);

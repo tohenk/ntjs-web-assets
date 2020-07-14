@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.1.2 (2020-06-16)
  *
  * Timeline series
  *
@@ -29,12 +29,12 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/timeline.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'modules/timeline.src.js', [_modules['parts/Globals.js'], _modules['mixins/legend-symbol.js'], _modules['parts/Point.js'], _modules['parts/SVGElement.js'], _modules['parts/Utilities.js']], function (H, LegendSymbolMixin, Point, SVGElement, U) {
         /* *
          *
          *  Timeline Series.
          *
-         *  (c) 2010-2019 Highsoft AS
+         *  (c) 2010-2020 Highsoft AS
          *
          *  Author: Daniel Studencki
          *
@@ -43,6 +43,7 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
+        var addEvent = U.addEvent, arrayMax = U.arrayMax, arrayMin = U.arrayMin, defined = U.defined, isNumber = U.isNumber, merge = U.merge, objectEach = U.objectEach, pick = U.pick, seriesType = U.seriesType;
         /**
          * Callback JavaScript function to format the data label as a string. Note that
          * if a `format` is defined, the format takes precedence and the formatter is
@@ -50,7 +51,7 @@
          *
          * @callback Highcharts.TimelineDataLabelsFormatterCallbackFunction
          *
-         * @param {Highcharts.DataLabelsFormatterContextObject|Highcharts.TimelineDataLabelsFormatterContextObject} this
+         * @param {Highcharts.PointLabelObject|Highcharts.TimelineDataLabelsFormatterContextObject} this
          *        Data label context to format
          *
          * @return {number|string|null|undefined}
@@ -58,7 +59,7 @@
          */
         /**
          * @interface Highcharts.TimelineDataLabelsFormatterContextObject
-         * @extends Highcharts.DataLabelsFormatterContextObject
+         * @extends Highcharts.PointLabelObject
          */ /**
         * @name Highcharts.TimelineDataLabelsFormatterContextObject#key
         * @type {string|undefined}
@@ -69,8 +70,7 @@
         * @name Highcharts.TimelineDataLabelsFormatterContextObject#series
         * @type {Highcharts.Series}
         */
-        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, defined = U.defined, isNumber = U.isNumber, objectEach = U.objectEach, pick = U.pick;
-        var addEvent = H.addEvent, LegendSymbolMixin = H.LegendSymbolMixin, TrackerMixin = H.TrackerMixin, merge = H.merge, Point = H.Point, Series = H.Series, seriesType = H.seriesType, seriesTypes = H.seriesTypes;
+        var TrackerMixin = H.TrackerMixin, Series = H.Series, seriesTypes = H.seriesTypes;
         /**
          * The timeline series type.
          *
@@ -99,7 +99,7 @@
          *               getExtremesFromAll, lineWidth, negativeColor,
          *               pointInterval, pointIntervalUnit, pointPlacement,
          *               pointStart, softThreshold, stacking, step, threshold,
-         *               turboThreshold, zoneAxis, zones
+         *               turboThreshold, zoneAxis, zones, dataSorting
          * @requires     modules/timeline
          * @optionparent plotOptions.timeline
          */
@@ -121,6 +121,8 @@
             },
             /**
              * @declare Highcharts.TimelineDataLabelsOptionsObject
+             *
+             * @private
              */
             dataLabels: {
                 enabled: true,
@@ -280,7 +282,7 @@
                                 if (this.targetPosition) {
                                     this.targetPosition = params;
                                 }
-                                return H.SVGElement.prototype.animate.apply(this, arguments);
+                                return SVGElement.prototype.animate.apply(this, arguments);
                             };
                             // Initialize the targetPosition field within data label
                             // object. It's necessary because there is need to know
@@ -322,7 +324,7 @@
                     if (isInverted) {
                         targetDLWidth = ((distance - pad) * 2 - (point.itemHeight / 2));
                         styles = {
-                            width: targetDLWidth,
+                            width: targetDLWidth + 'px',
                             // Apply ellipsis when data label height is exceeded.
                             textOverflow: dataLabel.width / targetDLWidth *
                                 dataLabel.height / 2 > availableSpace * multiplier ?
@@ -331,9 +333,9 @@
                     }
                     else {
                         styles = {
-                            width: userDLOptions.width ||
+                            width: (userDLOptions.width ||
                                 dataLabelsOptions.width ||
-                                availableSpace * multiplier - (pad * 2)
+                                availableSpace * multiplier - (pad * 2)) + 'px'
                         };
                     }
                     dataLabel.css(styles);
@@ -409,7 +411,7 @@
                 var series = this, seriesMarkerOptions = series.options.marker, seriesStateOptions, pointMarkerOptions = point.marker || {}, symbol = (pointMarkerOptions.symbol || seriesMarkerOptions.symbol), pointStateOptions, width = pick(pointMarkerOptions.width, seriesMarkerOptions.width, series.closestPointRangePx), height = pick(pointMarkerOptions.height, seriesMarkerOptions.height), radius = 0, attribs;
                 // Call default markerAttribs method, when the xAxis type
                 // is set to datetime.
-                if (series.xAxis.isDatetimeAxis) {
+                if (series.xAxis.dateTime) {
                     return seriesTypes.line.prototype.markerAttribs
                         .call(this, point, state);
                 }
@@ -499,12 +501,8 @@
                     coords[i] -= (dl.alignAttr || dl)[i[0]];
                 });
                 path = chart.renderer.crispLine([
-                    'M',
-                    coords.x1,
-                    coords.y1,
-                    'L',
-                    coords.x2,
-                    coords.y2
+                    ['M', coords.x1, coords.y1],
+                    ['L', coords.x2, coords.y2]
                 ], dl.options.connectorWidth);
                 return path;
             },
@@ -559,7 +557,7 @@
          *            getExtremesFromAll, lineWidth, negativeColor,
          *            pointInterval, pointIntervalUnit, pointPlacement, pointStart,
          *            softThreshold, stacking, stack, step, threshold, turboThreshold,
-         *            zoneAxis, zones
+         *            zoneAxis, zones, dataSorting
          * @product   highcharts
          * @requires  modules/timeline
          * @apioption series.timeline
