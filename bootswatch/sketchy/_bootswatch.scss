@@ -1,17 +1,21 @@
-// Sketchy 4.3.1
+// Sketchy 5.0.1
 // Bootswatch
 
 
-// Variables ===================================================================
+// Variables
 
-$web-font-path: "https://fonts.googleapis.com/css?family=Neucha|Cabin+Sketch" !default;
-@import url($web-font-path);
+$web-font-path: "https://fonts.googleapis.com/css?family=Neucha|Cabin+Sketch&display=swap" !default;
+@if $web-font-path {
+  @import url($web-font-path);
+}
 
-$border-radius-sketchy: 255px 25px 225px 25px/25px 225px 25px 255px;
-$border-radius-lg-sketchy: 555px 25px 15px 25px/25px 5px 35px 555px;
-$border-radius-sm-sketchy: 255px 25px 225px 25px/25px 225px 25px 255px;
+// stylelint-disable scss/dollar-variable-default
+$border-radius-sketchy:    255px 25px 225px 25px / 25px 225px 25px 255px;
+$border-radius-lg-sketchy: 55px 225px 15px 25px / 25px 25px 35px 355px;
+$border-radius-sm-sketchy: 255px 25px 225px 25px / 25px 225px 25px 255px;
+// style-enable scss/dollar-variable-default
 
-// Navbar ======================================================================
+// Navbar
 
 .navbar {
   border-width: 2px;
@@ -24,22 +28,22 @@ $border-radius-sm-sketchy: 255px 25px 225px 25px/25px 225px 25px 255px;
 
   &.fixed-top {
     border-radius: 0 25px 225px 0/25px 0 25px 255px;
-    border-width: 0 0 2px 0;
+    border-width: 0 0 2px;
   }
 
   &.fixed-bottom {
     border-radius: 255px 25px 0 25px/25px 225px 25px 0;
-    border-width: 2px 0 0 0;
+    border-width: 2px 0 0;
   }
 
   &-brand {
     font-family: $headings-font-family;
-    font-weight: normal;
+    font-weight: 400;
     text-decoration: none;
   }
 }
 
-// Buttons =====================================================================
+// Buttons
 
 .btn {
   border-radius: $border-radius-sketchy;
@@ -54,9 +58,17 @@ $border-radius-sm-sketchy: 255px 25px 225px 25px/25px 225px 25px 255px;
   }
 }
 
-// Typography ==================================================================
+.btn-check {
+  display: none;
+}
 
-button, input, optgroup, select, textarea {
+// Typography
+
+button,
+input,
+optgroup,
+select,
+textarea {
   font-family: $font-family-sans-serif;
 }
 
@@ -64,12 +76,12 @@ blockquote {
   border-radius: 15px 27px 25px 25px/25px 25px 305px 635px;
 }
 
-// Tables ======================================================================
+// Tables
 
 table {
   th,
   td {
-    background-color: #fff;
+    background-color: $white;
   }
 }
 
@@ -87,7 +99,8 @@ table {
 
   .table-success,
   .table-success:hover {
-    td, th {
+    td,
+    th {
       background-color: $success;
       color: $white;
     }
@@ -95,7 +108,8 @@ table {
 
   .table-info,
   .table-info:hover {
-    td, th {
+    td,
+    th {
       background-color: $info;
       color: $white;
     }
@@ -103,7 +117,8 @@ table {
 
   .table-warning,
   .table-warning:hover {
-    td, th {
+    td,
+    th {
       background-color: $warning;
       color: $white;
     }
@@ -111,7 +126,8 @@ table {
 
   .table-danger,
   .table-danger:hover {
-    td, th {
+    td,
+    th {
       background-color: $danger;
       color: $white;
     }
@@ -125,16 +141,14 @@ table {
   &.table-hover .table-active:hover > td {
     background-color: $gray-800;
   }
-  
 }
 
 
-// Forms =======================================================================
+// Forms
 
 input,
 .form-control,
-.input-group-text,
-.custom-file-label {
+.input-group-text {
   border-radius: $border-radius-sketchy;
 }
 
@@ -148,13 +162,16 @@ select.form-control {
 [type="checkbox"] {
   position: relative;
   appearance: none;
+  width: 0;
+  height: 0;
+  border: none;
   cursor: pointer;
 
-  &:before {
+  &::before {
     content: "";
     position: absolute;
-    left: -1.2em;
-    top: -0.9em;
+    left: 0;
+    top: -.1em;
     display: inline-block;
     width: 15px;
     height: 16px;
@@ -162,18 +179,18 @@ select.form-control {
     border-radius: 2px 8px 2px 4px / 5px 3px 5px 3px;
   }
 
-  &:checked:after {
+  &:checked::after {
     content: "x";
     position: absolute;
-    left: -0.64em;
-    top: -0.48em;
+    left: .1em;
+    top: 0;
     font-size: 1.5rem;
-    line-height: 0.5;
+    line-height: .5;
     color: $gray-800;
   }
 
   &:disabled {
-    &:before {
+    &::before {
       border: 2px solid $gray-500;
     }
   }
@@ -182,13 +199,16 @@ select.form-control {
 [type="radio"] {
   position: relative;
   appearance: none;
+  width: 0;
+  height: 0;
+  border: none;
   cursor: pointer;
 
-  &:before {
+  &::before {
     content: "";
     position: absolute;
-    left: -1.2em;
-    top: -0.9em;
+    left: 0;
+    top: -.1em;
     display: inline-block;
     width: 16px;
     height: 16px;
@@ -196,22 +216,62 @@ select.form-control {
     border-radius: 50% 45% 40% 50% / 40% 50% 50% 45%;
   }
 
-  &:checked:before {
+  &:checked::before {
     background-color: $gray-800;
   }
 
   &:disabled {
-    &:before {
+    &::before {
       border: 2px solid $gray-500;
     }
   }
 }
 
-.form-check-label {
-  padding-left: 2.5rem;
+.form-check-input {
+  &:focus {
+    box-shadow: none;
+  }
 }
 
-// Navs ========================================================================
+.form-switch {
+  padding-left: 0;
+
+  .form-check-input {
+    position: relative;
+    margin-left: 0;
+
+    &::before {
+      width: 32px;
+      border-radius: 30% 35% 30% 30% / 30% 50% 30% 45%;
+    }
+
+    &::after {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: $white;
+      border: 2px solid #333;
+      border-radius: 50% 45% 40% 50% / 40% 50% 50% 45%;
+      transition: left .15s ease-in-out;
+    }
+
+    &:checked::after {
+      top: 0;
+      left: 18px;
+      background-color: $gray-800;
+    }
+  }
+
+  .form-check-label {
+    margin-left: .5em;
+  }
+}
+
+// Navs
 
 .dropdown-menu {
   border-radius: 555px 25px 25px 25px/25px 25px 25px 555px;
@@ -244,7 +304,7 @@ select.form-control {
   }
 }
 
-.nav-pills .nav-link, {
+.nav-pills .nav-link {
   border-radius: $border-radius-sketchy;
 }
 
@@ -272,11 +332,7 @@ select.form-control {
   }
 }
 
-// Indicators ==================================================================
-
-.progress {
-  border: 2px solid $gray-800;
-}
+// Indicators
 
 .badge {
   border-radius: $border-radius-sm-sketchy;
@@ -285,73 +341,29 @@ select.form-control {
     border-radius: 7rem 8rem 8rem 8rem / 4rem 5rem 6rem 6rem;
   }
 
-  &-warning {
-    color: $white;
+  &.bg-light {
+    color: $dark;
   }
 }
 
 .alert {
   border-radius: $border-radius-sketchy;
 
-  &-dismissible {
-    .close {
-      color: transparent;
-
-      &:before {
-        right: 1rem;
-        top: 0.8rem;
-      }
-    }
-
-    &.alert-success {
-      border-color: $success;
-
-      &,
-      .alert-link,
-      .close:before {
-        color: $success;
-      }
-    }
-
-    &.alert-info {
-      border-color: $info;
-
-      &,
-      .alert-link,
-      .close:before {
-        color: $info;
-      }
-    }
-
-    &.alert-warning {
-      border-color: $warning;
-
-      &,
-      .alert-link,
-      .close:before {
-        color: $warning;
-      }
-    }
-
-    &.alert-danger {
-      border-color: $danger;
-
-      &,
-      .alert-link,
-      .close:before {
-        color: $danger;
-      }
+  .btn-close {
+    &::before {
+      color: inherit;
     }
   }
 }
 
-// Progress bars ===============================================================
+// Progress bars
 
 .progress {
+  border: 2px solid $gray-800;
   border-radius: $border-radius-sm-sketchy;
 }
 
-// Containers ==================================================================
+// Containers
 
 .card {
   border-radius: 5px 5px 5px 5px/25px 25px 25px 5px;
@@ -380,9 +392,12 @@ select.form-control {
   }
 }
 
-.jumbotron {
-  border: 2px solid $gray-800;
-  border-radius: $border-radius-lg-sketchy;
+.toast {
+  border-radius: 10px 10px 15px 5px/5px 15px 5px 15px;
+
+  &-header {
+    font-family: $headings-font-family;
+  }
 }
 
 .modal {
@@ -399,29 +414,28 @@ select.form-control {
     border-bottom: 2px solid $gray-800;
   }
 
-  &.popover-left::before,
+  &.bs-popover-start::before,
   &.bs-tether-element-attached-right::before {
     right: -13px;
   }
 
-  &.popover-top::before,
+  &.bs-popover-top::before,
   &.bs-tether-element-attached-bottom::before {
     bottom: -13px;
   }
 
-  &.popover-bottom::before,
+  &.bs-popover-bottom::before,
   &.bs-tether-element-attached-top::before {
     top: -13px;
   }
 
-  &.popover-right::before,
+  &.bs-popover-end::before,
   &.bs-tether-element-attached-left::before {
     left: -13px;
   }
 }
 
 .tooltip {
-
   &-inner {
     border-radius: $border-radius-sm-sketchy;
   }
@@ -432,16 +446,14 @@ pre {
   border-radius: 15px 5px 5px 25px/5px 25px 25px 5px;
 }
 
-.close,
-.close:hover,
-.close:focus,
-.close:active {
-  opacity: 1;
+.btn-close {
+  background-image: none;
 
-  &:before {
-    position: absolute;
+  &::before {
     content: "X";
-    color: $gray-800;
+    position: absolute;
+    right: 1rem;
+    top: .8rem;
   }
 }
 
