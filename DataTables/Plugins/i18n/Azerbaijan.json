@@ -5,7 +5,6 @@
 	"sInfo":           " _TOTAL_ Nəticədən _START_ - _END_ Arası Nəticələr",
 	"sInfoEmpty":      "Nəticə Yoxdur",
 	"sInfoFiltered":   "( _MAX_ Nəticə İçindən Tapılanlar)",
-	"sInfoPostFix":    "",
 	"sInfoThousands":  ",",
 	"sLengthMenu":     "Səhifədə _MENU_ Nəticə Göstər",
 	"sLoadingRecords": "Yüklənir...",

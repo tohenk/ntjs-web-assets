@@ -5,7 +5,6 @@
 	"sInfo":           "Приказ _START_ до _END_ од укупно _TOTAL_ записа",
 	"sInfoEmpty":      "Приказ 0 до 0 од укупно 0 записа",
 	"sInfoFiltered":   "(филтрирано од укупно _MAX_ записа)",
-	"sInfoPostFix":    "",
 	"sInfoThousands":  ".",
 	"sLengthMenu":     "Прикажи _MENU_ записа",
 	"sLoadingRecords": "Учитавање...",
@@ -16,7 +15,7 @@
 		"sFirst":    "Почетна",
 		"sLast":     "Последња",
 		"sNext":     "Следећа",
-		"sPrevious": "Предходна"
+		"sPrevious": "Претходна"
 	},
 	"oAria": {
 		"sSortAscending":  ": активирајте да сортирате колону узлазно",
