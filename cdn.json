@@ -22,7 +22,7 @@
     "jsdelivr-dist": ""
   },
   "bootstrap-datetimepicker": {
-    "version": "6.9.5",
+    "version": "6.9.6",
     "jsdelivr-dist": "@eonasdan/tempus-dominus"
   },
   "bootstrap-icons": {
