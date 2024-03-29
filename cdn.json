@@ -138,7 +138,7 @@
     "jsdelivr": "jquery-hotkeys"
   },
   "interact": {
-    "version": "1.10.26",
+    "version": "1.10.27",
     "jsdelivr-dist": "interactjs"
   },
   "JavaScript-Canvas-to-Blob": {
