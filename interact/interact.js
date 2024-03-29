@@ -1,5 +1,5 @@
 /**
- * interact.js 1.10.26
+ * interact.js 1.10.27
  *
  * Copyright (c) 2012-present Taye Adeyemi <dev@taye.me>
  * Released under the MIT License.
@@ -5920,7 +5920,7 @@
     interact.globalEvents = {};
 
     // eslint-disable-next-line no-undef
-    interact.version = "1.10.26";
+    interact.version = "1.10.27";
     interact.scope = scope;
     interact.use = function (plugin, options) {
       this.scope.usePlugin(plugin, options);
@@ -6022,8 +6022,6 @@
     };
     return interact;
   }
-
-  /** @internal */
 
   /** @internal */
   var Scope = /*#__PURE__*/function () {
@@ -6241,6 +6239,8 @@
     }]);
     return Scope;
   }();
+
+  // Keep Scope class internal, but expose minimal interface to avoid broken types when Scope is stripped out
 
   /** @internal */
   function initScope(scope, window) {
