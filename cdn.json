@@ -122,7 +122,7 @@
     "datatables-extension": "staterestore"
   },
   "fontawesome": {
-    "version": "6.5.1",
+    "version": "6.5.2",
     "cdnjs": "font-awesome"
   },
   "Gallery": {
