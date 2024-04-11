@@ -1,4 +1,4 @@
-/*! Select for DataTables 2.0.0
+/*! Select for DataTables 2.0.1
  * © SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -52,7 +52,7 @@ var DataTable = $.fn.dataTable;
 // Version information for debugger
 DataTable.select = {};
 
-DataTable.select.version = '2.0.0';
+DataTable.select.version = '2.0.1';
 
 DataTable.select.init = function (dt) {
 	var ctx = dt.settings()[0];
@@ -667,7 +667,9 @@ function init(ctx) {
 
 			// Row
 			if (d._select_selected) {
-				$(row).addClass(ctx._select.className);
+				$(row)
+					.addClass(ctx._select.className)
+					.find('input.dt-select-checkbox').prop('checked', true);
 			}
 
 			// Cells and columns - if separated out, we would need to do two
@@ -677,7 +679,7 @@ function init(ctx) {
 					ctx.aoColumns[i]._select_selected ||
 					(d._selected_cells && d._selected_cells[i])
 				) {
-					$(d.anCells[i]).addClass(ctx._select.className);
+					$(d.anCells[i]).addClass(ctx._select.className)
 				}
 			}
 		}
@@ -1100,12 +1102,23 @@ apiRegisterPlural('rows().select()', 'row().select()', function (select) {
 		for (var i=0 ; i<dtColumns.length ; i++) {
 			var col = dtColumns[i];
 
+			// Regenerate the column type if not present
+			if (col.sType === null) {
+				api.columns().types()
+			}
+			
 			if (col.sType === 'select-checkbox') {
-				// Make sure the checkbox shows the right state
-				$('input.dt-select-checkbox', dtData.anCells[i]).prop('checked', true);
+				var cells = dtData.anCells;
 
-				// Invalidate the sort data for this column
-				dtData._aSortData[i] = null;
+				// Make sure the checkbox shows the right state
+				if (cells && cells[i]) {
+					$('input.dt-select-checkbox', cells[i]).prop('checked', true);
+				}
+
+				// Invalidate the sort data for this column, if not already done
+				if (dtData._aSortData !== null) {
+					dtData._aSortData[i] = null;
+				}
 			}
 		}
 	});
@@ -1223,12 +1236,23 @@ apiRegisterPlural('rows().deselect()', 'row().deselect()', function () {
 		for (var i=0 ; i<dtColumns.length ; i++) {
 			var col = dtColumns[i];
 
+			// Regenerate the column type if not present
+			if (col.sType === null) {
+				api.columns().types()
+			}
+			
 			if (col.sType === 'select-checkbox') {
-				// Make sure the checkbox shows the right state
-				$('input.dt-select-checkbox', dtData.anCells[i]).prop('checked', false);
+				var cells = dtData.anCells;
 
-				// Invalidate the sort data for this column
-				dtData._aSortData[i] = null;
+				// Make sure the checkbox shows the right state
+				if (cells && cells[i]) {
+					$('input.dt-select-checkbox', dtData.anCells[i]).prop('checked', false);
+				}
+
+				// Invalidate the sort data for this column, if not already done
+				if (dtData._aSortData !== null) {
+					dtData._aSortData[i] = null;
+				}
 			}
 		}
 	});
