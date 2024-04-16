@@ -54,7 +54,7 @@
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
-    "version": "2.0.3",
+    "version": "2.0.4",
     "datatables": ""
   },
   "DataTables-AutoFill": {
@@ -62,7 +62,7 @@
     "datatables-extension": "autofill"
   },
   "DataTables-Buttons": {
-    "version": "3.0.1",
+    "version": "3.0.2",
     "datatables-extension": "buttons"
   },
   "DataTables-ColReorder": {
@@ -90,7 +90,7 @@
     "datatables-extension": "keytable"
   },
   "DataTables-Responsive": {
-    "version": "3.0.1",
+    "version": "3.0.2",
     "datatables-extension": "responsive"
   },
   "DataTables-RowGroup": {
