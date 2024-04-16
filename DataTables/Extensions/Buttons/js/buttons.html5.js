@@ -1396,8 +1396,9 @@ DataTable.ext.buttons.excelHtml5 = {
 						hidden: 1
 					},
 					text:
-						_sheetname(config) +
-						'!$A$' +
+						'\'' +
+						_sheetname(config).replace(/'/g, '\'\'') +
+						'\'!$A$' +
 						dataStartRow +
 						':' +
 						createCellPos(data.header.length - 1) +
@@ -1435,6 +1436,12 @@ DataTable.ext.buttons.excelHtml5 = {
 		if (filename > 175) {
 			filename = filename.substr(0, 175);
 		}
+
+		// Let the developer customize the final zip file if they want to before it is generated and sent to the browser
+		if (config.customizeZip) {
+			config.customizeZip(zip, data, filename);
+		}
+
 
 		if (zip.generateAsync) {
 			// JSZip 3+
