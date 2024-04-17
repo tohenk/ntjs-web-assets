@@ -82,7 +82,7 @@
     "datatables-extension": "fixedheader"
   },
   "DataTables-I18N": {
-    "version": "2.0.2",
+    "version": "2.0.4",
     "datatables-plugin": "i18n"
   },
   "DataTables-KeyTable": {
