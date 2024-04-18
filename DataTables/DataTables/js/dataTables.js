@@ -1,11 +1,11 @@
-/*! DataTables 2.0.4
+/*! DataTables 2.0.5
  * © SpryMedia Ltd - datatables.net/license
  */
 
 /**
  * @summary     DataTables
  * @description Paginate, search and order HTML tables
- * @version     2.0.4
+ * @version     2.0.5
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net
  * @copyright   SpryMedia Ltd.
@@ -2645,9 +2645,15 @@
 			type = 'sort';
 		}
 	
+		var row = settings.aoData[rowIdx];
+	
+		if (! row) {
+			return undefined;
+		}
+	
 		var draw           = settings.iDraw;
 		var col            = settings.aoColumns[colIdx];
-		var rowData        = settings.aoData[rowIdx]._aData;
+		var rowData        = row._aData;
 		var defaultContent = col.sDefaultContent;
 		var cellData       = col.fnGetData( rowData, type, {
 			settings: settings,
@@ -7806,11 +7812,6 @@
 				settings.aiDisplayMaster.splice(idx, 1);
 			}
 	
-			idx = settings.aiDisplay.indexOf(row);
-			if (idx !== -1) {
-				settings.aiDisplay.splice(idx, 1);
-			}
-	
 			// For server-side processing tables - subtract the deleted row from the count
 			if ( settings._iRecordsDisplay > 0 ) {
 				settings._iRecordsDisplay--;
@@ -9586,7 +9587,7 @@
 	 *  @type string
 	 *  @default Version number
 	 */
-	DataTable.version = "2.0.4";
+	DataTable.version = "2.0.5";
 	
 	/**
 	 * Private data store, containing all of the settings objects that are
