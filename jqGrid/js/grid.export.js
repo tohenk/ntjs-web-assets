@@ -279,7 +279,7 @@ $.extend($.jgrid,{
 				'<cellStyleXfs count="1">'+
 					'<xf numFmtId="0" fontId="0" fillId="0" borderId="0" />'+
 				'</cellStyleXfs>'+
-				'<cellXfs count="68">'+
+				'<cellXfs count="69">'+
 					'<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyFont="1" applyFill="1" applyBorder="1"/>'+
 					'<xf numFmtId="0" fontId="1" fillId="0" borderId="0" applyFont="1" applyFill="1" applyBorder="1"/>'+
 					'<xf numFmtId="0" fontId="2" fillId="0" borderId="0" applyFont="1" applyFill="1" applyBorder="1"/>'+
@@ -453,11 +453,60 @@ $.extend($.jgrid,{
 					attr: options 
 				});
 			celsX.appendChild( mycell );
-			count = parseInt( $(celsX).attr("count"), 10);
-			$(celsX).attr("count", count + 1);
-			obj[style] = count+1;
+			count = $('cellXfs xf', styleSh).length;
+			$(celsX).attr("count", count);
+			obj[style] = count - 1;
 		}
 		return obj;
+	},
+	newExcelStyle : function ( xlsx, options ) {
+		options = $.extend(true, {
+			font : { size : 11, name : 'Calibri', options :""}, // options <b/> <i/> <u/>
+			color : { patternType : "solid", fgColor : "FFFFFFF", bgColor : 64 } // bgColor if number 0-64
+		}, options || {});
+		//PatterType can be one of the following
+		/*
+			none, solid,darkDown,darkGray,darkGrid,darkHorizontal,darkTrellis,
+			darkUp,darkVertical,gray0625,gray125,lightDown,lightGray,lightGrid
+			lightHorizontal,lightTrellis,lightUp,lightVertical,mediumGray
+		*/
+		//styleSheet.childNodes[0].childNodes[0] ==> number formats  <numFmts count="6"> </numFmts>
+		//styleSheet.childNodes[0].childNodes[1] ==> fonts           <fonts count="5" x14ac:knownFonts="1"> </fonts>
+		//styleSheet.childNodes[0].childNodes[2] ==> fills           <fills count="6"> </fills>
+		//styleSheet.childNodes[0].childNodes[3] ==> borders         <borders count="2"> </borders>
+		//styleSheet.childNodes[0].childNodes[4] ==> cell style xfs  <cellStyleXfs count="1"> </cellStyleXfs>
+		//styleSheet.childNodes[0].childNodes[5] ==> cell xfs        <cellXfs count="69"> </cellXfs>
+		//on the last line we have the 69 currently built in styles (0 - 68)
+
+		var sSh = xlsx.xl['styles.xml'];
+		var lastXfIndex   = $('cellXfs xf', sSh).length - 1;
+		var lastFontIndex = $('fonts font', sSh).length - 1;
+		var lastFillIndex = $('fills fill', sSh).length - 1;
+
+
+		var font1 =
+        '<font>'+
+                '<sz val="'+options.font.size+'" />'+
+                '<name val="'+options.font.name+'" />'+
+                options.font.options +
+        '</font>';
+		sSh.childNodes[0].childNodes[1].innerHTML += font1; //new font
+		var bgcolor = 'indexed=';
+		if(parseInt(options.color.bgColor,10) >= 0 ) {
+			bgcolor = 'rgb=';
+		}
+		bgcolor += '"'+options.color.bgColor+'"';
+		var color1 = 
+			'<fill>'+
+			'<patternFill patternType="'+options.color.patternType+'">'+
+			'<fgColor rgb="'+options.color.fgColor+'" />'+
+			'<bgColor ' + bgcolor+' />'+
+			'</patternFill>'+
+		'</fill>';		
+		sSh.childNodes[0].childNodes[2].innerHTML += color1; //new color
+        var s1 = '<xf numFmtId="0" fontId="'+(lastFontIndex+1)+'" fillId="'+(lastFillIndex+1)+'" borderId="0" applyFont="1" applyFill="1" applyBorder="1" xfId="0" applyAlignment="1"></xf>';
+		sSh.childNodes[0].childNodes[5].innerHTML += s1;
+		return (lastXfIndex + 1);
 	}
 });
 /********************************************************************
@@ -738,14 +787,16 @@ $.jgrid.extend({
 					hdr += tmp.join( p.separator ) + p.newLine;
 				}
 			}
+			var hlen, il;
 			if(p.includeFooter && $t.p.footerrow) {
 				// already formated
-				var foot = $(".ui-jqgrid-ftable", this.sDiv);
-				if(foot.length) {
-					var frows = $($t).jqGrid('footerData', 'get');
+				hlen = $($t).jqGrid("footerData", "getlength");
+				var frows, fc;
+				for(il=0;il<hlen;il++) {
+					frows = $($t).jqGrid("footerData", "get", null, false, il, false);
 					i=0; tmp=[];
 					while(i < p.collen){
-						var fc = def[i];
+						fc = def[i];
 						if(frows.hasOwnProperty(fc) ) {
 							tmp.push( $.jgrid.formatCellCsv( $.jgrid.stripHtml( frows[fc] ), p ) );
 						}
@@ -755,16 +806,20 @@ $.jgrid.extend({
 				}
 			}
 			if(p.includeHeader && $t.p.headerrow) {
-				var hrows = $($t).jqGrid('headerData', 'get');
+				var hrows, hc;
+				hlen = $($t).jqGrid("headerData", "getlength");
+				for(il=0;il<hlen;il++) {
+					hrows = $($t).jqGrid("headerData", "get", null, false, il, false);
 				i=0; tmp=[];
 				while(i < p.collen){
-					var hc = def[i];
+						hc = def[i];
 					if(hrows.hasOwnProperty(hc) ) {
 						tmp.push( $.jgrid.formatCellCsv( $.jgrid.stripHtml( hrows[hc] ), p ) );
 					}
 					i++;
 				}
 				htr += tmp.join( p.separator ) + p.newLine;
+			}
 			}
 			ret = cap + hdr + lbl + htr + str + ftr;
 			if( $.jgrid.isFunction( p.loadIndicator )) {
@@ -779,7 +834,7 @@ $.jgrid.extend({
 				}
 			}
 			if (p.returnAsString) {
-				return ret;
+				//return ret;
 			} else {
 				// add BOM fix Excel
 				if(p.mimetype.toUpperCase().indexOf("UTF-8") !== -1) {
@@ -788,6 +843,7 @@ $.jgrid.extend({
 				$.jgrid.saveAs( ret, p.fileName, { type : p.mimetype });
 			}
 		});
+		return ret;
 	},
 	/*
 	 *
@@ -895,12 +951,16 @@ $.jgrid.extend({
 				i++;
 			}
 			if ( o.includeFooter || $t.p.footerrow) {
-				data.footer = $($t).jqGrid('footerData', 'get');
-				for( i in data.footer) {
-					if(data.footer.hasOwnProperty(i)) {
-						data.footer[i] = $.jgrid.stripHtml(data.footer[i]);
+				var dfl = $($t).jqGrid("footerData", "getlength"), dil, dfooter;
+				for(dil=0; dil<dfl; dil++) {
+					dfooter = $($t).jqGrid("footerData", "get", null, false, dil, false);
+					for( i in dfooter) {
+						if(dfooter.hasOwnProperty(i)) {
+							dfooter[i] = $.jgrid.stripHtml(dfooter[i]);
 					}
 				}
+					data.footer.push( dfooter);
+			}
 			}
 			if( $.jgrid.isFunction(o.customizeData) ) {
 				o.customizeData.call($t, data);
@@ -1360,7 +1420,9 @@ $.jgrid.extend({
 				}
 			}
 			if ( o.includeHeader || $t.p.headerrow) {
-				var hdata = $($t).jqGrid('headerData', 'get');
+				var hlen = $($t).jqGrid("headerData", "getlength"), il, hdata;
+				for(il=0; il < hlen; il++) {
+					hdata = $($t).jqGrid("headerData", "get", null, false, il, false);
 				for( i in hdata) {
 					if(hdata.hasOwnProperty(i)) {
 						hdata[i] = $.jgrid.stripHtml(hdata[i]);
@@ -1370,6 +1432,7 @@ $.jgrid.extend({
 					addRow( hdata, true );
 					$('row', rels).last().find('c').attr( 's', '2' ); // bold
 				}
+			}
 			}
 			if( $t.p.grouping ) {
 				var savlcgr = $t.p.groupingView._locgr ? true : false;
@@ -1738,8 +1801,12 @@ $.jgrid.extend({
 				rows.push( test );
 			}
 			}
+			var hlen, il;
 			if ( o.includeHeader && $t.p.headerrow) {
-				var hdata = $($t).jqGrid('headerData', 'get');
+				var hdata;
+				hlen = $($t).jqGrid("headerData", "getlength");
+				for(il=0; il < hlen; il++) {
+					hdata = $($t).jqGrid("headerData", "get", null, false, il, false);
 				test=[];
 				for( key =0; key< def.length; key++) {
 					obj  =  {
@@ -1750,6 +1817,7 @@ $.jgrid.extend({
 					test.push( obj );
 				}
 				rows.push( test );
+			}
 			}
 			if($t.p.grouping) {
 				var savlcgr = $t.p.groupingView._locgr ? true : false;
@@ -1776,7 +1844,9 @@ $.jgrid.extend({
 			}
 
 			if ( o.includeFooter && $t.p.footerrow) {
-				var fdata = $($t).jqGrid('footerData', 'get');
+				hlen = $($t).jqGrid("footerData", "getlength");
+				for(il=0; il < hlen; il++) {				
+					var fdata = $($t).jqGrid("footerData", "get", null, false, il, false);
 				test=[];
 				for( key =0; key< def.length; key++) {
 					obj  =  {
@@ -1787,6 +1857,7 @@ $.jgrid.extend({
 					test.push( obj );
 				}
 				rows.push( test );
+			}
 			}
 			var tblcnt = {
 				style : 'tableExample',
@@ -2155,10 +2226,16 @@ $.jgrid.extend({
 			}
 
 			html += '<tbody>';
+			var hlen, il;
 			if ( o.includeHeader && $t.p.headerrow ) {
-				var hdata = $($t).jqGrid('headerData', 'get', null, false);
-
+				var hdata;
+				hlen = $($t).jqGrid("footerData", "getlength");
+				for(il=0; il < hlen; il++) {
+					for(il=0; il < hlen; il++) {				
+						hdata = $($t).jqGrid("headerData", "get", null, false, il, false);
 				html += addBodyRow( hdata, 'td' , false);
+			}
+				}
 			}
 			if( $t.p.grouping ) {
 				var savlcgr = $t.p.groupingView._locgr ? true : false;
@@ -2172,9 +2249,11 @@ $.jgrid.extend({
 			}
 
 			if ( o.includeFooter && $t.p.footerrow ) {
-				data.footer = $($t).jqGrid('footerData', 'get', null, false);
-
-				html += addBodyRow( data.footer, 'td' , false);
+				hlen = $($t).jqGrid("footerData", "getlength");
+				for(il=0; il < hlen; il++) {				
+					data.footer[il] = $($t).jqGrid("footerData", "get", null, false, il, false);
+					html += addBodyRow( data.footer[il], 'td' , false);
+			}
 			}
 			html += '</tbody>';
 			html += '</table>';

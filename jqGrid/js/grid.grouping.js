@@ -272,6 +272,15 @@ $.jgrid.extend({
 				}
 				tarspan.removeClass(plus).addClass(minus);
 			}
+			if(frz && $t.p.height === 'auto'){
+				$t.grid.fbDiv.height($($t).height());
+				if($t.grid.fsDiv) {
+					var hasscroll = $($t.grid.bDiv)[0].scrollWidth > $($t.grid.bDiv)[0].clientWidth,
+					//scrollbar height
+					scrollh = hasscroll ? $.jgrid.scrollbarHeight() : 0;
+					$t.grid.fsDiv.css('top', ($t.grid.fbDiv.position().top + $($t).height()) + scrollh + 'px');
+				}
+			}
 			$($t).triggerHandler("jqGridGroupingClickGroup", [hid , collapsed]);
 			if( $.jgrid.isFunction($t.p.onClickGroup)) { $t.p.onClickGroup.call($t, hid , collapsed); }
 
@@ -386,6 +395,7 @@ $.jgrid.extend({
 								nv.v = (nv.v/n.cnt);
 							}
 						}
+						nv.uv = nv.v;
 						try {
 							nv.v = $t.formatter('',nv.v, ci, this);
 						} catch (e) {}
@@ -864,7 +874,8 @@ $.jgrid.extend({
 					$($focusElem).focus();
 				} catch(fe) {}
 			}
-			if( $.jgrid.trim($("tr.jqg-second-row-header th").eq( 0 ).text()) === "" ) {
+			var testws = $("tr.jqg-second-row-header th").eq( 0 );
+			if( $.jgrid.type(testws)==='object' && testws.length && $.jgrid.trim(testws[0].outerText) === "" ) {
 				$("tr.jqg-second-row-header th").eq( 0 ).prepend('&nbsp;');
 			}
 			if(frozen) {
