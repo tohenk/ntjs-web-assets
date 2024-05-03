@@ -1,4 +1,4 @@
-/*! Scroller 2.4.1
+/*! Scroller 2.4.2
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -52,7 +52,7 @@ var DataTable = $.fn.dataTable;
 /**
  * @summary     Scroller
  * @description Virtual rendering for DataTables
- * @version     2.4.1
+ * @version     2.4.2
  * @copyright   SpryMedia Ltd.
  *
  * This source file is free software, available under the following license:
@@ -886,7 +886,7 @@ $.extend(Scroller.prototype, {
 		// also means we need to work out the difference between the current scroll position
 		// and the "base" for when it was required
 		var diffRows = (this.s.lastScrollTop - this.s.baseScrollTop) / this.s.heights.row;
-		var start = Math.floor(this.s.baseRowTop + diffRows);
+		var start = Math.floor(this.s.baseRowTop + diffRows) + 1;
 
 		// For a jump scroll type, we just use the straightforward calculation based on
 		// `topRowFloat`
@@ -1284,7 +1284,7 @@ Scroller.oDefaults = Scroller.defaults;
  *  @name      Scroller.version
  *  @static
  */
-Scroller.version = '2.4.1';
+Scroller.version = '2.4.2';
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Initialisation
