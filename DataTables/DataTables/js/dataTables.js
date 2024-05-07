@@ -1,11 +1,11 @@
-/*! DataTables 2.0.6
+/*! DataTables 2.0.7
  * © SpryMedia Ltd - datatables.net/license
  */
 
 /**
  * @summary     DataTables
  * @description Paginate, search and order HTML tables
- * @version     2.0.6
+ * @version     2.0.7
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net
  * @copyright   SpryMedia Ltd.
@@ -4830,7 +4830,7 @@
 	
 			// Different positioning depending on if scrolling is enabled or not
 			if (scrolling) {
-				n.prependTo( 'div.dt-scroll', settings.nTableWrapper );
+				n.prependTo( $('div.dt-scroll', settings.nTableWrapper) );
 			}
 			else {
 				n.insertBefore( table );
@@ -5079,7 +5079,7 @@
 		// of the indexes out.
 		if (settings.aiDisplay.length) {
 			// Get the column sizes from the first row in the table
-			var colSizes = table.children('tbody > tr').eq(0).children('th, td').map(function (vis) {
+			var colSizes = table.children('tbody').eq(0).children('tr').eq(0).children('th, td').map(function (vis) {
 				return {
 					idx: _fnVisibleToColumnIndex(settings, vis),
 					width: $(this).outerWidth()
@@ -9611,7 +9611,7 @@
 	 *  @type string
 	 *  @default Version number
 	 */
-	DataTable.version = "2.0.6";
+	DataTable.version = "2.0.7";
 	
 	/**
 	 * Private data store, containing all of the settings objects that are
