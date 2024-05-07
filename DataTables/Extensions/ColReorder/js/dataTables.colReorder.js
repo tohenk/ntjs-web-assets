@@ -1,4 +1,4 @@
-/*! ColReorder 2.0.1
+/*! ColReorder 2.0.2
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -187,19 +187,25 @@ function move(dt, from, to) {
     // Per row manipulations
     for (i = 0; i < settings.aoData.length; i++) {
         var data = settings.aoData[i];
+        // Allow for sparse array
+        if (!data) {
+            continue;
+        }
         var cells = data.anCells;
-        if (cells) {
-            // Array of cells
-            arrayMove(cells, from[0], from.length, to);
-            for (j = 0; j < cells.length; j++) {
-                // Reinsert into the document in the new order
-                if (data.nTr && cells[j] && columns[j].bVisible) {
-                    data.nTr.appendChild(cells[j]);
-                }
-                // Update lookup index
-                if (cells[j] && cells[j]._DT_CellIndex) {
-                    cells[j]._DT_CellIndex.column = j;
-                }
+        // Not yet rendered
+        if (!cells) {
+            continue;
+        }
+        // Array of cells
+        arrayMove(cells, from[0], from.length, to);
+        for (j = 0; j < cells.length; j++) {
+            // Reinsert into the document in the new order
+            if (data.nTr && cells[j] && columns[j].bVisible) {
+                data.nTr.appendChild(cells[j]);
+            }
+            // Update lookup index
+            if (cells[j] && cells[j]._DT_CellIndex) {
+                cells[j]._DT_CellIndex.column = j;
             }
         }
     }
@@ -326,6 +332,9 @@ function structureFill(structure) {
             var cell = structure[row][col];
             if (cell) {
                 for (var rowInner = 0; rowInner < cell.rowspan; rowInner++) {
+                    if (!filledIn[row + rowInner]) {
+                        filledIn[row + rowInner] = [];
+                    }
                     for (var colInner = 0; colInner < cell.colspan; colInner++) {
                         filledIn[row + rowInner][col + colInner] = cell.cell;
                     }
@@ -829,17 +838,17 @@ var ColReorder = /** @class */ (function () {
         enable: true,
         order: null
     };
-    ColReorder.version = '2.0.1';
+    ColReorder.version = '2.0.2';
     return ColReorder;
 }());
 
-/*! ColReorder 2.0.1
+/*! ColReorder 2.0.2
  * © SpryMedia Ltd - datatables.net/license
  */
 /**
  * @summary     ColReorder
  * @description Provide the ability to reorder columns in a DataTable
- * @version     2.0.1
+ * @version     2.0.2
  * @author      SpryMedia Ltd
  * @contact     datatables.net
  * @copyright   SpryMedia Ltd.
