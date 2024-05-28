@@ -1,4 +1,4 @@
-/*! Select for DataTables 2.0.2
+/*! Select for DataTables 2.0.3
  * © SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -56,7 +56,7 @@ DataTable.select.classes = {
 	checkbox: 'dt-select-checkbox'
 };
 
-DataTable.select.version = '2.0.2';
+DataTable.select.version = '2.0.3';
 
 DataTable.select.init = function (dt) {
 	var ctx = dt.settings()[0];
@@ -200,11 +200,11 @@ DataTable.select.init = function (dt) {
 
 	// Insert a checkbox into the header if needed - might need to wait
 	// for init complete, or it might already be done
-	if (headerCheckbox) {
-		initCheckboxHeader(dt);
+	if (headerCheckbox || headerCheckbox === 'select-page' || headerCheckbox === 'select-all') {
+		initCheckboxHeader(dt, headerCheckbox);
 
 		dt.on('init', function () {
-			initCheckboxHeader(dt);
+			initCheckboxHeader(dt, headerCheckbox);
 		});
 	}
 };
@@ -600,8 +600,9 @@ function info(api, node) {
  * be selected, deselected or just to show the state.
  *
  * @param {*} dt API
+ * @param {*} headerCheckbox the header checkbox option
  */
-function initCheckboxHeader( dt ) {
+function initCheckboxHeader( dt, headerCheckbox ) {
 	// Find any checkbox column(s)
 	dt.columns('.dt-select').every(function () {
 		var header = this.header();
@@ -617,7 +618,11 @@ function initCheckboxHeader( dt ) {
 				.appendTo(header)
 				.on('change', function () {
 					if (this.checked) {
-						dt.rows({search: 'applied'}).select();
+						if (headerCheckbox == 'select-page') {
+							dt.rows({page: 'current'}).select()
+						} else {
+							dt.rows({search: 'applied'}).select();
+						}
 					}
 					else {
 						dt.rows({selected: true}).deselect();
@@ -633,7 +638,7 @@ function initCheckboxHeader( dt ) {
 				if (type === 'row' || ! type) {
 					var count = dt.rows({selected: true}).count();
 					var search = dt.rows({search: 'applied', selected: true}).count();
-					var available = dt.rows({search: 'applied'}).count();
+					var available = headerCheckbox == 'select-page' ? dt.rows({page: 'current'}).count() : dt.rows({search: 'applied'}).count();
 
 					if (search && search <= count && search === available) {
 						input
@@ -1548,6 +1553,15 @@ DataTable.render.select = function (valueProp, nameProp) {
 					type: 'checkbox',
 					value: valueFn ? valueFn(row) : null,
 					checked: selected
+				})
+				.on('input', function (e) {
+					// Let Select 100% control the state of the checkbox
+					e.preventDefault();
+
+					// And make sure this checkbox matches it's row as it is possible
+					// to check out of sync if this was clicked on to deselect a range
+					// but remains selected itself
+					this.checked = $(this).closest('tr').hasClass('selected');
 				})[0];
 		}
 		else if (type === 'type') {
