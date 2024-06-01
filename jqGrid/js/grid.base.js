@@ -19,7 +19,7 @@ if(!$.jgrid.hasOwnProperty("defaults")) {
 	$.jgrid.defaults = {};
 }
 $.extend($.jgrid,{
-	version : "5.8.6",
+	version : "5.8.7",
 	isNull : function( p, strict_eq) {
 		if(strict_eq && strict_eq === true) {
 			return p === null;
@@ -3080,6 +3080,7 @@ $.fn.jqGrid = function( pin ) {
 				rnc = ni ? getstyle(stylemodule, 'rownumBox', false, 'jqgrid-rownum') :"",
 				scc = sc ? getstyle(stylemodule, 'searchBox', false, '') :"",
 				mlc = gi ? getstyle(stylemodule, 'multiBox', false, 'cbox'):"";
+
 				while (j<gl) {
 					xmlr = gxml[j];
 					rid = getId(xmlr,br+j);
@@ -3095,16 +3096,16 @@ $.fn.jqGrid = function( pin ) {
 					var iStartTrTag = rowData.length;
 					rowData.push("");
 					if( ni ) {
-						rowData.push( addRowNum(0, j+rcnt, ts.p.page, ts.p.rowNum, rnc ) );
+						rowData.push( addRowNum(0, j, ts.p.page, ts.p.rowNum, rnc ) );
 					}
 					if( gi ) {
-						rowData.push( addMulti(rid, ni, j+rcnt, selr, mlc, xmlr) );
+						rowData.push( addMulti(rid, ni, j + 1, selr, mlc, xmlr) );
 					}
 					if( sc ){
-						rowData.push( addSearch(rid, gi+ni, j+rcnt, scc) );
+						rowData.push( addSearch(rid, gi+ni, j + 1, scc) );
 					}
 					if( si ) {
-						rowData.push( addSubGridCell.call(self, gi+ni+sc, j+rcnt) );
+						rowData.push( addSubGridCell.call(self, gi+ni+sc, j + 1) );
 					}
 					if(xmlRd.repeatitems){
 						if (!F) { F=orderedCols(gi+si+ni+sc); }
@@ -3288,7 +3289,7 @@ $.fn.jqGrid = function( pin ) {
 			ts.p.lastpage = intNum($.jgrid.getAccessor(data,dReader.total), 1);
 			ts.p.records = intNum($.jgrid.getAccessor(data,dReader.records));
 			ts.p.userData = $.jgrid.getAccessor(data,dReader.userdata) || {};
-
+			
 			if(si) {
 				addSubGridCell = $.jgrid.getMethod("addSubGridCell");
 			}
@@ -3303,7 +3304,7 @@ $.fn.jqGrid = function( pin ) {
 			drows = $.jgrid.getAccessor(data,dReader.root);
 			if ( $.jgrid.isNull(drows) && Array.isArray(data)) { drows = data; }
 			if (!drows) { drows = []; }
-			len = drows.length; i=0;
+			len = drows.length; i = 0;
 			if (len > 0 && ts.p.page <= 0) { ts.p.page = 1; }
 			if (adjust) { rn *= adjust+1; }
 			if(ts.p.datatype === "local" && !ts.p.deselectAfterSort) {
@@ -3344,16 +3345,16 @@ $.fn.jqGrid = function( pin ) {
 				var iStartTrTag = rowData.length;
 				rowData.push("");
 				if( ni ) {
-					rowData.push( addRowNum(0, i+rcnt, ts.p.page, ts.p.rowNum, rnc ) );
+					rowData.push( addRowNum(0, i, ts.p.page, ts.p.rowNum, rnc ) );
 				}
 				if( gi ){
-					rowData.push( addMulti(idr, ni, i+rcnt, selr, mlc, cur) );
+					rowData.push( addMulti(idr, ni, i + 1, selr, mlc, cur) );
 				}
 				if( sc ){
-					rowData.push( addSearch(idr, gi+ni, i+rcnt, scc) );
+					rowData.push( addSearch(idr, gi+ni, i + 1, scc) );
 				}
 				if( si ) {
-					rowData.push( addSubGridCell.call(self ,gi+ni+sc,i+rcnt) );
+					rowData.push( addSubGridCell.call(self ,gi+ni+sc,i + 1) );
 				}
 				rowReader=objectReader;
 				if (dReader.repeatitems) {
@@ -5063,6 +5064,46 @@ $.fn.jqGrid = function( pin ) {
 			$(ts).jqGrid("remapColumns", cols, true);
 			$(ts).jqGrid("setFrozenColumns");
 		},
+		buildSubmenuItems = function (top, left, parent, id, cname) {
+			var cm = ts.p.colModel, i,
+			common = $.jgrid.styleUI[(ts.p.styleUI || 'jQueryUI')].common,
+			styles = $.jgrid.styleUI[(ts.p.styleUI || 'jQueryUI')].colmenu,
+			items = ts.p.colMenuCustom[id].items,
+			str1 = '<ul id="col_menu" class="ui-search-menu  ui-col-menu modal-content ' + common.shadow + '" role="menu" tabindex="0" style="left:'+left+'px;">';
+			items.forEach((item)=>{
+				if(!item.icon) {
+					item.icon = styles.icon_new_item;
+				}
+				if(item.id =="separator") {
+					str1 += '<li class="ui-menu-item divider" role="separator"></li>';
+				} else {
+					str1 += '<li class="ui-menu-item" role="presentation"><a class="g-menu-item" tabindex="0" role="menuitem" data-value="' + item.id + '"><table class="ui-common-table"><tr><td class="menu_icon"><span class="'+iconbase+' '+item.icon+'"></span></td><td class="menu_text">'+item.title+'</td></tr></table></a></li>';
+				}
+			});
+			str1 += "</ul>";
+			$(parent).append(str1);	
+			$("#col_menu").addClass("ui-menu " + colmenustyle.menu_widget);
+			if(!$.jgrid.isElementInViewport($("#col_menu")[0])){
+				$("#col_menu").css("left", - parseInt($("#column_menu").innerWidth(),10) +"px");
+			}
+			$("#col_menu > li > a").on("click", function(e) {
+				var v = $(this).attr("data-value");
+				//sobj = ts.grid.headers[index].el;
+				var itm = items.find( (exec) => exec.id===v);
+				if(itm) {
+					if($.jgrid.isFunction(itm.funcname)) {
+						itm.funcname.call(ts, cname);
+						if(itm.closeOnRun) {
+							$(this).remove();
+						}
+					}
+				}
+			}).hover(function(){
+				$(this).addClass(hover);
+			},function(){
+				$(this).removeClass(hover);
+			});
+		},
 		buildColMenu = function( index, left, top ){
 			var menu_offset = $(grid.hDiv).height();
 			if($(".ui-search-toolbar",grid.hDiv)[0] && !isNaN($(".ui-search-toolbar",grid.hDiv).height())) {
@@ -5134,8 +5175,9 @@ $.fn.jqGrid = function( pin ) {
 					var	exclude = menuitem.exclude.split(",");
 					exclude = $.map(exclude, function(item){ return $.jgrid.trim(item);});
 					if( menuitem.colname === cname  || (menuitem.colname === '_all_' && $.inArray(cname, exclude) === -1)) {
+						var subid = menuitem.items.length ? "submenu": menuitem.id;
 						strl = '<li class="ui-menu-item divider" role="separator"></li>';
-						str = '<li class="ui-menu-item" role="presentation"><a class="g-menu-item" tabindex="0" role="menuitem" data-value="'+menuitem.id+'"><table class="ui-common-table"><tr><td class="menu_icon"><span class="'+iconbase+' '+menuitem.icon+'"></span></td><td class="menu_text">'+menuitem.title+'</td></tr></table></a></li>';
+						str = '<li class="ui-menu-item" role="presentation"><a id="'+menuitem.id+'" class="g-menu-item" tabindex="0" role="menuitem" data-value="' + subid + '"><table class="ui-common-table"><tr><td class="menu_icon"><span class="'+iconbase+' '+menuitem.icon+'"></span></td><td class="menu_text">'+menuitem.title+'</td></tr></table></a></li>';
 						if(menuitem.position === 'last') {
 							if(menuitem.separator) {
 								menuData.push( strl );
@@ -5175,6 +5217,11 @@ $.fn.jqGrid = function( pin ) {
 						left1 = $(this).parent().width()+8;
 						top1 = $(this).parent().position().top - 5;
 						buildSearchBox(index, top1, left1, $(this).parent());
+					}
+					if($(this).attr("data-value") === 'submenu') {
+						left1 = $(this).parent().width()+8;
+						top1 = $(this).parent().position().top - 5;
+						buildSubmenuItems(top1, left1, $(this).parent(), $(this).attr("id"), cname);
 					}
 					$(this).addClass(hover);
 				},
@@ -8179,7 +8226,8 @@ $.jgrid.extend({
 			position : "last",
 			closeOnRun : true,
 			exclude : "",
-			id : null
+			id : null, 
+			items : []
 		}, options ||{});
 		return this.each(function(){
 			options.colname = colname === 'all' ? "_all_" : colname;

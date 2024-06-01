@@ -1,6 +1,6 @@
 /**
 *
-* @license Guriddo jqGrid JS - v5.8.6 - 2024-04-30
+* @license Guriddo jqGrid JS - v5.8.7 - 2024-06-01
 * Copyright(c) 2008, Tony Tomov, tony@trirand.com
 * 
 * License: http://guriddo.net/?page_id=103334
@@ -24,7 +24,7 @@ if(!$.jgrid.hasOwnProperty("defaults")) {
 	$.jgrid.defaults = {};
 }
 $.extend($.jgrid,{
-	version : "5.8.6",
+	version : "5.8.7",
 	isNull : function( p, strict_eq) {
 		if(strict_eq && strict_eq === true) {
 			return p === null;
@@ -3085,6 +3085,7 @@ $.fn.jqGrid = function( pin ) {
 				rnc = ni ? getstyle(stylemodule, 'rownumBox', false, 'jqgrid-rownum') :"",
 				scc = sc ? getstyle(stylemodule, 'searchBox', false, '') :"",
 				mlc = gi ? getstyle(stylemodule, 'multiBox', false, 'cbox'):"";
+
 				while (j<gl) {
 					xmlr = gxml[j];
 					rid = getId(xmlr,br+j);
@@ -3100,16 +3101,16 @@ $.fn.jqGrid = function( pin ) {
 					var iStartTrTag = rowData.length;
 					rowData.push("");
 					if( ni ) {
-						rowData.push( addRowNum(0, j+rcnt, ts.p.page, ts.p.rowNum, rnc ) );
+						rowData.push( addRowNum(0, j, ts.p.page, ts.p.rowNum, rnc ) );
 					}
 					if( gi ) {
-						rowData.push( addMulti(rid, ni, j+rcnt, selr, mlc, xmlr) );
+						rowData.push( addMulti(rid, ni, j + 1, selr, mlc, xmlr) );
 					}
 					if( sc ){
-						rowData.push( addSearch(rid, gi+ni, j+rcnt, scc) );
+						rowData.push( addSearch(rid, gi+ni, j + 1, scc) );
 					}
 					if( si ) {
-						rowData.push( addSubGridCell.call(self, gi+ni+sc, j+rcnt) );
+						rowData.push( addSubGridCell.call(self, gi+ni+sc, j + 1) );
 					}
 					if(xmlRd.repeatitems){
 						if (!F) { F=orderedCols(gi+si+ni+sc); }
@@ -3293,7 +3294,7 @@ $.fn.jqGrid = function( pin ) {
 			ts.p.lastpage = intNum($.jgrid.getAccessor(data,dReader.total), 1);
 			ts.p.records = intNum($.jgrid.getAccessor(data,dReader.records));
 			ts.p.userData = $.jgrid.getAccessor(data,dReader.userdata) || {};
-
+			
 			if(si) {
 				addSubGridCell = $.jgrid.getMethod("addSubGridCell");
 			}
@@ -3308,7 +3309,7 @@ $.fn.jqGrid = function( pin ) {
 			drows = $.jgrid.getAccessor(data,dReader.root);
 			if ( $.jgrid.isNull(drows) && Array.isArray(data)) { drows = data; }
 			if (!drows) { drows = []; }
-			len = drows.length; i=0;
+			len = drows.length; i = 0;
 			if (len > 0 && ts.p.page <= 0) { ts.p.page = 1; }
 			if (adjust) { rn *= adjust+1; }
 			if(ts.p.datatype === "local" && !ts.p.deselectAfterSort) {
@@ -3349,16 +3350,16 @@ $.fn.jqGrid = function( pin ) {
 				var iStartTrTag = rowData.length;
 				rowData.push("");
 				if( ni ) {
-					rowData.push( addRowNum(0, i+rcnt, ts.p.page, ts.p.rowNum, rnc ) );
+					rowData.push( addRowNum(0, i, ts.p.page, ts.p.rowNum, rnc ) );
 				}
 				if( gi ){
-					rowData.push( addMulti(idr, ni, i+rcnt, selr, mlc, cur) );
+					rowData.push( addMulti(idr, ni, i + 1, selr, mlc, cur) );
 				}
 				if( sc ){
-					rowData.push( addSearch(idr, gi+ni, i+rcnt, scc) );
+					rowData.push( addSearch(idr, gi+ni, i + 1, scc) );
 				}
 				if( si ) {
-					rowData.push( addSubGridCell.call(self ,gi+ni+sc,i+rcnt) );
+					rowData.push( addSubGridCell.call(self ,gi+ni+sc,i + 1) );
 				}
 				rowReader=objectReader;
 				if (dReader.repeatitems) {
@@ -5068,6 +5069,46 @@ $.fn.jqGrid = function( pin ) {
 			$(ts).jqGrid("remapColumns", cols, true);
 			$(ts).jqGrid("setFrozenColumns");
 		},
+		buildSubmenuItems = function (top, left, parent, id, cname) {
+			var cm = ts.p.colModel, i,
+			common = $.jgrid.styleUI[(ts.p.styleUI || 'jQueryUI')].common,
+			styles = $.jgrid.styleUI[(ts.p.styleUI || 'jQueryUI')].colmenu,
+			items = ts.p.colMenuCustom[id].items,
+			str1 = '<ul id="col_menu" class="ui-search-menu  ui-col-menu modal-content ' + common.shadow + '" role="menu" tabindex="0" style="left:'+left+'px;">';
+			items.forEach((item)=>{
+				if(!item.icon) {
+					item.icon = styles.icon_new_item;
+				}
+				if(item.id =="separator") {
+					str1 += '<li class="ui-menu-item divider" role="separator"></li>';
+				} else {
+					str1 += '<li class="ui-menu-item" role="presentation"><a class="g-menu-item" tabindex="0" role="menuitem" data-value="' + item.id + '"><table class="ui-common-table"><tr><td class="menu_icon"><span class="'+iconbase+' '+item.icon+'"></span></td><td class="menu_text">'+item.title+'</td></tr></table></a></li>';
+				}
+			});
+			str1 += "</ul>";
+			$(parent).append(str1);	
+			$("#col_menu").addClass("ui-menu " + colmenustyle.menu_widget);
+			if(!$.jgrid.isElementInViewport($("#col_menu")[0])){
+				$("#col_menu").css("left", - parseInt($("#column_menu").innerWidth(),10) +"px");
+			}
+			$("#col_menu > li > a").on("click", function(e) {
+				var v = $(this).attr("data-value");
+				//sobj = ts.grid.headers[index].el;
+				var itm = items.find( (exec) => exec.id===v);
+				if(itm) {
+					if($.jgrid.isFunction(itm.funcname)) {
+						itm.funcname.call(ts, cname);
+						if(itm.closeOnRun) {
+							$(this).remove();
+						}
+					}
+				}
+			}).hover(function(){
+				$(this).addClass(hover);
+			},function(){
+				$(this).removeClass(hover);
+			});
+		},
 		buildColMenu = function( index, left, top ){
 			var menu_offset = $(grid.hDiv).height();
 			if($(".ui-search-toolbar",grid.hDiv)[0] && !isNaN($(".ui-search-toolbar",grid.hDiv).height())) {
@@ -5139,8 +5180,9 @@ $.fn.jqGrid = function( pin ) {
 					var	exclude = menuitem.exclude.split(",");
 					exclude = $.map(exclude, function(item){ return $.jgrid.trim(item);});
 					if( menuitem.colname === cname  || (menuitem.colname === '_all_' && $.inArray(cname, exclude) === -1)) {
+						var subid = menuitem.items.length ? "submenu": menuitem.id;
 						strl = '<li class="ui-menu-item divider" role="separator"></li>';
-						str = '<li class="ui-menu-item" role="presentation"><a class="g-menu-item" tabindex="0" role="menuitem" data-value="'+menuitem.id+'"><table class="ui-common-table"><tr><td class="menu_icon"><span class="'+iconbase+' '+menuitem.icon+'"></span></td><td class="menu_text">'+menuitem.title+'</td></tr></table></a></li>';
+						str = '<li class="ui-menu-item" role="presentation"><a id="'+menuitem.id+'" class="g-menu-item" tabindex="0" role="menuitem" data-value="' + subid + '"><table class="ui-common-table"><tr><td class="menu_icon"><span class="'+iconbase+' '+menuitem.icon+'"></span></td><td class="menu_text">'+menuitem.title+'</td></tr></table></a></li>';
 						if(menuitem.position === 'last') {
 							if(menuitem.separator) {
 								menuData.push( strl );
@@ -5180,6 +5222,11 @@ $.fn.jqGrid = function( pin ) {
 						left1 = $(this).parent().width()+8;
 						top1 = $(this).parent().position().top - 5;
 						buildSearchBox(index, top1, left1, $(this).parent());
+					}
+					if($(this).attr("data-value") === 'submenu') {
+						left1 = $(this).parent().width()+8;
+						top1 = $(this).parent().position().top - 5;
+						buildSubmenuItems(top1, left1, $(this).parent(), $(this).attr("id"), cname);
 					}
 					$(this).addClass(hover);
 				},
@@ -8184,7 +8231,8 @@ $.jgrid.extend({
 			position : "last",
 			closeOnRun : true,
 			exclude : "",
-			id : null
+			id : null, 
+			items : []
 		}, options ||{});
 		return this.each(function(){
 			options.colname = colname === 'all' ? "_all_" : colname;
@@ -15125,6 +15173,7 @@ $.jgrid.extend({
 			//startColumnName,
 			numberOfColumns,
 			titleText,
+                        toolTip,
 			cVisibleColumns,
 			className,
 			colModel = ts.p.colModel,
@@ -15172,8 +15221,9 @@ $.jgrid.extend({
 				if (iCol >= 0) {
 					cghi = ts.p.colSpanHeader[iCol];
 					numberOfColumns = cghi.numberOfColumns;
-					titleText = cghi.titleText;
+					titleText = cghi.titleText || "";
 					className = cghi.className || "";
+					toolTip = cghi.toolTip || "";
 					// caclulate the number of visible columns from the next numberOfColumns columns
 					for (cVisibleColumns = 0, iCol = 0; iCol < numberOfColumns && (i + iCol < cml); iCol++) {
 						if (!colModel[i + iCol].hidden) {
@@ -15188,13 +15238,14 @@ $.jgrid.extend({
 								$("tr",$thead).eq(k+1).find("th").eq(i).attr("colspan", String(cVisibleColumns));
 							}
 						}
-
 					}
 					if (titleText) {
-						var fl = $th.find("div.ui-th-div")[0].firstChild;
-						cghi.savedLabel = fl.data;
-						fl.data = titleText;
-						if (ts.p.headertitles) {
+						var fl = $th.find("div.ui-th-div")[0];
+						cghi.savedLabel = fl.innerHTML;
+						fl.innerHTML = titleText;
+						if(typeof toolTip === "string" && toolTip !== "") {
+							$th.attr("title", toolTip);
+						} else if (ts.p.headertitles) {
 							$th.attr("title", titleText);
 						}
 					}
@@ -15251,8 +15302,8 @@ $.jgrid.extend({
 						}
 						$(itm).attr("colspan","").removeClass( itm.className );
 						if($(n).hasClass('ui-jqgrid-labels')) {
-							fl = itm.find("div.ui-th-div")[0].firstChild;
-							fl.data = clitem.savedLabel;
+							fl = itm.find("div.ui-th-div")[0];
+							fl.innerHTML = clitem.savedLabel;
 						}
 						for(k=1;k<clitem.numberOfColumns;k++) {
 							$("th", n).eq(cellInd+k).show();
@@ -15278,6 +15329,7 @@ $.jgrid.extend({
 			//startColumnName,
 			numberOfColumns,
 			titleText,
+			toolTip,
 			cVisibleColumns,
 			className,
 			colModel = ts.p.colModel,
@@ -15328,6 +15380,7 @@ $.jgrid.extend({
 					cghi = o.groupHeaders[iCol];
 					numberOfColumns = cghi.numberOfColumns;
 					titleText = cghi.titleText;
+					toolTip = cghi.toolTip || "";
 					className = cghi.className || "";
 					// caclulate the number of visible columns from the next numberOfColumns columns
 					for (cVisibleColumns = 0, iCol = 0; iCol < numberOfColumns && (i + iCol < cml); iCol++) {
@@ -15346,7 +15399,9 @@ $.jgrid.extend({
 					if(cVisibleColumns > 0) {
 						$colHeader.attr("colspan", String(cVisibleColumns));
 					}
-					if (ts.p.headertitles) {
+					if(typeof toolTip === "string" && toolTip !== "") {
+						$colHeader.attr("title", toolTip);
+					} else if (ts.p.headertitles) {
 						$colHeader.attr("title", $colHeader.text());
 					}
 					// hide if not a visible cols
@@ -23009,7 +23064,8 @@ $.jgrid.extend({
 			highlight = getstyle($t.p.styleUI+'.common','highlight', true);
 			$t.p.F2key = false;
 			// basic functions
-			function isValidCell(row, col) {
+			var baseFunc = {
+				isValidCell : function (row, col) {
 				return (
 					!isNaN(row) &&
 					!isNaN(col) &&
@@ -23019,8 +23075,8 @@ $.jgrid.extend({
 					row < $t.rows.length &&
 					col < $t.p.colModel.length
 				);
-			}
-			function getNextCell( dirX, dirY) {
+				},
+				getNextCell: function ( dirX, dirY) {
 				var row = $t.p.iRow + dirY; // set the default one when initialize grid
 				var col = $t.p.iCol + dirX; // set the default .................
 				var rowCount = $t.rows.length;
@@ -23044,12 +23100,12 @@ $.jgrid.extend({
 							row--;
 						}
 				}
-				if (isValidCell(row, col)) {
+					if (this.isValidCell(row, col)) {
 					return {
 						row: row,
 						col: col
 					};
-				} else if (isValidCell($t.p.iRow, $t.p.iCol)) {
+					} else if (this.isValidCell($t.p.iRow, $t.p.iCol)) {
 					return {
 						row: $t.p.iRow,
 						col: $t.p.iCol
@@ -23057,9 +23113,9 @@ $.jgrid.extend({
 				} else {
 					return false;
 				}
-			}
-			function getNextVisibleCell(dirX, dirY) {
-				var nextCell = getNextCell( dirX, dirY);
+				},
+				getNextVisibleCell : function (dirX, dirY) {
+					var nextCell = this.getNextCell( dirX, dirY);
 				if (!nextCell) {
 					return false;
 				}
@@ -23067,7 +23123,7 @@ $.jgrid.extend({
 				while ( $($t.rows[nextCell.row].cells[nextCell.col]).is(":hidden") ) {
 					$t.p.iRow = nextCell.row;
 					$t.p.iCol = nextCell.col;
-					nextCell = getNextCell(dirX, dirY);
+						nextCell = this.getNextCell(dirX, dirY);
 					if ($t.p.iRow  === nextCell.row && $t.p.iCol  === nextCell.col) {
 						// There are no more cells to try if getNextCell returns the current cell
 						return false;
@@ -23078,8 +23134,8 @@ $.jgrid.extend({
 				}
 
 				return nextCell;
-			}
-			function movePage ( dir ) {
+				},
+				movePage : function ( dir ) {
 				var curpage = $t.p.page, last =$t.p.lastpage;
 				curpage = curpage + dir;
 				if( curpage <= 0) {
@@ -23094,6 +23150,7 @@ $.jgrid.extend({
 				$t.p.page = curpage;
 				$t.grid.populate();
 			}
+			};
 			var focusableElementsSelector = $.jgrid.focusableElementsList.join();
 			/*
 			function hasFocusableChild( el) {
@@ -23145,7 +23202,7 @@ $.jgrid.extend({
 					return;
 				}
 				if(onKeyCheck) {
-					if(!onKeyCheck.call($t, $t.rows[$t.p.iRow].id, $t.p.iRow, $t.p.iCol, e) ) {
+					if(!onKeyCheck.call($t, $t.rows[$t.p.iRow].id, $t.p.iRow, $t.p.iCol, e, baseFunc) ) {
 						return;
 					}
 				}
@@ -23154,26 +23211,26 @@ $.jgrid.extend({
 
 				switch(key) {
 					case (38) : // UP
-						nextCell = getNextVisibleCell(0, -1);
+						nextCell = baseFunc.getNextVisibleCell(0, -1);
 						focusRow = nextCell.row;
 						focusCol = nextCell.col;
 						e.preventDefault();
 						break;
 					case (40) : // DOWN
 					case 13 : // Enter
-						nextCell = getNextVisibleCell(0, 1);
+						nextCell = baseFunc.getNextVisibleCell(0, 1);
 						focusRow = nextCell.row;
 						focusCol = nextCell.col;
 						e.preventDefault();
 						break;
 					case (37) : // LEFT
-						nextCell = getNextVisibleCell(-1, 0);
+						nextCell = baseFunc.getNextVisibleCell(-1, 0);
 						focusRow = nextCell.row;
 						focusCol = nextCell.col;
 						e.preventDefault();
 						break;
 					case (39) : // RIGHT
-						nextCell = getNextVisibleCell(1, 0);
+						nextCell = baseFunc.getNextVisibleCell(1, 0);
 						focusRow = nextCell.row;
 						focusCol = nextCell.col;
 						e.preventDefault();
@@ -23198,13 +23255,13 @@ $.jgrid.extend({
 						break;
 					case 33 : // PAGEUP
 
-						movePage( -1 );
+						baseFunc.movePage( -1 );
 						focusCol = $t.p.iCol;
 						focusRow = $t.p.iRow;
 						e.preventDefault();
 						break;
 					case 34 : // PAGEDOWN
-						movePage( 1 );
+						baseFunc.movePage( 1 );
 						focusCol = $t.p.iCol;
 						focusRow = $t.p.iRow;
 						if(focusRow > $t.rows.length-1) {
@@ -23215,9 +23272,9 @@ $.jgrid.extend({
 						break;
 					case 9 : //TAB
 						if (e.shiftKey) {
-							nextCell = getNextVisibleCell(-1, 0);
+							nextCell = baseFunc.getNextVisibleCell(-1, 0);
 						} else {
-							nextCell = getNextVisibleCell(1, 0);
+							nextCell = baseFunc.getNextVisibleCell(1, 0);
 
 						}
 						focusRow = nextCell.row;
