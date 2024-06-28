@@ -1,6 +1,6 @@
 /**
 *
-* @license Guriddo jqGrid JS - v5.8.7 - 2024-06-01
+* @license Guriddo jqGrid JS - v5.8.8 - 2024-06-28
 * Copyright(c) 2008, Tony Tomov, tony@trirand.com
 * 
 * License: http://guriddo.net/?page_id=103334
@@ -24,7 +24,7 @@ if(!$.jgrid.hasOwnProperty("defaults")) {
 	$.jgrid.defaults = {};
 }
 $.extend($.jgrid,{
-	version : "5.8.7",
+	version : "5.8.8",
 	isNull : function( p, strict_eq) {
 		if(strict_eq && strict_eq === true) {
 			return p === null;
@@ -4070,10 +4070,12 @@ $.fn.jqGrid = function( pin ) {
 						prm[pN.sort] = gs;
 						prm[pN.order] = "";
 					}
+					/*
 					if(ts.p.datatype==='local' && !grp._locgr) {
 						ts.p.datatype = 'jsonstring';
 						ts.p.datastr = ts.p.data;
 					}
+					*/
 				}
 				$.extend(ts.p.postData,prm);
 				var rcnt = !ts.p.scroll ? 1 : ts.rows.length-1;
@@ -4166,10 +4168,12 @@ $.fn.jqGrid = function( pin ) {
 						return;
 					}
 					addJSONData(dstr);
+					/*
 					if(ts.p.grouping && ts.p.groupingView._locgr) {
 						// back to original data???
 						ts.p.data = dstr;
 					}
+					*/
 					afterprocess(dstr, lcf);
 				break;
 				case "local":
@@ -4675,6 +4679,9 @@ $.fn.jqGrid = function( pin ) {
 				if(ts.p.tblwidth > ts.p.width) {
 					ts.p.colModel[lvc].width -= (ts.p.tblwidth - parseInt(ts.p.width,10));
 					ts.p.tblwidth = ts.p.width;
+				} else if(!hs && ts.p.tblwidth === ts.p.width) {
+					ts.p.colModel[lvc].width -= bstw;
+					ts.p.tblwidth -= bstw;
 				}
 			}
 		},
@@ -13989,15 +13996,15 @@ $.jgrid.extend({
 			}
 			var alert_info = function(){
 				 $.jgrid.info_dialog(o.alertcap,"<div>"+o.alerttext+"</div><span tabindex='0'><span tabindex='-1' id='jqg_alrt'></span></span>","",{
-						jqModal:true,
-						drag:true,
-						resize:true,
-						caption:o.alertcap,
+					jqModal:true,
+					drag:true,
+					resize:true,
+					caption:o.alertcap,
 					width:o.alertwidth,
 					height: o.alertheight,
-						top:o.alerttop,
-						left:o.alertleft,
-						closeOnEscape:o.closeOnEscape, 
+					top:o.alerttop,
+					left:o.alertleft,
+					closeOnEscape:o.closeOnEscape, 
 					styleUI: $t.p.styleUI,
 					zIndex: o.alertzIndex}
 				);
@@ -14803,7 +14810,7 @@ $.jgrid.extend({
 						}
 						footLevel = parseInt($(r).attr("jqfootlevel") ,10);
 						skip = isNaN(footLevel) ? false : 
-						 (grp.showSummaryOnHide && footLevel >= num);
+						 (grp.showSummaryOnHide && footLevel <= num);
 						if( !skip) {
 							$(r).hide();
 						}

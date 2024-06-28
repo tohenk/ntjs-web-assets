@@ -405,7 +405,8 @@ div.tablediv > .table-bordered {
 .ui-jqgrid .ui-jqgrid-toppager .ui-pg-input { 
 	display: inline-block;
 	height:auto;
-	width: 50px;
+	width: auto;
+        max-width: 50px;
 	font-size: inherit; 
 	margin:0;
 	line-height: inherit;
@@ -1317,6 +1318,9 @@ a.colmenu .colmenuspan
 .ui-col-menu {
 	overflow: auto;
 	height: 17em;
+}
+.frozen-bdiv [class*="ghead_"] td {
+    overflow-x: hidden;
 }
 /*uncomment  this if you use ie11*/
 /* <script>window.MSInputMethodContext && document.documentMode && document.write('<script src="https://cdn.jsdelivr.net/gh/nuxodin/ie11CustomProperties@4.1.0/ie11CustomProperties.min.js"><\/script>');</script>*/
