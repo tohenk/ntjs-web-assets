@@ -1,11 +1,11 @@
-/*! DataTables 2.1.0
+/*! DataTables 2.1.2
  * © SpryMedia Ltd - datatables.net/license
  */
 
 /**
  * @summary     DataTables
  * @description Paginate, search and order HTML tables
- * @version     2.1.0
+ * @version     2.1.2
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net
  * @copyright   SpryMedia Ltd.
@@ -4742,14 +4742,16 @@
 			return;
 		}
 	
-		/* Build and draw the header / footer for the table */
+		// Build the header / footer for the table
 		_fnBuildHead( settings, 'header' );
 		_fnBuildHead( settings, 'footer' );
-		_fnDrawHead( settings, settings.aoHeader );
-		_fnDrawHead( settings, settings.aoFooter );
 	
-		// Load the table's state (if needed) and then render around it and draw draw
+		// Load the table's state (if needed) and then render around it and draw
 		_fnLoadState( settings, init, function () {
+			// Then draw the header / footer
+			_fnDrawHead( settings, settings.aoHeader );
+			_fnDrawHead( settings, settings.aoFooter );
+	
 			// Local data load
 			// Check if there is data passing into the constructor
 			if ( init.aaData ) {
@@ -9802,7 +9804,7 @@
 	 *  @type string
 	 *  @default Version number
 	 */
-	DataTable.version = "2.1.0";
+	DataTable.version = "2.1.2";
 	
 	/**
 	 * Private data store, containing all of the settings objects that are
@@ -12729,6 +12731,7 @@
 						return;               // table, not a nested one
 					}
 	
+					var i;
 					var orderClasses = classes.order;
 					var columns = ctx.api.columns( cell );
 					var col = settings.aoColumns[columns.flatten()[0]];
@@ -12737,14 +12740,7 @@
 					var indexes = columns.indexes();
 					var sortDirs = columns.orderable(true).flatten();
 					var sorting = ctx.sortDetails;
-					var orderedColumns = ',' + sorting
-						.filter( function (sort) {
-							// Filter to just the visible columns
-							return ctx.aoColumns[sort.col].bVisible;
-						} )
-						.map( function (sort) {
-							return sort.col;
-						} ).join(',') + ',';
+					var orderedColumns = _pluck(sorting, 'col');
 	
 					cell
 						.removeClass(
@@ -12755,10 +12751,17 @@
 						.toggleClass( orderClasses.canAsc, orderable && sortDirs.includes('asc') )
 						.toggleClass( orderClasses.canDesc, orderable && sortDirs.includes('desc') );
 	
-					// Get the index of this cell in the sort array
-					var sortIdx = orderedColumns.indexOf( ',' + indexes.toArray().join(',') + ',' );
+					// Determine if all of the columns that this cell covers are included in the
+					// current ordering
+					var isOrdering = true;
+					
+					for (i=0; i<indexes.length; i++) {
+						if (! orderedColumns.includes(indexes[i])) {
+							isOrdering = false;
+						}
+					}
 	
-					if ( sortIdx !== -1 ) {
+					if ( isOrdering ) {
 						// Get the ordering direction for the columns under this cell
 						// Note that it is possible for a cell to be asc and desc sorting
 						// (column spanning cells)
@@ -12770,8 +12773,19 @@
 						);
 					}
 	
-					// The ARIA spec says that only one column should be marked with aria-sort
-					if ( sortIdx === 0 ) {
+					// Find the first visible column that has ordering applied to it - it get's
+					// the aria information, as the ARIA spec says that only one column should
+					// be marked with aria-sort
+					var firstVis = -1; // column index
+	
+					for (i=0; i<orderedColumns.length; i++) {
+						if (settings.aoColumns[orderedColumns[i]].bVisible) {
+							firstVis = orderedColumns[i];
+							break;
+						}
+					}
+	
+					if (indexes[0] == firstVis) {
 						var firstSort = sorting[0];
 						var sortOrder = col.asSorting;
 	
@@ -12789,6 +12803,7 @@
 						: col.ariaTitle
 					);
 	
+					// Make the headers tab-able for keyboard navigation
 					if (orderable) {
 						cell.find('.dt-column-title').attr('role', 'button');
 						cell.attr('tabindex', 0)
