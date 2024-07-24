@@ -54,7 +54,7 @@
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
-    "version": "2.1.0",
+    "version": "2.1.2",
     "datatables": ""
   },
   "DataTables-AutoFill": {
@@ -70,7 +70,7 @@
     "datatables-extension": "colreorder"
   },
   "DataTables-DateTime": {
-    "version": "1.5.2",
+    "version": "1.5.3",
     "datatables-extension": "datetime"
   },
   "DataTables-FixedColumns": {
