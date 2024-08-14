@@ -1,4 +1,4 @@
-/*! SearchPanes 2.3.0
+/*! SearchPanes 2.3.2
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -141,10 +141,7 @@ var DataTable = $.fn.dataTable;
                 countButton: $$5('<button type="button"><span></span></button>')
                     .addClass(this.classes.paneButton)
                     .addClass(this.classes.countButton),
-                dtP: $$5('<table width="100%"><thead><tr><th>' +
-                    (this.s.colExists
-                        ? $$5(this.s.dt.column(this.s.index).header()).text()
-                        : this.s.customPaneSettings.header || 'Custom Pane') + '</th><th/></tr></thead></table>'),
+                dtP: $$5('<table width="100%"><thead><tr><th></th><th></th></tr></thead></table>'),
                 lower: $$5('<div/>').addClass(this.classes.subRow2).addClass(this.classes.narrowButton),
                 nameButton: $$5('<button type="button"><span></span></button>')
                     .addClass(this.classes.paneButton)
@@ -159,6 +156,15 @@ var DataTable = $.fn.dataTable;
                 topRow: $$5('<div/>').addClass(this.classes.topRow),
                 upper: $$5('<div/>').addClass(this.classes.subRow1).addClass(this.classes.narrowSearch)
             };
+            var title = '';
+            if (this.s.colExists) {
+                title = $$5(this.s.dt.column(this.s.index).header()).text();
+                this.dom.dtP.find('th').eq(0).text(title);
+            }
+            else {
+                title = this.s.customPaneSettings.header || 'Custom Pane';
+                this.dom.dtP.find('th').eq(0).html(title);
+            }
             // Set the value of name incase ordering is desired
             if (this.s.colOpts.name) {
                 this.s.name = this.s.colOpts.name;
@@ -167,9 +173,7 @@ var DataTable = $.fn.dataTable;
                 this.s.name = this.s.customPaneSettings.name;
             }
             else {
-                this.s.name = this.s.colExists ?
-                    $$5(this.s.dt.column(this.s.index).header()).text() :
-                    this.s.customPaneSettings.header || 'Custom Pane';
+                this.s.name = title;
             }
             var tableNode = this.s.dt.table(0).node();
             // Custom search function for table
@@ -527,7 +531,7 @@ var DataTable = $.fn.dataTable;
             //  change the ordering to whatever it isn't currently
             this.dom.nameButton.off('click.dtsp').on('click.dtsp', function () {
                 var currentOrder = _this.s.dtPane.order()[0][1];
-                _this.s.dtPane.order([0, currentOrder === 'asc' ? 'desc' : 'asc']).draw();
+                _this.s.dtPane.order([[0, currentOrder === 'asc' ? 'desc' : 'asc']]).draw();
                 // This state save is required so that the ordering of the panes is maintained
                 _this.s.dt.state.save();
             });
@@ -535,7 +539,7 @@ var DataTable = $.fn.dataTable;
             //  change the ordering to whatever it isn't currently
             this.dom.countButton.off('click.dtsp').on('click.dtsp', function () {
                 var currentOrder = _this.s.dtPane.order()[0][1];
-                _this.s.dtPane.order([1, currentOrder === 'asc' ? 'desc' : 'asc']).draw();
+                _this.s.dtPane.order([[1, currentOrder === 'asc' ? 'desc' : 'asc']]).draw();
                 // This state save is required so that the ordering of the panes is maintained
                 _this.s.dt.state.save();
             });
@@ -841,7 +845,12 @@ var DataTable = $.fn.dataTable;
             if (bins === void 0) { bins = this.s.rowData.bins; }
             // Retrieve the rendered data from the cell using the fastData function
             // rather than the cell().render API method for optimisation
-            var fastData = settings.fastData;
+            var fastData = settings.fastData
+                ? settings.fastData
+                : function (row, col, orth) {
+                    // Legacy DT1
+                    return settings.oApi._fnGetCellData(settings, row, col, orth);
+                };
             if (typeof this.s.colOpts.orthogonal === 'string') {
                 var rendered = fastData(rowIdx, this.s.index, this.s.colOpts.orthogonal);
                 this.s.rowData.filterMap.set(rowIdx, rendered);
@@ -1319,10 +1328,10 @@ var DataTable = $.fn.dataTable;
         SearchPane.prototype._escapeHTML = function (txt) {
             return txt
                 .toString()
-                .replace(/&amp;/g, '&')
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')
-                .replace(/&quot;/g, '"');
+                .replace(/&quot;/g, '"')
+                .replace(/&amp;/g, '&');
         };
         /**
          * Gets the options for the row for the customPanes
@@ -1767,7 +1776,12 @@ var DataTable = $.fn.dataTable;
             var orth = typeof this.s.colOpts.orthogonal === 'string'
                 ? this.s.colOpts.orthogonal
                 : this.s.colOpts.orthogonal.search;
-            var fastData = this.s.dt.settings()[0].fastData;
+            var fastData = settings.fastData
+                ? settings.fastData
+                : function (row, col, orth) {
+                    // Legacy DT1
+                    return settings.oApi._fnGetCellData(settings, row, col, orth);
+                };
             var filter = fastData(rowIdx, this.s.index, orth);
             var add = function (f) {
                 if (!bins[f]) {
@@ -2704,7 +2718,14 @@ var DataTable = $.fn.dataTable;
                 // Otherwise add the paneStartup function to the list of functions
                 // that are to be run when the table is initialised. This will garauntee that the
                 // panes are initialised before the init event and init Complete callback is fired
-                this.s.dt.settings()[0].aoInitComplete.push(function () { return _this._startup(table); });
+                if (dataTable$1.versionCheck('2')) {
+                    this.s.dt.settings()[0].aoInitComplete.push(function () { return _this._startup(table); });
+                }
+                else {
+                    this.s.dt.settings()[0].aoInitComplete.push({
+                        fn: function () { return _this._startup(table); }
+                    });
+                }
             }
         };
         /**
@@ -2979,7 +3000,7 @@ var DataTable = $.fn.dataTable;
                 this.dom.clearAll.removeClass(this.classes.disabledButton).removeAttr('disabled');
             }
         };
-        SearchPanes.version = '2.3.0';
+        SearchPanes.version = '2.3.2';
         SearchPanes.classes = {
             clear: 'dtsp-clear',
             clearAll: 'dtsp-clearAll',
@@ -3356,7 +3377,7 @@ var DataTable = $.fn.dataTable;
         return SearchPanesST;
     }(SearchPanes));
 
-    /*! SearchPanes 2.3.0
+    /*! SearchPanes 2.3.2
      * © SpryMedia Ltd - datatables.net/license
      */
     setJQuery$4($);
