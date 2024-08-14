@@ -66,7 +66,7 @@
     "datatables-extension": "buttons"
   },
   "DataTables-ColReorder": {
-    "version": "2.0.3",
+    "version": "2.0.4",
     "datatables-extension": "colreorder"
   },
   "DataTables-DateTime": {
@@ -106,15 +106,15 @@
     "datatables-extension": "scroller"
   },
   "DataTables-SearchBuilder": {
-    "version": "1.7.1",
+    "version": "1.8.0",
     "datatables-extension": "searchbuilder"
   },
   "DataTables-SearchPanes": {
-    "version": "2.3.0",
+    "version": "2.3.2",
     "datatables-extension": "searchpanes"
   },
   "DataTables-Select": {
-    "version": "2.0.4",
+    "version": "2.0.5",
     "datatables-extension": "select"
   },
   "DataTables-StateRestore": {
@@ -130,7 +130,7 @@
     "cdnjs": "blueimp-gallery"
   },
   "highcharts": {
-    "version": "11.4.6",
+    "version": "11.4.7",
     "highcharts": ""
   },
   "hotkeys": {
