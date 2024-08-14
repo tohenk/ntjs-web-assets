@@ -1,4 +1,4 @@
-/*! Select for DataTables 2.0.4
+/*! Select for DataTables 2.0.5
  * © SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -56,7 +56,7 @@ DataTable.select.classes = {
 	checkbox: 'dt-select-checkbox'
 };
 
-DataTable.select.version = '2.0.4';
+DataTable.select.version = '2.0.5';
 
 DataTable.select.init = function (dt) {
 	var ctx = dt.settings()[0];
@@ -550,6 +550,15 @@ function eventTrigger(api, type, args, any) {
 }
 
 /**
+ * Determine if a column is a checkbox column
+ * @param {*} col DataTables column object
+ * @returns 
+ */
+function isCheckboxColumn(col) {
+	return col.mRender && col.mRender._name === 'selectCheckbox';
+}
+
+/**
  * Update the information element of the DataTable showing information about the
  * items selected. This is done by adding tags to the existing text
  *
@@ -603,9 +612,17 @@ function info(api, node) {
  * @param {*} headerCheckbox the header checkbox option
  */
 function initCheckboxHeader( dt, headerCheckbox ) {
+	var dtInternalColumns = dt.settings()[0].aoColumns;
+
 	// Find any checkbox column(s)
-	dt.columns('.dt-select').every(function () {
-		var header = this.header();
+	dt.columns().iterator('column', function (s, idx) {
+		var col = dtInternalColumns[idx];
+
+		// Checkbox columns have a rendering function with a given name
+		if (! isCheckboxColumn(col)) {
+			return;
+		}
+		var header = dt.column(idx).header();
 
 		if (! $('input', header).length) {
 			// If no checkbox yet, insert one
@@ -1130,7 +1147,7 @@ apiRegisterPlural('rows().select()', 'row().select()', function (select) {
 				api.columns().types()
 			}
 			
-			if (col.sType === 'select-checkbox') {
+			if (isCheckboxColumn(col)) {
 				var cells = dtData.anCells;
 
 				// Make sure the checkbox shows the right state
@@ -1264,7 +1281,7 @@ apiRegisterPlural('rows().deselect()', 'row().deselect()', function () {
 				api.columns().types()
 			}
 			
-			if (col.sType === 'select-checkbox') {
+			if (isCheckboxColumn(col)) {
 				var cells = dtData.anCells;
 
 				// Make sure the checkbox shows the right state
@@ -1517,7 +1534,7 @@ $.each(['Row', 'Column', 'Cell'], function (i, item) {
 });
 
 // Note that DataTables 2.1 has more robust type detection, but we retain
-// backwards compatbility with 2.0 for the moment.
+// backwards compatibility with 2.0 for the moment.
 DataTable.type('select-checkbox', {
 	className: 'dt-select',
 	detect: DataTable.versionCheck('2.1')
@@ -1529,7 +1546,7 @@ DataTable.type('select-checkbox', {
 				return false; // no op
 			},
 			init: function (settings, col, idx) {
-				return col.mRender && col.mRender.name === 'selectCheckbox';
+				return isCheckboxColumn(col);
 			}
 		}
 		: function (data) {
@@ -1555,7 +1572,7 @@ DataTable.render.select = function (valueProp, nameProp) {
 	var valueFn = valueProp ? DataTable.util.get(valueProp) : null;
 	var nameFn = nameProp ? DataTable.util.get(nameProp) : null;
 
-	return function selectCheckbox(data, type, row, meta) {
+	var fn = function (data, type, row, meta) {
 		var dtRow = meta.settings.aoData[meta.row];
 		var selected = dtRow._select_selected;
 		var ariaLabel = meta.settings.oLanguage.select.aria.rowCheckbox;
@@ -1589,6 +1606,12 @@ DataTable.render.select = function (valueProp, nameProp) {
 
 		return selected ? 'X' : '';
 	}
+
+	// Workaround so uglify doesn't strip the function name. It is used
+	// for the column type detection.
+	fn._name = 'selectCheckbox';
+
+	return fn;
 }
 
 // Legacy checkbox ordering
