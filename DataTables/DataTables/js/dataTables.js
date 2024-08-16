@@ -1,11 +1,11 @@
-/*! DataTables 2.1.3
+/*! DataTables 2.1.4
  * © SpryMedia Ltd - datatables.net/license
  */
 
 /**
  * @summary     DataTables
  * @description Paginate, search and order HTML tables
- * @version     2.1.3
+ * @version     2.1.4
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net
  * @copyright   SpryMedia Ltd.
@@ -8482,8 +8482,10 @@
 				switch( match[2] ) {
 					case 'visIdx':
 					case 'visible':
-						if (match[1]) {
+						// Selector is a column index
+						if (match[1] && match[1].match(/^\d+$/)) {
 							var idx = parseInt( match[1], 10 );
+	
 							// Visible index given, convert to column index
 							if ( idx < 0 ) {
 								// Counting from the right
@@ -8496,9 +8498,19 @@
 							return [ _fnVisibleToColumnIndex( settings, idx ) ];
 						}
 						
-						// `:visible` on its own
-						return columns.map( function (col, i) {
-							return col.bVisible ? i : null;
+						return columns.map( function (col, idx) {
+							// Not visible, can't match
+							if (! col.bVisible) {
+								return null;
+							}
+	
+							// Selector
+							if (match[1]) {
+								return $(nodes[idx]).filter(match[1]).length > 0 ? idx : null;
+							}
+	
+							// `:visible` on its own
+							return idx;
 						} );
 	
 					case 'name':
@@ -9811,7 +9823,7 @@
 	 *  @type string
 	 *  @default Version number
 	 */
-	DataTable.version = "2.1.3";
+	DataTable.version = "2.1.4";
 	
 	/**
 	 * Private data store, containing all of the settings objects that are
@@ -12485,7 +12497,7 @@
 			pre: function ( a ) {
 				// This is a little complex, but faster than always calling toString,
 				// http://jsperf.com/tostring-v-check
-				return _empty(a) ?
+				return _empty(a) && typeof a !== 'boolean' ?
 					'' :
 					typeof a === 'string' ?
 						a.toLowerCase() :
@@ -12738,6 +12750,12 @@
 						return;               // table, not a nested one
 					}
 	
+					var sorting = ctx.sortDetails;
+	
+					if (! sorting) {
+						return;
+					}
+	
 					var i;
 					var orderClasses = classes.order;
 					var columns = ctx.api.columns( cell );
@@ -12746,7 +12764,6 @@
 					var ariaType = '';
 					var indexes = columns.indexes();
 					var sortDirs = columns.orderable(true).flatten();
-					var sorting = ctx.sortDetails;
 					var orderedColumns = _pluck(sorting, 'col');
 	
 					cell
