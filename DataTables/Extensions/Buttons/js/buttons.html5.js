@@ -967,18 +967,20 @@ DataTable.ext.buttons.copyHtml5 = {
 				hiddenDiv.remove();
 
 				if (successful) {
-					dt.buttons.info(
-						dt.i18n('buttons.copyTitle', 'Copy to clipboard'),
-						dt.i18n(
-							'buttons.copySuccess',
-							{
-								1: 'Copied one row to clipboard',
-								_: 'Copied %d rows to clipboard'
-							},
-							exportData.rows
-						),
-						2000
-					);
+					if (config.copySuccess) {
+						dt.buttons.info(
+							dt.i18n('buttons.copyTitle', 'Copy to clipboard'),
+							dt.i18n(
+								'buttons.copySuccess',
+								{
+									1: 'Copied one row to clipboard',
+									_: 'Copied %d rows to clipboard'
+								},
+								exportData.rows
+							),
+							2000
+						);
+					}
 
 					cb();
 					return;
@@ -1018,7 +1020,10 @@ DataTable.ext.buttons.copyHtml5 = {
 			dt.buttons.info(false);
 		};
 
-		container.on('click.buttons-copy', close);
+		container.on('click.buttons-copy', function () {
+			close();
+			cb();
+		});
 		$(document)
 			.on('keydown.buttons-copy', function (e) {
 				if (e.keyCode === 27) {
@@ -1034,6 +1039,8 @@ DataTable.ext.buttons.copyHtml5 = {
 	},
 
 	async: 100,
+
+	copySuccess: true,
 
 	exportOptions: {},
 
