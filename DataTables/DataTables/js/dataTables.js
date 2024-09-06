@@ -1,11 +1,11 @@
-/*! DataTables 2.1.5
+/*! DataTables 2.1.6
  * © SpryMedia Ltd - datatables.net/license
  */
 
 /**
  * @summary     DataTables
  * @description Paginate, search and order HTML tables
- * @version     2.1.5
+ * @version     2.1.6
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net
  * @copyright   SpryMedia Ltd.
@@ -254,6 +254,7 @@
 				"caption",
 				"layout",
 				"orderDescReverse",
+				"typeDetect",
 				[ "iCookieDuration", "iStateDuration" ], // backwards compat
 				[ "oSearch", "oPreviousSearch" ],
 				[ "aoSearchCols", "aoPreSearchCols" ],
@@ -477,7 +478,7 @@
 				} );
 			}
 			else {
-				_fnCallbackFire( oSettings, null, 'i18n', [oSettings]);
+				_fnCallbackFire( oSettings, null, 'i18n', [oSettings], true);
 				_fnInitialise( oSettings );
 			}
 		} );
@@ -1217,7 +1218,7 @@
 		// is essential here
 		if ( prop2 !== undefined ) {
 			for ( ; i<ien ; i++ ) {
-				if ( a[ order[i] ][ prop ] ) {
+				if ( a[ order[i] ] && a[ order[i] ][ prop ] ) {
 					out.push( a[ order[i] ][ prop ][ prop2 ] );
 				}
 			}
@@ -2274,12 +2275,6 @@
 		var i, ien, j, jen, k, ken;
 		var col, detectedType, cache;
 	
-		// If SSP then we don't have the full data set, so any type detection would be
-		// unreliable and error prone
-		if (_fnDataSource( settings ) === 'ssp') {
-			return;
-		}
-	
 		// For each column, spin over the data type detection functions, seeing if one matches
 		for ( i=0, ien=columns.length ; i<ien ; i++ ) {
 			col = columns[i];
@@ -2289,6 +2284,12 @@
 				col.sType = col._sManualType;
 			}
 			else if ( ! col.sType ) {
+				// With SSP type detection can be unreliable and error prone, so we provide a way
+				// to turn it off.
+				if (! settings.typeDetect) {
+					return;
+				}
+	
 				for ( j=0, jen=types.length ; j<jen ; j++ ) {
 					var typeDetect = types[j];
 	
@@ -4340,6 +4341,7 @@
 		}
 		settings.aiDisplay = settings.aiDisplayMaster.slice();
 	
+		_fnColumnTypes(settings);
 		_fnDraw( settings, true );
 		_fnInitComplete( settings );
 		_fnProcessingDisplay( settings, false );
@@ -9860,7 +9862,7 @@
 	 *  @type string
 	 *  @default Version number
 	 */
-	DataTable.version = "2.1.5";
+	DataTable.version = "2.1.6";
 	
 	/**
 	 * Private data store, containing all of the settings objects that are
@@ -11960,7 +11962,10 @@
 		colgroup: null,
 	
 		/** Delay loading of data */
-		deferLoading: null
+		deferLoading: null,
+	
+		/** Allow auto type detection */
+		typeDetect: true
 	};
 	
 	/**
