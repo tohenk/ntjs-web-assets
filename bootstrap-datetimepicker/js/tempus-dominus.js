@@ -4005,11 +4005,18 @@
                   this.display.hide();
                   break;
               case ActionTypes$1.today: {
-                  const today = new DateTime().setLocalization(this.optionsStore.options.localization);
-                  this._eventEmitters.updateViewDate.emit(today);
-                  //todo this this really a good idea?
-                  if (this.validation.isValid(today, exports.Unit.date))
-                      this.dates.setValue(today, this.dates.lastPickedIndex);
+                  const day = new DateTime().setLocalization(this.optionsStore.options.localization);
+                  this._eventEmitters.updateViewDate.emit(day);
+                  if (!this.validation.isValid(day, exports.Unit.date))
+                      break;
+                  if (this.optionsStore.options.dateRange)
+                      this.handleDateRange(day);
+                  else if (this.optionsStore.options.multipleDates) {
+                      this.handleMultiDate(day);
+                  }
+                  else {
+                      this.dates.setValue(day, this.dates.lastPickedIndex);
+                  }
                   break;
               }
           }
