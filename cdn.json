@@ -4,7 +4,7 @@
     "ckeditor": "https://cdn.ckeditor.com/ckeditor5/<VER>/classic/<NAME>",
     "datatables": "https://cdn.datatables.net/<VER>/<TYPE>/<NAME>",
     "datatables-extension": "https://cdn.datatables.net/<PKG>/<VER>/<TYPE>/<NAME>",
-    "datatables-plugin": "https://cdn.datatables.net/plugins/<VER>/<PKG>/<NAME>",
+    "datatables-plugin": "https://cdn.datatables.net/plug-ins/<VER>/<PKG>/<NAME>",
     "highcharts": "https://code.highcharts.com/<NAME>",
     "jquery": "https://code.jquery.com/<NAME>",
     "jsdelivr": "https://cdn.jsdelivr.net/npm/<PKG>@<VER>/<TYPE>/<NAME>",
