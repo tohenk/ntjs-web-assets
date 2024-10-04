@@ -1,4 +1,4 @@
-/*! SearchBuilder 1.8.0
+/*! SearchBuilder 1.8.1
  * ©SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -333,7 +333,7 @@ var DataTable = $.fn.dataTable;
             var settings = this.s.dt.settings()[0];
             // This check is in place for if a custom decimal character is in place
             if (this.s.type !== null &&
-                this.s.type.includes('num') &&
+                ["num", "num-fmt", "html-num", "html-num-fmt"].includes(this.s.type) &&
                 (settings.oLanguage.sDecimal !== '' || settings.oLanguage.sThousands !== '')) {
                 for (i = 0; i < this.s.value.length; i++) {
                     var splitRD = [this.s.value[i].toString()];
@@ -1474,7 +1474,7 @@ var DataTable = $.fn.dataTable;
                     values.push(Criteria._escapeHTML(element.val()));
                 }
             }
-            return values;
+            return values.map(dataTable$2.util.diacritics);
         };
         /**
          * Function that is run on each element as a call back when a search should be triggered
@@ -3275,7 +3275,9 @@ var DataTable = $.fn.dataTable;
         // eslint upset at empty object but that is what it is
         SearchBuilder.prototype.getDetails = function (deFormatDates) {
             if (deFormatDates === void 0) { deFormatDates = false; }
-            return this.s.topGroup.getDetails(deFormatDates);
+            return this.s.topGroup
+                ? this.s.topGroup.getDetails(deFormatDates)
+                : {};
         };
         /**
          * Getter for the node of the container for the searchBuilder
@@ -3623,7 +3625,7 @@ var DataTable = $.fn.dataTable;
                 _this.dom.clearAll.remove();
             });
         };
-        SearchBuilder.version = '1.8.0';
+        SearchBuilder.version = '1.8.1';
         SearchBuilder.classes = {
             button: 'dtsb-button',
             clearAll: 'dtsb-clearAll',
@@ -3731,7 +3733,7 @@ var DataTable = $.fn.dataTable;
         return SearchBuilder;
     }());
 
-    /*! SearchBuilder 1.8.0
+    /*! SearchBuilder 1.8.1
      * ©SpryMedia Ltd - datatables.net/license/mit
      */
     setJQuery($);
@@ -3773,12 +3775,15 @@ var DataTable = $.fn.dataTable;
         },
         config: {},
         init: function (dt, node, config) {
-            var sb = new DataTable.SearchBuilder(dt, $.extend({
-                filterChanged: function (count, text) {
-                    dt.button(node).text(text);
-                }
-            }, config.config));
-            dt.button(node).text(config.text || dt.i18n('searchBuilder.button', sb.c.i18n.button, 0));
+            var that = this;
+            var sb = new DataTable.SearchBuilder(dt, config.config);
+            dt.on('draw', function () {
+                var count = sb.s.topGroup
+                    ? sb.s.topGroup.count()
+                    : 0;
+                that.text(dt.i18n('searchBuilder.button', sb.c.i18n.button, count));
+            });
+            that.text(config.text || dt.i18n('searchBuilder.button', sb.c.i18n.button, 0));
             config._searchBuilder = sb;
         },
         text: null
