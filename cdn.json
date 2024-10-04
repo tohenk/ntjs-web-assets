@@ -54,7 +54,7 @@
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
-    "version": "2.1.7",
+    "version": "2.1.8",
     "datatables": ""
   },
   "DataTables-AutoFill": {
@@ -74,7 +74,7 @@
     "datatables-extension": "datetime"
   },
   "DataTables-FixedColumns": {
-    "version": "5.0.2",
+    "version": "5.0.3",
     "datatables-extension": "fixedcolumns"
   },
   "DataTables-FixedHeader": {
@@ -106,7 +106,7 @@
     "datatables-extension": "scroller"
   },
   "DataTables-SearchBuilder": {
-    "version": "1.8.0",
+    "version": "1.8.1",
     "datatables-extension": "searchbuilder"
   },
   "DataTables-SearchPanes": {
