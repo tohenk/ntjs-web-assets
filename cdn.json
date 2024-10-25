@@ -223,7 +223,7 @@
     "jsdelivr-dist": "fomantic-ui"
   },
   "socket.io": {
-    "version": "4.8.0",
+    "version": "4.8.1",
     "socket.io": ""
   },
   "strophe": {
