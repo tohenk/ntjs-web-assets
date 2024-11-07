@@ -94,7 +94,7 @@
     "datatables-extension": "responsive"
   },
   "DataTables-RowGroup": {
-    "version": "1.5.0",
+    "version": "1.5.1",
     "datatables-extension": "rowgroup"
   },
   "DataTables-RowReorder": {
