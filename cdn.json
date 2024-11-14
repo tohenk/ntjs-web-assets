@@ -46,7 +46,7 @@
     "jsdelivr-dist": ""
   },
   "ckeditor": {
-    "version": "40.2.0",
+    "version": "43.3.1",
     "ckeditor": ""
   },
   "cropper": {
@@ -227,7 +227,7 @@
     "socket.io": ""
   },
   "strophe": {
-    "version": "1.6.2",
+    "version": "3.0.1",
     "cdnjs": "strophe.js",
     "js": {
       "strophe": "strophe",
@@ -235,11 +235,11 @@
     }
   },
   "tinymce": {
-    "version": "6.8.5",
+    "version": "7.5.1",
     "jsdelivr": ""
   },
   "tinymce-i18n": {
-    "version": "23.12.19",
+    "version": "24.11.11",
     "jsdelivr": ""
   },
   "typeahead.js": {
