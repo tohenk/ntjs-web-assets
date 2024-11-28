@@ -1,9 +1,12 @@
 !/**
- * Highstock JS v11.4.8 (2024-08-29)
+ * Highstock JS v12.0.1 (2024-11-28)
+ * @module highcharts/indicators/natr
+ * @requires highcharts
+ * @requires highcharts/modules/stock
  *
  * Indicator series type for Highcharts Stock
  *
  * (c) 2010-2024 Paweł Dalek
  *
  * License: www.highcharts.com/license
- */function(e){"object"==typeof module&&module.exports?(e.default=e,module.exports=e):"function"==typeof define&&define.amd?define("highcharts/indicators/natr",["highcharts","highcharts/modules/stock"],function(t){return e(t),e.Highcharts=t,e}):e("undefined"!=typeof Highcharts?Highcharts:void 0)}(function(e){"use strict";var t=e?e._modules:{};function s(t,s,i,r){t.hasOwnProperty(s)||(t[s]=r.apply(null,i),"function"==typeof CustomEvent&&e.win.dispatchEvent(new CustomEvent("HighchartsModuleLoaded",{detail:{path:s,module:t[s]}})))}s(t,"Stock/Indicators/NATR/NATRIndicator.js",[t["Core/Series/SeriesRegistry.js"],t["Core/Utilities.js"]],function(e,t){let{atr:s}=e.seriesTypes,{merge:i}=t;class r extends s{getValues(e,t){let s=super.getValues.apply(this,arguments),i=s.values.length,r=e.yData,n=0,o=t.period-1;if(s){for(;n<i;n++)s.yData[n]=s.values[n][1]/r[o][3]*100,s.values[n][1]=s.yData[n],o++;return s}}}return r.defaultOptions=i(s.defaultOptions,{tooltip:{valueSuffix:"%"}}),e.registerSeriesType("natr",r),r}),s(t,"masters/indicators/natr.src.js",[t["Core/Globals.js"]],function(e){return e})});
+ */function(e,t){"object"==typeof exports&&"object"==typeof module?module.exports=t(require("highcharts"),require("highcharts").SeriesRegistry):"function"==typeof define&&define.amd?define("highcharts/natr",[["highcharts/highcharts"],["highcharts/highcharts","SeriesRegistry"]],t):"object"==typeof exports?exports["highcharts/natr"]=t(require("highcharts"),require("highcharts").SeriesRegistry):e.Highcharts=t(e.Highcharts,e.Highcharts.SeriesRegistry)}(this,(e,t)=>(()=>{"use strict";var r={512:e=>{e.exports=t},944:t=>{t.exports=e}},s={};function a(e){var t=s[e];if(void 0!==t)return t.exports;var i=s[e]={exports:{}};return r[e](i,i.exports,a),i.exports}a.n=e=>{var t=e&&e.__esModule?()=>e.default:()=>e;return a.d(t,{a:t}),t},a.d=(e,t)=>{for(var r in t)a.o(t,r)&&!a.o(e,r)&&Object.defineProperty(e,r,{enumerable:!0,get:t[r]})},a.o=(e,t)=>Object.prototype.hasOwnProperty.call(e,t);var i={};a.d(i,{default:()=>f});var h=a(944),o=/*#__PURE__*/a.n(h),u=a(512),n=/*#__PURE__*/a.n(u);let{atr:p}=n().seriesTypes,{merge:c}=o();class l extends p{getValues(e,t){let r=super.getValues.apply(this,arguments),s=r.values.length,a=e.yData,i=0,h=t.period-1;if(r){for(;i<s;i++)r.yData[i]=r.values[i][1]/a[h][3]*100,r.values[i][1]=r.yData[i],h++;return r}}}l.defaultOptions=c(p.defaultOptions,{tooltip:{valueSuffix:"%"}}),n().registerSeriesType("natr",l);let f=o();return i.default})());
