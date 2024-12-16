@@ -2,8 +2,6 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var abab = require('abab');
-
 /**
  * This module provides uniform
  * Shims APIs and globals that are not present in all JS environments,
@@ -32,13 +30,37 @@ function getWebSocketImplementation() {
   if (typeof globalThis.WebSocket === 'undefined') {
     try {
       return require('ws');
-    } catch (err) {
+      // eslint-disable-next-line no-unused-vars
+    } catch (e) {
       throw new Error('You must install the "ws" package to use Strophe in nodejs.');
     }
   }
   return globalThis.WebSocket;
 }
 const WebSocket = getWebSocketImplementation();
+
+/**
+ * Retrieves the XMLSerializer implementation for the current environment.
+ *
+ * In browser environments, it uses the built-in XMLSerializer.
+ * In Node.js environments, it attempts to load the 'jsdom' package
+ * to create a compatible XMLSerializer.
+ */
+function getXMLSerializerImplementation() {
+  if (typeof globalThis.XMLSerializer === 'undefined') {
+    let JSDOM;
+    try {
+      JSDOM = require('jsdom').JSDOM;
+      // eslint-disable-next-line no-unused-vars
+    } catch (e) {
+      throw new Error('You must install the "ws" package to use Strophe in nodejs.');
+    }
+    const dom = new JSDOM('');
+    return dom.window.XMLSerializer;
+  }
+  return globalThis.XMLSerializer;
+}
+const XMLSerializer = getXMLSerializerImplementation();
 
 /**
  * DOMParser
@@ -49,17 +71,21 @@ const WebSocket = getWebSocketImplementation();
  * Used implementations:
  * - supported browsers: built-in in DOMParser global
  *   https://developer.mozilla.org/en-US/docs/Web/API/DOMParser#Browser_compatibility
- * - nodejs: use '@xmldom/xmldom' module
- *   https://www.npmjs.com/package/@xmldom/xmldom
+ * - nodejs: use 'jsdom' https://www.npmjs.com/package/jsdom
  */
 function getDOMParserImplementation() {
-  let DOMParserImplementation = globalThis.DOMParser;
+  const DOMParserImplementation = globalThis.DOMParser;
   if (typeof DOMParserImplementation === 'undefined') {
+    // NodeJS
+    let JSDOM;
     try {
-      DOMParserImplementation = require('@xmldom/xmldom').DOMParser;
-    } catch (err) {
-      throw new Error('You must install the "@xmldom/xmldom" package to use Strophe in nodejs.');
+      JSDOM = require('jsdom').JSDOM;
+      // eslint-disable-next-line no-unused-vars
+    } catch (e) {
+      throw new Error('You must install the "jsdom" package to use Strophe in nodejs.');
     }
+    const dom = new JSDOM('');
+    return dom.window.DOMParser;
   }
   return DOMParserImplementation;
 }
@@ -69,20 +95,21 @@ const DOMParser = getDOMParserImplementation();
  * Creates a dummy XML DOM document to serve as an element and text node generator.
  *
  * Used implementations:
- *  - IE < 10: avoid using createDocument() due to a memory leak, use ie-specific
- *    workaround
- *  - other supported browsers: use document's createDocument
- *  - nodejs: use '@xmldom/xmldom'
+ *  - browser: use document's createDocument
+ * - nodejs: use 'jsdom' https://www.npmjs.com/package/jsdom
  */
 function getDummyXMLDOMDocument() {
   if (typeof document === 'undefined') {
     // NodeJS
+    let JSDOM;
     try {
-      const DOMImplementation = require('@xmldom/xmldom').DOMImplementation;
-      return new DOMImplementation().createDocument('jabber:client', 'strophe', null);
-    } catch (err) {
-      throw new Error('You must install the "@xmldom/xmldom" package to use Strophe in nodejs.');
+      JSDOM = require('jsdom').JSDOM;
+      // eslint-disable-next-line no-unused-vars
+    } catch (e) {
+      throw new Error('You must install the "jsdom" package to use Strophe in nodejs.');
     }
+    const dom = new JSDOM('');
+    return dom.window.document.implementation.createDocument('jabber:client', 'strophe', null);
   }
   return document.implementation.createDocument('jabber:client', 'strophe', null);
 }
@@ -90,6 +117,7 @@ function getDummyXMLDOMDocument() {
 var shims = /*#__PURE__*/Object.freeze({
     __proto__: null,
     WebSocket: WebSocket,
+    XMLSerializer: XMLSerializer,
     DOMParser: DOMParser,
     getDummyXMLDOMDocument: getDummyXMLDOMDocument
 });
@@ -120,6 +148,7 @@ const NS = {
   HTTPBIND: 'http://jabber.org/protocol/httpbind',
   BOSH: 'urn:xmpp:xbosh',
   CLIENT: 'jabber:client',
+  SERVER: 'jabber:server',
   AUTH: 'jabber:iq:auth',
   ROSTER: 'jabber:iq:roster',
   PROFILE: 'jabber:iq:profile',
@@ -136,6 +165,7 @@ const NS = {
   XHTML_IM: 'http://jabber.org/protocol/xhtml-im',
   XHTML: 'http://www.w3.org/1999/xhtml'
 };
+const PARSE_ERROR_NS = 'http://www.w3.org/1999/xhtml';
 
 /**
  * Contains allowed tags, tag attributes, and css properties.
@@ -336,6 +366,30 @@ const log = {
 /* global btoa */
 
 /**
+ * Takes a string and turns it into an XML Element.
+ * @param {string} string
+ * @param {boolean} [throwErrorIfInvalidNS]
+ * @returns {Element}
+ */
+function toElement(string, throwErrorIfInvalidNS) {
+  const doc = xmlHtmlNode(string);
+  const parserError = getParserError(doc);
+  if (parserError) {
+    throw new Error(`Parser Error: ${parserError}`);
+  }
+  const node = getFirstElementChild(doc);
+  if (['message', 'iq', 'presence'].includes(node.nodeName.toLowerCase()) && node.namespaceURI !== 'jabber:client' && node.namespaceURI !== 'jabber:server') {
+    const err_msg = `Invalid namespaceURI ${node.namespaceURI}`;
+    if (throwErrorIfInvalidNS) {
+      throw new Error(err_msg);
+    } else {
+      log.error(err_msg);
+    }
+  }
+  return node;
+}
+
+/**
  * Properly logs an error to the console
  * @param {Error} e
  */
@@ -490,12 +544,37 @@ function xmlTextNode(text) {
 
 /**
  * Creates an XML DOM node.
- * @param {string} html - The content of the html node.
+ * @param {string} text - The contents of the XML element.
  * @return {XMLDocument}
  */
-function xmlHtmlNode(html) {
+function xmlHtmlNode(text) {
   const parser = new DOMParser();
-  return parser.parseFromString(html, 'text/xml');
+  return parser.parseFromString(text, 'text/xml');
+}
+
+/**
+ * @param {XMLDocument} doc
+ * @returns {string|null}
+ */
+function getParserError(doc) {
+  var _doc$firstElementChil;
+  const el = ((_doc$firstElementChil = doc.firstElementChild) === null || _doc$firstElementChil === void 0 ? void 0 : _doc$firstElementChil.nodeName) === 'parsererror' ? doc.firstElementChild : doc.getElementsByTagNameNS(PARSE_ERROR_NS, 'parsererror')[0];
+  return (el === null || el === void 0 ? void 0 : el.nodeName) === 'parsererror' ? el === null || el === void 0 ? void 0 : el.textContent : null;
+}
+
+/**
+ * @param {XMLDocument} el
+ * @returns {Element}
+ */
+function getFirstElementChild(el) {
+  if (el.firstElementChild) return el.firstElementChild;
+  let node,
+    i = 0;
+  const nodes = el.childNodes;
+  while (node = nodes[i++]) {
+    if (node.nodeType === 1) return /** @type {Element} */node;
+  }
+  return null;
 }
 
 /**
@@ -521,7 +600,7 @@ function xmlElement(name, attrs, text) {
   if (text && (typeof text === 'string' || typeof text === 'number')) {
     node.appendChild(xmlTextNode(text.toString()));
   } else if (typeof attrs === 'string' || typeof attrs === 'number') {
-    node.appendChild(xmlTextNode( /** @type {number|string} */attrs.toString()));
+    node.appendChild(xmlTextNode(/** @type {number|string} */attrs.toString()));
     return node;
   }
   if (!attrs) {
@@ -577,7 +656,7 @@ function validTag(tag) {
  * @param {string} attribute
  */
 function validAttribute(tag, attribute) {
-  const attrs = XHTML.attributes[( /** @type {XHTMLAttrs} */tag)];
+  const attrs = XHTML.attributes[(/** @type {XHTMLAttrs} */tag)];
   if ((attrs === null || attrs === void 0 ? void 0 : attrs.length) > 0) {
     for (let i = 0; i < attrs.length; i++) {
       if (attribute === attrs[i]) {
@@ -605,7 +684,6 @@ function validCSS(style) {
  * Copy an HTML DOM Element into an XML DOM.
  * This function copies a DOM element and all its descendants and returns
  * the new copy.
- * @method Strophe.createHtml
  * @param {HTMLElement} elem - A DOM element.
  * @return {Node} - A new, copied DOM element tree.
  */
@@ -616,7 +694,7 @@ function createFromHtmlElement(elem) {
     try {
       el = xmlElement(tag);
       if (tag in XHTML.attributes) {
-        const attrs = XHTML.attributes[( /** @type {XHTMLAttrs} */tag)];
+        const attrs = XHTML.attributes[(/** @type {XHTMLAttrs} */tag)];
         for (let i = 0; i < attrs.length; i++) {
           const attribute = attrs[i];
           let value = elem.getAttribute(attribute);
@@ -653,6 +731,7 @@ function createFromHtmlElement(elem) {
         }
       }
     } catch (e) {
+      // eslint-disable-line no-unused-vars
       // invalid elements
       el = xmlTextNode('');
     }
@@ -675,7 +754,7 @@ function createFromHtmlElement(elem) {
  */
 function createHtml(node) {
   if (node.nodeType === ElementType.NORMAL) {
-    return createFromHtmlElement( /** @type {HTMLElement} */node);
+    return createFromHtmlElement(/** @type {HTMLElement} */node);
   } else if (node.nodeType === ElementType.FRAGMENT) {
     const el = xmlGenerator().createDocumentFragment();
     for (let i = 0; i < node.childNodes.length; i++) {
@@ -787,18 +866,14 @@ function isTagEqual(el, name) {
  * @return {string} - A String with the concatenated text of all text element children.
  */
 function getText(elem) {
-  var _elem$childNodes;
-  if (!elem) {
-    return null;
-  }
+  if (!elem) return null;
   let str = '';
-  if (!((_elem$childNodes = elem.childNodes) !== null && _elem$childNodes !== void 0 && _elem$childNodes.length) && elem.nodeType === ElementType.TEXT) {
+  if (!elem.childNodes.length && elem.nodeType === ElementType.TEXT) {
     str += elem.nodeValue;
   }
-  for (let i = 0; (_ref = i < ((_elem$childNodes2 = elem.childNodes) === null || _elem$childNodes2 === void 0 ? void 0 : _elem$childNodes2.length)) !== null && _ref !== void 0 ? _ref : 0; i++) {
-    var _ref, _elem$childNodes2;
-    if (elem.childNodes[i].nodeType === ElementType.TEXT) {
-      str += elem.childNodes[i].nodeValue;
+  for (const child of elem.childNodes) {
+    if (child.nodeType === ElementType.TEXT) {
+      str += child.nodeValue;
     }
   }
   return xmlescape(str);
@@ -898,6 +973,7 @@ const utils = {
 
 var utils$1 = /*#__PURE__*/Object.freeze({
     __proto__: null,
+    toElement: toElement,
     handleError: handleError,
     utf16to8: utf16to8,
     xorArrayBuffers: xorArrayBuffers,
@@ -908,6 +984,8 @@ var utils$1 = /*#__PURE__*/Object.freeze({
     xmlGenerator: xmlGenerator,
     xmlTextNode: xmlTextNode,
     xmlHtmlNode: xmlHtmlNode,
+    getParserError: getParserError,
+    getFirstElementChild: getFirstElementChild,
     xmlElement: xmlElement,
     validTag: validTag,
     validAttribute: validAttribute,
@@ -1000,6 +1078,15 @@ class Builder {
    * @property {string} [StanzaAttrs.xmlns]
    */
 
+  /** @type {Element} */
+  #nodeTree;
+  /** @type {Element} */
+  #node;
+  /** @type {string} */
+  #name;
+  /** @type {StanzaAttrs} */
+  #attrs;
+
   /**
    * The attributes should be passed in object notation.
    * @param {string} name - The name of the root element.
@@ -1018,10 +1105,46 @@ class Builder {
         };
       }
     }
-    // Holds the tree being built.
-    this.nodeTree = xmlElement(name, attrs);
-    // Points to the current operation node.
-    this.node = this.nodeTree;
+    this.#name = name;
+    this.#attrs = attrs;
+  }
+
+  /**
+   * Creates a new Builder object from an XML string.
+   * @param {string} str
+   * @returns {Builder}
+   * @example const stanza = Builder.fromString('<presence from="juliet@example.com/chamber"></presence>');
+   */
+  static fromString(str) {
+    const el = toElement(str, true);
+    const b = new Builder('');
+    b.#nodeTree = el;
+    return b;
+  }
+  buildTree() {
+    return xmlElement(this.#name, this.#attrs);
+  }
+
+  /** @return {Element} */
+  get nodeTree() {
+    if (!this.#nodeTree) {
+      // Holds the tree being built.
+      this.#nodeTree = this.buildTree();
+    }
+    return this.#nodeTree;
+  }
+
+  /** @return {Element} */
+  get node() {
+    if (!this.#node) {
+      this.#node = this.tree();
+    }
+    return this.#node;
+  }
+
+  /** @param {Element} el */
+  set node(el) {
+    this.#node = el;
   }
 
   /**
@@ -1042,7 +1165,7 @@ class Builder {
         switch (child.nodeType) {
           case ElementType.NORMAL:
             // normal element, so recurse
-            result += Builder.serialize( /** @type {Element} */child);
+            result += Builder.serialize(/** @type {Element} */child);
             break;
           case ElementType.TEXT:
             // text element to escape values
@@ -1082,7 +1205,7 @@ class Builder {
    * @return {string} The serialized DOM tree in a String.
    */
   toString() {
-    return Builder.serialize(this.nodeTree);
+    return Builder.serialize(this.tree());
   }
 
   /**
@@ -1097,7 +1220,7 @@ class Builder {
    */
   up() {
     // Depending on context, parentElement is not always available
-    this.node = this.node.parentElement ? this.node.parentElement : ( /** @type {Element} */this.node.parentNode);
+    this.node = this.node.parentElement ? this.node.parentElement : (/** @type {Element} */this.node.parentNode);
     return this;
   }
 
@@ -1111,7 +1234,7 @@ class Builder {
    * @return {Builder} The Strophe.Builder object.
    */
   root() {
-    this.node = this.nodeTree;
+    this.node = this.tree();
     return this;
   }
 
@@ -1177,6 +1300,7 @@ class Builder {
     const xmlGen = xmlGenerator();
     try {
       impNode = xmlGen.importNode !== undefined;
+      // eslint-disable-next-line no-unused-vars
     } catch (e) {
       impNode = false;
     }
@@ -1276,7 +1400,7 @@ class Request {
    */
   getResponse() {
     var _this$xhr$responseXML;
-    let node = (_this$xhr$responseXML = this.xhr.responseXML) === null || _this$xhr$responseXML === void 0 ? void 0 : _this$xhr$responseXML.documentElement;
+    const node = (_this$xhr$responseXML = this.xhr.responseXML) === null || _this$xhr$responseXML === void 0 ? void 0 : _this$xhr$responseXML.documentElement;
     if (node) {
       if (node.tagName === 'parsererror') {
         log.error('invalid response received');
@@ -1285,15 +1409,14 @@ class Request {
         throw new Error('parsererror');
       }
     } else if (this.xhr.responseText) {
-      var _node;
       // In Node (with xhr2) or React Native, we may get responseText but no responseXML.
       // We can try to parse it manually.
       log.debug('Got responseText but no responseXML; attempting to parse it with DOMParser...');
-      node = new DOMParser().parseFromString(this.xhr.responseText, 'application/xml').documentElement;
-      const parserError = (_node = node) === null || _node === void 0 ? void 0 : _node.getElementsByTagName('parsererror').item(0);
-      if (!node || parserError) {
+      const doc = xmlHtmlNode(this.xhr.responseText);
+      const parserError = getParserError(doc);
+      if (!doc || parserError) {
         if (parserError) {
-          log.error('invalid response received: ' + parserError.textContent);
+          log.error('invalid response received: ' + parserError);
           log.error('responseText: ' + this.xhr.responseText);
         }
         const error = new Error();
@@ -1740,7 +1863,7 @@ class Bosh {
               'xmlns:xmpp': NS.BOSH
             });
           } else {
-            body.cnode( /** @type {Element} */data[i]).up();
+            body.cnode(/** @type {Element} */data[i]).up();
           }
         }
       }
@@ -1777,7 +1900,7 @@ class Bosh {
       } catch (e) {
         // ignore errors from undefined status attribute. Works
         // around a browser bug
-        log.error("Caught an error while retrieving a request's status, " + 'reqStatus: ' + reqStatus);
+        log.error(`Caught an error while retrieving a request's status, reqStatus: ${reqStatus}, message: ${e.message}`);
       }
     }
     if (typeof reqStatus === 'undefined') {
@@ -2136,23 +2259,24 @@ class Handler {
   }
 
   /**
-   * Tests if a stanza matches the namespace set for this Handler.
+   * Tests if a stanza element (or any of its children) matches the
+   * namespace set for this Handler.
    * @param {Element} elem - The XML element to test.
    * @return {boolean} - true if the stanza matches and false otherwise.
    */
   namespaceMatch(elem) {
-    let nsMatch = false;
-    if (!this.ns) {
+    if (!this.ns || this.getNamespace(elem) === this.ns) {
       return true;
-    } else {
-      forEachChild(elem, null, /** @param {Element} elem */
-      elem => {
-        if (this.getNamespace(elem) === this.ns) {
-          nsMatch = true;
-        }
-      });
-      return nsMatch || this.getNamespace(elem) === this.ns;
     }
+    for (const child of (_elem$children = elem.children) !== null && _elem$children !== void 0 ? _elem$children : []) {
+      var _elem$children;
+      if (this.getNamespace(child) === this.ns) {
+        return true;
+      } else if (this.namespaceMatch(child)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -2674,7 +2798,7 @@ const scram = {
       pass
     } = connection;
     if (typeof connection.pass === 'string' || connection.pass instanceof String) {
-      const keys = await scramDeriveKeys( /** @type {string} */pass, challengeData.salt, challengeData.iter, hashName, hashBits);
+      const keys = await scramDeriveKeys(/** @type {string} */pass, challengeData.salt, challengeData.iter, hashName, hashBits);
       clientKey = keys.ck;
       serverKey = keys.sk;
     } else if (
@@ -3201,7 +3325,7 @@ class Websocket {
       try {
         this.socket.send(closeString);
       } catch (e) {
-        log.warn("Couldn't send <close /> tag.");
+        log.warn(`Couldn't send <close /> tag. "${e.message}"`);
       }
     }
     setTimeout(() => this._conn._doDisconnect(), 0);
@@ -3554,7 +3678,7 @@ class WorkerWebsocket extends Websocket {
       this._messageHandler(data[1]);
     } else if (method_name in this) {
       try {
-        this[( /** @type {'_attachCallback'|'_onOpen'|'_onClose'|'_onError'} */
+        this[(/** @type {'_attachCallback'|'_onOpen'|'_onClose'|'_onError'} */
         method_name)].apply(this, ev.data.slice(1));
       } catch (e) {
         log.error(e);
@@ -3578,16 +3702,138 @@ class WorkerWebsocket extends Websocket {
 }
 
 /**
+ * @typedef {import("./sasl.js").default} SASLMechanism
+ * @typedef {import("./request.js").default} Request
+ *
+ * @typedef {Object} ConnectionOptions
+ * @property {Cookies} [cookies]
+ *  Allows you to pass in cookies that will be included in HTTP requests.
+ *  Relevant to both the BOSH and Websocket transports.
+ *
+ *  The passed in value must be a map of cookie names and string values.
+ *
+ *  > { "myCookie": {
+ *  >     "value": "1234",
+ *  >     "domain": ".example.org",
+ *  >     "path": "/",
+ *  >     "expires": expirationDate
+ *  >     }
+ *  > }
+ *
+ *  Note that cookies can't be set in this way for domains other than the one
+ *  that's hosting Strophe (i.e. cross-domain).
+ *  Those cookies need to be set under those domains, for example they can be
+ *  set server-side by making a XHR call to that domain to ask it to set any
+ *  necessary cookies.
+ * @property {SASLMechanism[]} [mechanisms]
+ *  Allows you to specify the SASL authentication mechanisms that this
+ *  instance of Connection (and therefore your XMPP client) will support.
+ *
+ *  The value must be an array of objects with {@link SASLMechanism}
+ *  prototypes.
+ *
+ *  If nothing is specified, then the following mechanisms (and their
+ *  priorities) are registered:
+ *
+ *      Mechanism       Priority
+ *      ------------------------
+ *      SCRAM-SHA-512   72
+ *      SCRAM-SHA-384   71
+ *      SCRAM-SHA-256   70
+ *      SCRAM-SHA-1     60
+ *      PLAIN           50
+ *      OAUTHBEARER     40
+ *      X-OAUTH2        30
+ *      ANONYMOUS       20
+ *      EXTERNAL        10
+ *
+ * @property {boolean} [explicitResourceBinding]
+ *  If `explicitResourceBinding` is set to `true`, then the XMPP client
+ *  needs to explicitly call {@link Connection.bind} once the XMPP
+ *  server has advertised the `urn:ietf:propertys:xml:ns:xmpp-bind` feature.
+ *
+ *  Making this step explicit allows client authors to first finish other
+ *  stream related tasks, such as setting up an XEP-0198 Stream Management
+ *  session, before binding the JID resource for this session.
+ *
+ * @property {'ws'|'wss'} [protocol]
+ *  _Note: This option is only relevant to Websocket connections, and not BOSH_
+ *
+ *  If you want to connect to the current host with a WebSocket connection you
+ *  can tell Strophe to use WebSockets through the "protocol" option.
+ *  Valid values are `ws` for WebSocket and `wss` for Secure WebSocket.
+ *  So to connect to "wss://CURRENT_HOSTNAME/xmpp-websocket" you would call
+ *
+ *      const conn = new Strophe.Connection(
+ *          "/xmpp-websocket/",
+ *          {protocol: "wss"}
+ *      );
+ *
+ *  Note that relative URLs _NOT_ starting with a "/" will also include the path
+ *  of the current site.
+ *
+ *  Also because downgrading security is not permitted by browsers, when using
+ *  relative URLs both BOSH and WebSocket connections will use their secure
+ *  variants if the current connection to the site is also secure (https).
+ *
+ * @property {string} [worker]
+ *  _Note: This option is only relevant to Websocket connections, and not BOSH_
+ *
+ *  Set this option to URL from where the shared worker script should be loaded.
+ *
+ *  To run the websocket connection inside a shared worker.
+ *  This allows you to share a single websocket-based connection between
+ *  multiple Connection instances, for example one per browser tab.
+ *
+ *  The script to use is the one in `src/shared-connection-worker.js`.
+ *
+ * @property {boolean} [sync]
+ *  Used to control whether BOSH HTTP requests will be made synchronously or not.
+ *  The default behaviour is asynchronous. If you want to make requests
+ *  synchronous, make "sync" evaluate to true.
+ *
+ *  > const conn = new Strophe.Connection("/http-bind/", {sync: true});
+ *
+ *  You can also toggle this on an already established connection.
+ *
+ *  > conn.options.sync = true;
+ *
+ * @property {string[]} [customHeaders]
+ *  Used to provide custom HTTP headers to be included in the BOSH HTTP requests.
+ *
+ * @property {boolean} [keepalive]
+ *  Used to instruct Strophe to maintain the current BOSH session across
+ *  interruptions such as webpage reloads.
+ *
+ *  It will do this by caching the sessions tokens in sessionStorage, and when
+ *  "restore" is called it will check whether there are cached tokens with
+ *  which it can resume an existing session.
+ *
+ * @property {boolean} [withCredentials]
+ *  Used to indicate wether cookies should be included in HTTP requests (by default
+ *  they're not).
+ *  Set this value to `true` if you are connecting to a BOSH service
+ *  and for some reason need to send cookies to it.
+ *  In order for this to work cross-domain, the server must also enable
+ *  credentials by setting the `Access-Control-Allow-Credentials` response header
+ *  to "true". For most usecases however this setting should be false (which
+ *  is the default).
+ *  Additionally, when using `Access-Control-Allow-Credentials`, the
+ *  `Access-Control-Allow-Origin` header can't be set to the wildcard "*", but
+ *  instead must be restricted to actual domains.
+ *
+ * @property {string} [contentType]
+ *  Used to change the default Content-Type, which is "text/xml; charset=utf-8".
+ *  Can be useful to reduce the amount of CORS preflight requests that are sent
+ *  to the server.
+ */
+
+/**
  * _Private_ variable Used to store plugin names that need
  * initialization during Connection construction.
  * @type {Object.<string, Object>}
  */
 const connectionPlugins = {};
-
-/**
- * @typedef {import("./sasl.js").default} SASLMechanism
- * @typedef {import("./request.js").default} Request
- */
 
 /**
  * **XMPP Connection manager**
@@ -3620,130 +3866,6 @@ class Connection {
   /**
    * @typedef {Object.<string, string>} Cookie
    * @typedef {Cookie|Object.<string, Cookie>} Cookies
-   */
-
-  /**
-   * @typedef {Object} ConnectionOptions
-   * @property {Cookies} [cookies]
-   *  Allows you to pass in cookies that will be included in HTTP requests.
-   *  Relevant to both the BOSH and Websocket transports.
-   *
-   *  The passed in value must be a map of cookie names and string values.
-   *
-   *  > { "myCookie": {
-   *  >     "value": "1234",
-   *  >     "domain": ".example.org",
-   *  >     "path": "/",
-   *  >     "expires": expirationDate
-   *  >     }
-   *  > }
-   *
-   *  Note that cookies can't be set in this way for domains other than the one
-   *  that's hosting Strophe (i.e. cross-domain).
-   *  Those cookies need to be set under those domains, for example they can be
-   *  set server-side by making a XHR call to that domain to ask it to set any
-   *  necessary cookies.
-   * @property {SASLMechanism[]} [mechanisms]
-   *  Allows you to specify the SASL authentication mechanisms that this
-   *  instance of Connection (and therefore your XMPP client) will support.
-   *
-   *  The value must be an array of objects with {@link SASLMechanism}
-   *  prototypes.
-   *
-   *  If nothing is specified, then the following mechanisms (and their
-   *  priorities) are registered:
-   *
-   *      Mechanism       Priority
-   *      ------------------------
-   *      SCRAM-SHA-512   72
-   *      SCRAM-SHA-384   71
-   *      SCRAM-SHA-256   70
-   *      SCRAM-SHA-1     60
-   *      PLAIN           50
-   *      OAUTHBEARER     40
-   *      X-OAUTH2        30
-   *      ANONYMOUS       20
-   *      EXTERNAL        10
-   *
-   * @property {boolean} [explicitResourceBinding]
-   *  If `explicitResourceBinding` is set to `true`, then the XMPP client
-   *  needs to explicitly call {@link Connection.bind} once the XMPP
-   *  server has advertised the `urn:ietf:propertys:xml:ns:xmpp-bind` feature.
-   *
-   *  Making this step explicit allows client authors to first finish other
-   *  stream related tasks, such as setting up an XEP-0198 Stream Management
-   *  session, before binding the JID resource for this session.
-   *
-   * @property {'ws'|'wss'} [protocol]
-   *  _Note: This option is only relevant to Websocket connections, and not BOSH_
-   *
-   *  If you want to connect to the current host with a WebSocket connection you
-   *  can tell Strophe to use WebSockets through the "protocol" option.
-   *  Valid values are `ws` for WebSocket and `wss` for Secure WebSocket.
-   *  So to connect to "wss://CURRENT_HOSTNAME/xmpp-websocket" you would call
-   *
-   *      const conn = new Strophe.Connection(
-   *          "/xmpp-websocket/",
-   *          {protocol: "wss"}
-   *      );
-   *
-   *  Note that relative URLs _NOT_ starting with a "/" will also include the path
-   *  of the current site.
-   *
-   *  Also because downgrading security is not permitted by browsers, when using
-   *  relative URLs both BOSH and WebSocket connections will use their secure
-   *  variants if the current connection to the site is also secure (https).
-   *
-   * @property {string} [worker]
-   *  _Note: This option is only relevant to Websocket connections, and not BOSH_
-   *
-   *  Set this option to URL from where the shared worker script should be loaded.
-   *
-   *  To run the websocket connection inside a shared worker.
-   *  This allows you to share a single websocket-based connection between
-   *  multiple Connection instances, for example one per browser tab.
-   *
-   *  The script to use is the one in `src/shared-connection-worker.js`.
-   *
-   * @property {boolean} [sync]
-   *  Used to control whether BOSH HTTP requests will be made synchronously or not.
-   *  The default behaviour is asynchronous. If you want to make requests
-   *  synchronous, make "sync" evaluate to true.
-   *
-   *  > const conn = new Strophe.Connection("/http-bind/", {sync: true});
-   *
-   *  You can also toggle this on an already established connection.
-   *
-   *  > conn.options.sync = true;
-   *
-   * @property {string[]} [customHeaders]
-   *  Used to provide custom HTTP headers to be included in the BOSH HTTP requests.
-   *
-   * @property {boolean} [keepalive]
-   *  Used to instruct Strophe to maintain the current BOSH session across
-   *  interruptions such as webpage reloads.
-   *
-   *  It will do this by caching the sessions tokens in sessionStorage, and when
-   *  "restore" is called it will check whether there are cached tokens with
-   *  which it can resume an existing session.
-   *
-   * @property {boolean} [withCredentials]
-   *  Used to indicate wether cookies should be included in HTTP requests (by default
-   *  they're not).
-   *  Set this value to `true` if you are connecting to a BOSH service
-   *  and for some reason need to send cookies to it.
-   *  In order for this to work cross-domain, the server must also enable
-   *  credentials by setting the `Access-Control-Allow-Credentials` response header
-   *  to "true". For most usecases however this setting should be false (which
-   *  is the default).
-   *  Additionally, when using `Access-Control-Allow-Credentials`, the
-   *  `Access-Control-Allow-Origin` header can't be set to the wildcard "*", but
-   *  instead must be restricted to actual domains.
-   *
-   * @property {string} [contentType]
-   *  Used to change the default Content-Type, which is "text/xml; charset=utf-8".
-   *  Can be useful to reduce the amount of CORS preflight requests that are sent
-   *  to the server.
    */
 
   /**
@@ -4169,6 +4291,7 @@ class Connection {
         sessionStorage.setItem('_strophe_', '_strophe_');
         sessionStorage.removeItem('_strophe_');
       } catch (e) {
+        // eslint-disable-line no-unused-vars
         return false;
       }
       return true;
@@ -4326,7 +4449,7 @@ class Connection {
       el.setAttribute('id', id);
     }
     if (typeof callback === 'function' || typeof errback === 'function') {
-      const handler = this.addHandler( /** @param {Element} stanza */
+      const handler = this.addHandler(/** @param {Element} stanza */
       stanza => {
         // remove timeout handler if there is one
         if (timeoutHandler) this.deleteTimedHandler(timeoutHandler);
@@ -4374,7 +4497,7 @@ class Connection {
       el.setAttribute('id', id);
     }
     if (typeof callback === 'function' || typeof errback === 'function') {
-      const handler = this.addHandler( /** @param {Element} stanza */
+      const handler = this.addHandler(/** @param {Element} stanza */
       stanza => {
         // remove timeout handler if there is one
         if (timeoutHandler) this.deleteTimedHandler(timeoutHandler);
@@ -4706,7 +4829,7 @@ class Connection {
    */
   _dataRecv(req, raw) {
     const elem = /** @type {Element} */
-    '_reqToData' in this._proto ? this._proto._reqToData( /** @type {Request} */req) : req;
+    '_reqToData' in this._proto ? this._proto._reqToData(/** @type {Request} */req) : req;
     if (elem === null) {
       return;
     }
@@ -4821,7 +4944,7 @@ class Connection {
     let bodyWrap;
     try {
       bodyWrap = /** @type {Element} */
-      '_reqToData' in this._proto ? this._proto._reqToData( /** @type {Request} */req) : req;
+      '_reqToData' in this._proto ? this._proto._reqToData(/** @type {Request} */req) : req;
     } catch (e) {
       if (e.name !== ErrorCondition.BAD_FORMAT) {
         throw e;
@@ -4944,7 +5067,7 @@ class Connection {
       });
       if (this._sasl_mechanism.isClientFirst) {
         const response = this._sasl_mechanism.clientChallenge(this);
-        request_auth_exchange.t(abab.btoa( /** @type {string} */response));
+        request_auth_exchange.t(btoa(/** @type {string} */response));
       }
       this.send(request_auth_exchange.tree());
       mechanism_found = true;
@@ -4959,12 +5082,12 @@ class Connection {
    * @param {Element} elem
    */
   async _sasl_challenge_cb(elem) {
-    const challenge = abab.atob(getText(elem));
+    const challenge = atob(getText(elem));
     const response = await this._sasl_mechanism.onChallenge(this, challenge);
     const stanza = $build('response', {
       'xmlns': NS.SASL
     });
-    if (response) stanza.t(abab.btoa(response));
+    if (response) stanza.t(btoa(response));
     this.send(stanza.tree());
     return true;
   }
@@ -5003,8 +5126,6 @@ class Connection {
    * @private
    * @return {false} `false` to remove the handler.
    */
-  // eslint-disable-next-line no-unused-vars
-  //
   _onLegacyAuthIQResult() {
     const pass = typeof this.pass === 'string' ? this.pass : '';
 
@@ -5036,7 +5157,7 @@ class Connection {
   _sasl_success_cb(elem) {
     if (this._sasl_data['server-signature']) {
       let serverSignature;
-      const success = abab.atob(getText(elem));
+      const success = atob(getText(elem));
       const attribMatch = /([a-z]+)=([^,]+)(,|$)/;
       const matches = success.match(attribMatch);
       if (matches[1] === 'v') {
@@ -5082,9 +5203,9 @@ class Connection {
       this._onStreamFeaturesAfterSASL(elem);
       return false;
     };
-    streamfeature_handlers.push(this._addSysHandler( /** @param {Element} elem */
+    streamfeature_handlers.push(this._addSysHandler(/** @param {Element} elem */
     elem => wrapper(streamfeature_handlers, elem), null, 'stream:features', null, null));
-    streamfeature_handlers.push(this._addSysHandler( /** @param {Element} elem */
+    streamfeature_handlers.push(this._addSysHandler(/** @param {Element} elem */
     elem => wrapper(streamfeature_handlers, elem), NS.STREAM, 'features', null, null));
 
     // we must send an xmpp:restart now
@@ -5384,72 +5505,114 @@ class Connection {
   }
 }
 
-const PARSE_ERROR_NS = 'http://www.w3.org/1999/xhtml';
-
 /**
- * @param {string} string
- * @param {boolean} [throwErrorIfInvalidNS]
- * @return {Element}
+ * A Stanza represents a XML element used in XMPP (commonly referred to as stanzas).
  */
-function toStanza(string, throwErrorIfInvalidNS) {
-  const doc = xmlHtmlNode(string);
-  if (doc.getElementsByTagNameNS(PARSE_ERROR_NS, 'parsererror').length) {
-    throw new Error(`Parser Error: ${string}`);
-  }
-  const node = doc.firstElementChild;
-  if (['message', 'iq', 'presence'].includes(node.nodeName.toLowerCase()) && node.namespaceURI !== 'jabber:client' && node.namespaceURI !== 'jabber:server') {
-    const err_msg = `Invalid namespaceURI ${node.namespaceURI}`;
-    if (throwErrorIfInvalidNS) {
-      throw new Error(err_msg);
-    } else {
-      log.error(err_msg);
-    }
-  }
-  return node;
-}
-
-/**
- * A Stanza represents a XML element used in XMPP (commonly referred to as
- * stanzas).
- */
-class Stanza {
+class Stanza extends Builder {
+  /** @type {string} */
+  #string;
+  /** @type {Array<string>} */
+  #strings;
   /**
-   * @param { string[] } strings
-   * @param { any[] } values
+   * @typedef {Array<string|Stanza|Builder>} StanzaValue
+   * @type {StanzaValue|Array<StanzaValue>}
+   */
+  #values;
+
+  /**
+   * @param {string[]} strings
+   * @param {any[]} values
    */
   constructor(strings, values) {
-    this.strings = strings;
-    this.values = values;
+    super('stanza');
+    this.#strings = strings;
+    this.#values = values;
   }
 
   /**
-   * @return { string }
+   * A directive which can be used to pass a string of XML as a value to the
+   * stx tagged template literal.
+   *
+   * It's considered "unsafe" because it can pose a security risk if used with
+   * untrusted input.
+   *
+   * @param {string} string
+   * @returns {Builder}
+   * @example
+   *    const status = '<status>I am busy!</status>';
+   *    const pres = stx`
+   *       <presence from='juliet@example.com/chamber' id='pres1'>
+   *           <show>dnd</show>
+   *           ${unsafeXML(status)}
+   *       </presence>`;
+   *    connection.send(pres);
+   */
+  static unsafeXML(string) {
+    return Builder.fromString(string);
+  }
+
+  /**
+   * Turns the passed-in string into an XML Element.
+   * @param {string} string
+   * @param {boolean} [throwErrorIfInvalidNS]
+   * @returns {Element}
+   */
+  static toElement(string, throwErrorIfInvalidNS) {
+    const doc = xmlHtmlNode(string);
+    const parserError = getParserError(doc);
+    if (parserError) {
+      throw new Error(`Parser Error: ${parserError}`);
+    }
+    const node = getFirstElementChild(doc);
+    if (['message', 'iq', 'presence'].includes(node.nodeName.toLowerCase()) && node.namespaceURI !== 'jabber:client' && node.namespaceURI !== 'jabber:server') {
+      const err_msg = `Invalid namespaceURI ${node.namespaceURI}`;
+      if (throwErrorIfInvalidNS) {
+        throw new Error(err_msg);
+      } else {
+        log.error(err_msg);
+      }
+    }
+    return node;
+  }
+  buildTree() {
+    return Stanza.toElement(this.toString(), true);
+  }
+
+  /**
+   * @return {string}
    */
   toString() {
-    this.string = this.string || this.strings.reduce((acc, str) => {
-      const idx = this.strings.indexOf(str);
-      const value = this.values.length > idx ? this.values[idx].toString() : '';
-      return acc + str + value;
-    }, '');
-    return this.string;
-  }
-
-  /**
-   * @return { Element }
-   */
-  tree() {
-    var _this$node;
-    this.node = (_this$node = this.node) !== null && _this$node !== void 0 ? _this$node : toStanza(this.toString(), true);
-    return this.node;
+    this.#string = this.#string || this.#strings.reduce((acc, str) => {
+      const idx = this.#strings.indexOf(str);
+      const value = this.#values.length > idx ? this.#values[idx] : '';
+      return acc + str + (Array.isArray(value) ? value.map(v => v instanceof Stanza || v instanceof Builder ? v : xmlescape(v.toString())).join('') : value instanceof Stanza || value instanceof Builder ? value : xmlescape(value.toString()));
+    }, '').trim();
+    return this.#string;
   }
 }
 
 /**
- * Tagged template literal function which generates {@link Stanza } objects
- * @example stx`<presence type="${type}" xmlns="jabber:client"><show>${show}</show></presence>`
+ * Tagged template literal function which generates {@link Stanza} objects
  *
- * @param { string[] } strings
- * @param { ...any } values
+ * @example
+ *      const pres = stx`<presence type="${type}" xmlns="jabber:client"><show>${show}</show></presence>`
+ *
+ *      connection.send(msg);
+ *
+ * @example
+ *      const msg = stx`<message
+ *          from='sender@example.org'
+ *          id='hgn27af1'
+ *          to='recipient@example.org'
+ *          type='chat'>
+ *          <body>Hello world</body>
+ *      </message>`;
+ *
+ *      connection.send(msg);
+ *
+ * @param {string[]} strings
+ * @param {...any} values
+ * @returns {Stanza}
  */
 function stx(strings, ...values) {
   return new Stanza(strings, values);
@@ -5538,6 +5701,7 @@ const Strophe = {
   SASLOAuthBearer,
   SASLExternal,
   SASLXOAuth2,
+  Stanza,
   Builder,
   ElementType,
   ErrorCondition,
@@ -5601,6 +5765,9 @@ globalThis.$iq = $iq;
 globalThis.$msg = $msg;
 globalThis.$pres = $pres;
 globalThis.Strophe = Strophe;
+globalThis.stx = stx;
+const toStanza = Stanza.toElement;
+globalThis.toStanza = Stanza.toElement; // Deprecated
 
 exports.$build = $build;
 exports.$iq = $iq;
