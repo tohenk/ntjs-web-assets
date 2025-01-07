@@ -1,4 +1,4 @@
-/*! DateTime picker for DataTables.net v1.5.4
+/*! DateTime picker for DataTables.net v1.5.5
  *
  * © SpryMedia Ltd, all rights reserved.
  * License: MIT datatables.net/license/mit
@@ -48,7 +48,7 @@
 
 /**
  * @summary     DateTime picker for DataTables.net
- * @version     1.5.4
+ * @version     1.5.5
  * @file        dataTables.dateTime.js
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net/contact
@@ -183,7 +183,10 @@ var DateTime = function (input, opts) {
 			time: this.c.format.match(/[Hhm]|LT|LTS/) !== null,
 			seconds: this.c.format.indexOf('s') !== -1,
 			hours12: this.c.format.match(/[haA]/) !== null
-		}
+		},
+
+		/** Timeout when showing the control to listen for a blur */
+		showTo: null
 	};
 
 	this.dom.container
@@ -210,6 +213,7 @@ $.extend(DateTime.prototype, {
 	 * Destroy the control
 	 */
 	destroy: function () {
+		clearTimeout(this.s.showTo);
 		this._hide(true);
 		this.dom.container.off().empty();
 		this.dom.input
@@ -303,6 +307,8 @@ $.extend(DateTime.prototype, {
 			return this.s.d;
 		}
 
+		var oldVal = this.s.d;
+
 		if (set instanceof Date) {
 			this.s.d = this._dateToUtc(set);
 		}
@@ -320,7 +326,12 @@ $.extend(DateTime.prototype, {
 
 		if (write || write === undefined) {
 			if (this.s.d) {
-				this._writeOutput();
+				this._writeOutput(
+					false,
+					(oldVal === null && this.s.d !== null) ||
+						(oldVal !== null && this.s.d === null) ||
+						oldVal.toString() !== this.s.d.toString()
+				);
 			}
 			else {
 				// The input value was not valid...
@@ -1559,6 +1570,29 @@ $.extend(DateTime.prototype, {
 			}
 		});
 
+		clearTimeout(this.s.showTo);
+
+		// We can't use blur to hide, as we want to keep the picker open while
+		// to let the user select from it. But if focus is moved outside of of
+		// the picker, then we auto hide.
+		this.dom.input.on('blur', function (e) {
+			that.s.showTo = setTimeout(function () {
+				let name = document.activeElement.tagName.toLowerCase();
+
+				if (document.activeElement === that.dom.input[0]) {
+					return;
+				}
+
+				if (that.dom.container.find(document.activeElement).length) {
+					return;
+				}
+
+				if (['input', 'select', 'button'].includes(name)) {
+					that.hide();
+				}
+			}, 10);
+		});
+
 		// Hide if clicking outside of the widget - but in a different click
 		// event from the one that was used to trigger the show (bubble and
 		// inline)
@@ -1579,7 +1613,7 @@ $.extend(DateTime.prototype, {
 	 *
 	 * @private
 	 */
-	_writeOutput: function (focus) {
+	_writeOutput: function (focus, change) {
 		var date = this.s.d;
 		var out = '';
 		var input = this.dom.input;
@@ -1590,10 +1624,12 @@ $.extend(DateTime.prototype, {
 
 		input.val(out);
 
-		// Create a DOM synthetic event. Can't use $().trigger() as
-		// that doesn't actually trigger non-jQuery event listeners
-		var event = new Event('change', { bubbles: true });
-		input[0].dispatchEvent(event);
+		if (change === undefined || change) {
+			// Create a DOM synthetic event. Can't use $().trigger() as
+			// that doesn't actually trigger non-jQuery event listeners
+			var event = new Event('change', { bubbles: true });
+			input[0].dispatchEvent(event);
+		}
 
 		if (input.attr('type') === 'hidden') {
 			this.val(out, false);
@@ -1690,7 +1726,7 @@ DateTime.defaults = {
 	yearRange: 25
 };
 
-DateTime.version = '1.5.4';
+DateTime.version = '1.5.5';
 
 /**
  * CommonJS factory function pass through. Matches DataTables.
