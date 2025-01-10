@@ -54,7 +54,7 @@
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
-    "version": "2.2.0",
+    "version": "2.2.1",
     "datatables": ""
   },
   "DataTables-AutoFill": {
