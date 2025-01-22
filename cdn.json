@@ -62,7 +62,7 @@
     "datatables-extension": "autofill"
   },
   "DataTables-Buttons": {
-    "version": "3.2.0",
+    "version": "3.2.1",
     "datatables-extension": "buttons"
   },
   "DataTables-ColReorder": {
@@ -235,7 +235,7 @@
     }
   },
   "tinymce": {
-    "version": "7.6.0",
+    "version": "7.6.1",
     "jsdelivr": ""
   },
   "tinymce-i18n": {
