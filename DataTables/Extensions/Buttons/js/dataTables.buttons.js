@@ -1,4 +1,4 @@
-/*! Buttons for DataTables 3.2.0
+/*! Buttons for DataTables 3.2.1
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -1489,7 +1489,7 @@ $.extend(Buttons.prototype, {
 		hostButtonNode.attr('aria-expanded', 'true');
 
 		if (hostNode.parents('body')[0] !== document.body) {
-			hostNode = document.body.lastChild;
+			hostNode = $(document.body).children('div, section, p').last();
 		}
 
 		if (options.popoverTitle) {
@@ -1986,6 +1986,11 @@ Buttons.buttonSelector = function (insts, selector) {
  * @param {*} str Data to strip
  */
 Buttons.stripData = function (str, config) {
+	// If the input is an HTML element, we can use the HTML from it (HTML might be stripped below).
+	if (typeof str === 'object' && str.nodeName && str.nodeType) {
+		str = str.innerHTML;
+	}
+
 	if (typeof str !== 'string') {
 		return str;
 	}
@@ -2144,7 +2149,7 @@ Buttons.defaults = {
  * @type {string}
  * @static
  */
-Buttons.version = '3.2.0';
+Buttons.version = '3.2.1';
 
 $.extend(_dtButtons, {
 	collection: {
