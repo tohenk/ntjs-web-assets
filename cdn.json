@@ -82,7 +82,7 @@
     "datatables-extension": "fixedheader"
   },
   "DataTables-I18N": {
-    "version": "2.1.7",
+    "version": "2.2.1",
     "datatables-plugin": "i18n"
   },
   "DataTables-KeyTable": {
@@ -239,7 +239,7 @@
     "jsdelivr": ""
   },
   "tinymce-i18n": {
-    "version": "25.1.27",
+    "version": "25.2.3",
     "jsdelivr": ""
   },
   "typeahead.js": {
