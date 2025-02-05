@@ -1,4 +1,4 @@
-/*! SearchBuilder 1.8.1
+/*! SearchBuilder 1.8.2
  * ©SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -349,29 +349,31 @@ var DataTable = $.fn.dataTable;
                 }
             }
             else if (this.s.type !== null && deFormatDates) {
-                if (this.s.type.includes('date') ||
-                    this.s.type.includes('time')) {
+                var momentLib = moment();
+                var luxonLib = luxon();
+                if ((this.s.type.includes('date') ||
+                    this.s.type.includes('time')) && !moment && !luxon) {
                     for (i = 0; i < this.s.value.length; i++) {
                         if (this.s.value[i].match(/^\d{4}-([0]\d|1[0-2])-([0-2]\d|3[01])$/g) === null) {
                             this.s.value[i] = '';
                         }
                     }
                 }
-                else if (this.s.type.includes('moment')) {
+                else if (this.s.type.includes('moment') || (this.s.type.includes('datetime') && moment)) {
                     for (i = 0; i < this.s.value.length; i++) {
                         if (this.s.value[i] &&
                             this.s.value[i].length > 0 &&
-                            moment()(this.s.value[i], this.s.dateFormat, true).isValid()) {
-                            this.s.value[i] = moment()(this.s.value[i], this.s.dateFormat).format('YYYY-MM-DD HH:mm:ss');
+                            momentLib(this.s.value[i], this.s.dateFormat, true).isValid()) {
+                            this.s.value[i] = momentLib(this.s.value[i], this.s.dateFormat).format('YYYY-MM-DD HH:mm:ss');
                         }
                     }
                 }
-                else if (this.s.type.includes('luxon')) {
+                else if (this.s.type.includes('luxon') || (this.s.type.includes('datetime') && luxon)) {
                     for (i = 0; i < this.s.value.length; i++) {
                         if (this.s.value[i] &&
                             this.s.value[i].length > 0 &&
-                            luxon().DateTime.fromFormat(this.s.value[i], this.s.dateFormat).invalid === null) {
-                            this.s.value[i] = luxon().DateTime.fromFormat(this.s.value[i], this.s.dateFormat).toFormat('yyyy-MM-dd HH:mm:ss');
+                            luxonLib.DateTime.fromFormat(this.s.value[i], this.s.dateFormat).invalid === null) {
+                            this.s.value[i] = luxonLib.DateTime.fromFormat(this.s.value[i], this.s.dateFormat).toFormat('yyyy-MM-dd HH:mm:ss');
                         }
                     }
                 }
@@ -747,6 +749,20 @@ var DataTable = $.fn.dataTable;
                 var conditionObj = void 0;
                 if (this.c.conditions[this.s.type] !== undefined) {
                     conditionObj = this.c.conditions[this.s.type];
+                }
+                else if (this.s.type && this.s.type === 'datetime') {
+                    // If no format was specified in the DT type, then we need to use
+                    // Moment / Luxon's default locale formatting.
+                    var moment_1 = DataTable.use('moment');
+                    var luxon_1 = DataTable.use('luxon');
+                    if (moment_1) {
+                        conditionObj = this.c.conditions.moment;
+                        this.s.dateFormat = moment_1().creationData().locale._longDateFormat.L;
+                    }
+                    if (luxon_1) {
+                        conditionObj = this.c.conditions.luxon;
+                        this.s.dateFormat = luxon_1.DateTime.DATE_SHORT;
+                    }
                 }
                 else if (this.s.type && this.s.type.includes('datetime-')) {
                     // Date / time data types in DataTables are driven by Luxon or
@@ -2316,9 +2332,9 @@ var DataTable = $.fn.dataTable;
                 inputValue: Criteria.inputValueSelect,
                 isInputValid: Criteria.isInputValidSelect,
                 search: function (value, comparison) {
-                    if (value.length === comparison[0].length) {
+                    if (value.length === comparison.length) {
                         for (var i = 0; i < value.length; i++) {
-                            if (value[i] !== comparison[0][i]) {
+                            if (value[i] !== comparison[i]) {
                                 return false;
                             }
                         }
@@ -2335,9 +2351,9 @@ var DataTable = $.fn.dataTable;
                 inputValue: Criteria.inputValueSelect,
                 isInputValid: Criteria.isInputValidSelect,
                 search: function (value, comparison) {
-                    if (value.length === comparison[0].length) {
+                    if (value.length === comparison.length) {
                         for (var i = 0; i < value.length; i++) {
-                            if (value[i] !== comparison[0][i]) {
+                            if (value[i] !== comparison[i]) {
                                 return true;
                             }
                         }
@@ -3292,7 +3308,8 @@ var DataTable = $.fn.dataTable;
          *
          * @param details The details required to perform a rebuild
          */
-        SearchBuilder.prototype.rebuild = function (details) {
+        SearchBuilder.prototype.rebuild = function (details, redraw) {
+            if (redraw === void 0) { redraw = true; }
             this.dom.clearAll.click();
             // If there are no details to rebuild then return
             if (details === undefined || details === null) {
@@ -3304,7 +3321,9 @@ var DataTable = $.fn.dataTable;
             this._checkClear();
             this._updateTitle(this.s.topGroup.count());
             this.s.topGroup.redrawContents();
-            this.s.dt.draw(false);
+            if (redraw) {
+                this.s.dt.draw(false);
+            }
             this.s.topGroup.setListeners();
             return this;
         };
@@ -3625,7 +3644,7 @@ var DataTable = $.fn.dataTable;
                 _this.dom.clearAll.remove();
             });
         };
-        SearchBuilder.version = '1.8.1';
+        SearchBuilder.version = '1.8.2';
         SearchBuilder.classes = {
             button: 'dtsb-button',
             clearAll: 'dtsb-clearAll',
@@ -3733,7 +3752,7 @@ var DataTable = $.fn.dataTable;
         return SearchBuilder;
     }());
 
-    /*! SearchBuilder 1.8.1
+    /*! SearchBuilder 1.8.2
      * ©SpryMedia Ltd - datatables.net/license/mit
      */
     setJQuery($);
@@ -3796,13 +3815,14 @@ var DataTable = $.fn.dataTable;
             ctx._searchBuilder.getDetails(deFormatDates) :
             null;
     });
-    apiRegister('searchBuilder.rebuild()', function (details) {
+    apiRegister('searchBuilder.rebuild()', function (details, redraw) {
+        if (redraw === void 0) { redraw = true; }
         var ctx = this.context[0];
         // If SearchBuilder has not been initialised on this instance then return
         if (ctx._searchBuilder === undefined) {
             return null;
         }
-        ctx._searchBuilder.rebuild(details);
+        ctx._searchBuilder.rebuild(details, redraw);
         return this;
     });
     apiRegister('searchBuilder.container()', function () {
