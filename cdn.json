@@ -106,7 +106,7 @@
     "datatables-extension": "scroller"
   },
   "DataTables-SearchBuilder": {
-    "version": "1.8.1",
+    "version": "1.8.2",
     "datatables-extension": "searchbuilder"
   },
   "DataTables-SearchPanes": {
