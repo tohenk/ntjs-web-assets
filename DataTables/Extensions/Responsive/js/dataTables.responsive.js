@@ -1,4 +1,4 @@
-/*! Responsive 3.0.3
+/*! Responsive 3.0.4
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -52,7 +52,7 @@ var DataTable = $.fn.dataTable;
 /**
  * @summary     Responsive
  * @description Responsive tables plug-in for DataTables
- * @version     3.0.3
+ * @version     3.0.4
  * @author      SpryMedia Ltd
  * @copyright   SpryMedia Ltd.
  *
@@ -103,7 +103,7 @@ var DataTable = $.fn.dataTable;
  *  @param {object} settings DataTables settings object for the host table
  *  @param {object} [opts] Configuration options
  *  @requires jQuery 1.7+
- *  @requires DataTables 1.10.3+
+ *  @requires DataTables 2.0.0+
  *
  *  @example
  *      $('#example').DataTable( {
@@ -112,7 +112,7 @@ var DataTable = $.fn.dataTable;
  *    } );
  */
 var Responsive = function (settings, opts) {
-	// Sanity check that we are using DataTables 1.10 or newer
+	// Sanity check that we are using DataTables 2.0.0 or newer
 	if (!DataTable.versionCheck || !DataTable.versionCheck('2')) {
 		throw 'DataTables Responsive requires DataTables 2 or newer';
 	}
@@ -743,11 +743,15 @@ $.extend(Responsive.prototype, {
 				.filter('.dtr-control')
 				.removeClass('dtr-control');
 
-			dt.cells(null, firstVisible, { page: 'current' })
-				.nodes()
-				.to$()
-				.addClass('dtr-control');
+			if (firstVisible >= 0) {
+				dt.cells(null, firstVisible, { page: 'current' })
+					.nodes()
+					.to$()
+					.addClass('dtr-control');
+			}
 		}
+
+		this._tabIndexes();
 	},
 
 	/**
@@ -813,12 +817,6 @@ $.extend(Responsive.prototype, {
 		if (details.type === 'inline') {
 			details.target = 'td.dtr-control, th.dtr-control';
 		}
-
-		// Keyboard accessibility
-		dt.on('draw.dtr', function () {
-			that._tabIndexes();
-		});
-		that._tabIndexes(); // Initial draw has already happened
 
 		$(dt.table().body()).on('keyup.dtr', 'td, th', function (e) {
 			if (e.keyCode === 13 && $(this).data('dtr-keyboard')) {
@@ -1293,8 +1291,24 @@ $.extend(Responsive.prototype, {
 		var that = this;
 		var display = showHide ? '' : 'none';
 
+		// We use the `null`s in the structure array to indicate that a cell
+		// should expand over that one if there is a colspan, but it might
+		// also have been filled by a rowspan, so we need to expand the
+		// rowspan cells down through the structure
+		structure.forEach(function (row, rowIdx) {
+			for (var col = 0; col < row.length; col++) {
+				if (row[col] && row[col].rowspan > 1) {
+					var span = row[col].rowspan;
+
+					for (var i=1 ; i<span ; i++) {
+						structure[rowIdx + i][col] = {};
+					}
+				}
+			}
+		});
+
 		structure.forEach(function (row) {
-			if (row[col]) {
+			if (row[col] && row[col].cell) {
 				$(row[col].cell)
 					.css('display', display)
 					.toggleClass('dtr-hidden', !showHide);
@@ -1305,7 +1319,7 @@ $.extend(Responsive.prototype, {
 				var search = col;
 
 				while (search >= 0) {
-					if (row[search]) {
+					if (row[search] && row[search].cell) {
 						row[search].cell.colSpan = that._colspan(row, search);
 						break;
 					}
@@ -1370,7 +1384,12 @@ $.extend(Responsive.prototype, {
 				target = '>td:first-child, >th:first-child';
 			}
 
-			$(target, dt.rows({ page: 'current' }).nodes())
+			var rows = dt.rows({ page: 'current' }).nodes();
+			var nodes = target === 'tr'
+				? $(rows)
+				: $(target, rows);
+
+			nodes
 				.attr('tabIndex', ctx.iTabIndex)
 				.data('dtr-keyboard', 1);
 		}
@@ -1660,8 +1679,10 @@ Responsive.renderer = {
 					col.columnIndex +
 					'">' +
 					'<td>' +
-					col.title +
-					':' +
+					( '' !== col.title
+						? col.title + ':'
+						: ''
+					) +
 					'</td> ' +
 					'<td>' +
 					col.data +
@@ -1809,7 +1830,7 @@ Api.registerPlural(
  * @name Responsive.version
  * @static
  */
-Responsive.version = '3.0.3';
+Responsive.version = '3.0.4';
 
 $.fn.dataTable.Responsive = Responsive;
 $.fn.DataTable.Responsive = Responsive;
