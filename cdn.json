@@ -90,7 +90,7 @@
     "datatables-extension": "keytable"
   },
   "DataTables-Responsive": {
-    "version": "3.0.3",
+    "version": "3.0.4",
     "datatables-extension": "responsive"
   },
   "DataTables-RowGroup": {
