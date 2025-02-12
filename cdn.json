@@ -46,7 +46,7 @@
     "jsdelivr-dist": ""
   },
   "ckeditor": {
-    "version": "44.1.0",
+    "version": "44.2.0",
     "ckeditor": ""
   },
   "cropper": {
