@@ -22,7 +22,7 @@
     "jsdelivr-dist": ""
   },
   "bootstrap-datetimepicker": {
-    "version": "6.9.11",
+    "version": "6.10.1",
     "jsdelivr-dist": "@eonasdan/tempus-dominus"
   },
   "bootstrap-icons": {
@@ -46,11 +46,11 @@
     "jsdelivr-dist": ""
   },
   "ckeditor": {
-    "version": "44.2.0",
+    "version": "44.3.0",
     "ckeditor": ""
   },
   "cropper": {
-    "version": "1.6.2",
+    "version": "2.0.0",
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
@@ -219,7 +219,7 @@
     "jsdelivr": ""
   },
   "semantic-ui": {
-    "version": "2.9.3",
+    "version": "2.9.4",
     "jsdelivr-dist": "fomantic-ui"
   },
   "socket.io": {
@@ -235,7 +235,7 @@
     }
   },
   "tinymce": {
-    "version": "7.6.1",
+    "version": "7.7.1",
     "jsdelivr": ""
   },
   "tinymce-i18n": {
