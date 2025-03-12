@@ -3692,7 +3692,7 @@
           if (this.optionsStore.options.display.keyboardNavigation) {
               this.widget.removeEventListener('keydown', this._keyboardEventBound);
           }
-          this.optionsStore.toggle.focus();
+          this.optionsStore.toggle?.focus();
       }
       /**
        * Toggles the picker's open state. Fires a show/hide event depending.
