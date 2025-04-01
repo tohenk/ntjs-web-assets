@@ -1315,6 +1315,25 @@ a.colmenu .colmenuspan
 	border: 1px solid var(--tbl-brd-color, #ddd);
 	box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
 }
+#info_dialog .info_content {
+	margin:0px;
+	padding: 0.4em 0.4em 0.8em 0.4em;
+	width:100%;
+	overflow:auto;
+	position:relative;
+	text-align: center;
+}
+#info_dialog .info_footer {
+	text-align: center;
+	padding-bottom:0.3em;
+	padding-top:0.3em;
+	background-image: none;
+	border-width: 1px 0 0 0;
+}
+#info_dialog .ui-jqdialog-titlebar-close:hover {
+	background-color :var(--tbl-brd-color, #ddd);
+}
+
 .ui-col-menu {
 	overflow: auto;
 	height: 17em;
@@ -1324,3 +1343,47 @@ a.colmenu .colmenuspan
 }
 /*uncomment  this if you use ie11*/
 /* <script>window.MSInputMethodContext && document.documentMode && document.write('<script src="https://cdn.jsdelivr.net/gh/nuxodin/ie11CustomProperties@4.1.0/ie11CustomProperties.min.js"><\/script>');</script>*/
+
+.ui-jqgrid-btable td.selected-cell {
+    background-color: antiquewhite;
+}
+.toast-success {
+	background-color: #e8f6f3 !important;
+}
+.toast-warning {
+	background-color: #fef9e7 !important;
+}
+.toast-info {
+	background-color: #ebf5fb !important;
+}
+.toast-error {
+	background-color: #fadbd8 !important;
+}
+
+/* frozen rows */
+.frozen-row-class {
+    z-index: 2;
+    position: sticky;
+	position: -webkit-sticky;
+    background-color: #fff !important;
+	box-shadow: inset 0px 1px 0  var(--tbl-brd-color, #ddd), inset 0px -1px 0  var(--tbl-brd-color, #ddd) !important;
+}
+/* frozen columns */
+.frozen-col-class {
+    z-index: 1;
+    position: sticky;
+	position: -webkit-sticky;
+    background-color: #fff !important;
+	box-shadow: inset -1px 0px 0  #ddd !important;
+}
+.frozen-col-class-rtl {
+    z-index: 1;
+    position: sticky;
+	position: -webkit-sticky;
+    background-color: #fff !important;
+	box-shadow: inset 1px 0px 0  #ddd !important;
+}
+.for-sticky {
+	box-shadow :none !important;
+	border-right-width: 0px !important;
+}

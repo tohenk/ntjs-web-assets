@@ -22,21 +22,27 @@ $.jgrid = $.jgrid || {};
 
 
 $.extend($.jgrid,{
-	formatCell : function ( cellval , colpos, rwdat, cm, $t, etype){
-		var v;
+	formatCell : function ( cellval , colpos, rwdat, cm, $t, etype, adf, acf){
+		var v = cellval;
+		if( adf === undefined ) {
+			adf = true;
+		}
+		if( acf === undefined ) {
+			acf = true;
+		}
 		if(cm.formatter !== undefined) {
 			var opts= {rowId: '', colModel:cm, gid: $t.p.id, pos:colpos, styleUI: '', isExported : true, exporttype : etype };
 			if($.jgrid.isFunction( cm.formatter ) ) {
+				if(acf) {
 				v = cm.formatter.call($t,cellval,opts,rwdat);
+				}
 			} else if($.fmatter){
+				if(adf) {
 				v = $.fn.fmatter.call($t,cm.formatter,cellval,opts,rwdat);
-			} else {
-				v = cellval;
 			}
-		} else {
-			v = cellval;
 		}
-		return v;
+		}
+		return v == null ? '' : v;
 	},
 	formatCellCsv : function (v, p) {
 		v = v == null ? '' : String(v);
@@ -85,6 +91,11 @@ $.extend($.jgrid,{
 			}
 		}
 		return currNode;
+	},
+	xmlToString : function (xmlDom) {
+		return (typeof XMLSerializer!=="undefined") ? 
+			(new window.XMLSerializer()).serializeToString(xmlDom) : 
+			xmlDom.xml;
 	},
 	xmlToZip : function ( zip, obj ) {
 		var $t = this,
@@ -408,6 +419,12 @@ $.extend($.jgrid,{
 		if( $.isEmptyObject( obj )) {
 			obj.excel_parsers = true;
 		}
+		var checkSt = true;
+		if(styleSh == null) {
+			var es= $.jgrid.excelStrings;
+			styleSh = $.parseXML( es['xl/styles.xml']);
+			checkSt = false;
+		}
 		//var	styleSh = $.parseXML( $.jgrid.excelStrings['xl/styles.xml']), //xlsx.xl["styles.xml"];
 		var formats = styleSh.getElementsByTagName("numFmts")[0],
 		celsX = styleSh.getElementsByTagName("cellXfs")[0];
@@ -455,20 +472,32 @@ $.extend($.jgrid,{
 			celsX.appendChild( mycell );
 			count = $('cellXfs xf', styleSh).length;
 			$(celsX).attr("count", count);
-			obj[style] = count - 1;
+			obj[style] = count-1;
+			if(!checkSt) {
+				es['xl/styles.xml'] = $.jgrid.xmlToString( styleSh );
+			}
 		}
 		return obj;
 	},
 	newExcelStyle : function ( xlsx, options ) {
 		options = $.extend(true, {
 			font : { size : 11, name : 'Calibri', options :""}, // options <b/> <i/> <u/>
-			color : { patternType : "solid", fgColor : "FFFFFFF", bgColor : 64 } // bgColor if number 0-64
+			color : { patternType : "solid", fgColor : "FFFFFFF", bgColor : 64 }, // bgColor if number 0-64
+			border : 0 //{leftStyle : 'none', rightStyle:'none', topStyle : 'none', bottomStyle : none, color : 'auto'}
 		}, options || {});
 		//PatterType can be one of the following
 		/*
 			none, solid,darkDown,darkGray,darkGrid,darkHorizontal,darkTrellis,
 			darkUp,darkVertical,gray0625,gray125,lightDown,lightGray,lightGrid
 			lightHorizontal,lightTrellis,lightUp,lightVertical,mediumGray
+		*/
+		// border style values can be
+		/*
+		  dashDot, dashDotDot, dashed, dotted, double, hair, medium, mediumDashDot,
+		  mediumDashDotDot, mediumDashed, none, slantDashDot, thick, thin
+		 */
+		/* color can be
+		  auto or string representing rgb value or number from 0-64
 		*/
 		//styleSheet.childNodes[0].childNodes[0] ==> number formats  <numFmts count="6"> </numFmts>
 		//styleSheet.childNodes[0].childNodes[1] ==> fonts           <fonts count="5" x14ac:knownFonts="1"> </fonts>
@@ -478,10 +507,11 @@ $.extend($.jgrid,{
 		//styleSheet.childNodes[0].childNodes[5] ==> cell xfs        <cellXfs count="69"> </cellXfs>
 		//on the last line we have the 69 currently built in styles (0 - 68)
 
-		var sSh = xlsx.xl['styles.xml'];
-		var lastXfIndex   = $('cellXfs xf', sSh).length - 1;
-		var lastFontIndex = $('fonts font', sSh).length - 1;
-		var lastFillIndex = $('fills fill', sSh).length - 1;
+		var sSh = xlsx.xl['styles.xml'],
+		   lastXfIndex   = $('cellXfs xf', sSh).length - 1,
+		   lastFontIndex = $('fonts font', sSh).length - 1,
+		   lastFillIndex = $('fills fill', sSh).length - 1,
+		   lastBorderIndex = $('borders border', sSh).length - 1;
 
 
 		var font1 =
@@ -491,9 +521,9 @@ $.extend($.jgrid,{
                 options.font.options +
         '</font>';
 		sSh.childNodes[0].childNodes[1].innerHTML += font1; //new font
-		var bgcolor = 'indexed=';
+		var bgcolor = 'rgb =';
 		if(parseInt(options.color.bgColor,10) >= 0 ) {
-			bgcolor = 'rgb=';
+			bgcolor = 'indexed =';
 		}
 		bgcolor += '"'+options.color.bgColor+'"';
 		var color1 = 
@@ -504,7 +534,37 @@ $.extend($.jgrid,{
 			'</patternFill>'+
 		'</fill>';		
 		sSh.childNodes[0].childNodes[2].innerHTML += color1; //new color
-        var s1 = '<xf numFmtId="0" fontId="'+(lastFontIndex+1)+'" fillId="'+(lastFillIndex+1)+'" borderId="0" applyFont="1" applyFill="1" applyBorder="1" xfId="0" applyAlignment="1"></xf>';
+		if($.isPlainObject(options.border)) {
+			options.border = $.extend({leftStyle : 'none', rightStyle:'none', topStyle : 'none', bottomStyle : 'none', color : 'auto'}, options.border || {})
+			var bcolor;
+			if(options.border.color === 'auto') {
+				bcolor = 'auto="1"'; 
+			} else if( $.fmatter.isNumber(options.border.color) ) {
+				bcolor = 'indexed="'+options.border.color+'"';
+			} else if($.fmatter.isString(options.border.color)) {
+				bcolor = 'rgb="'+options.border.color+'"';
+			}
+			var border1 =
+			'<border diagonalUp="false" diagonalDown="false">'+
+				'<left style="'+options.border.leftStyle+'">' +
+					'<color '+bcolor+' />'+
+				'</left>'+
+				'<right style="'+options.border.rightStyle+'">' +
+					'<color '+bcolor+' />'+
+				'</right>'+
+				'<top style="'+options.border.topStyle+'">' +
+					'<color '+bcolor+' />'+
+				'</top>'+
+				'<bottom style="'+options.border.bottomStyle+'">' +
+					'<color '+bcolor+' />'+
+				'</bottom>'+
+				'<diagonal />'+
+			'</border>';
+			sSh.childNodes[0].childNodes[3].innerHTML += border1; //new border
+		} else {
+			lastBorderIndex = parseInt(options.border,10)-1;
+		}
+        var s1 = '<xf numFmtId="0" fontId="'+(lastFontIndex+1)+'" fillId="'+(lastFillIndex+1)+'" borderId="'+(lastBorderIndex+1)+'" applyFont="1" applyFill="1" applyBorder="1" xfId="0" applyAlignment="1"></xf>';
 		sSh.childNodes[0].childNodes[5].innerHTML += s1;
 		return (lastXfIndex + 1);
 	}
@@ -535,7 +595,9 @@ $.jgrid.extend({
 			onBeforeExport : null,
 			treeindent : ' ',
 			visibleTreeNodes : false,
-			loadIndicator : true // can be a function
+			loadIndicator : true, // can be a function
+			applyDefFmt : true,
+			applyCustFmt : true
 		}, p || {});
 		var ret ="";
 		this.each(function(){
@@ -678,7 +740,7 @@ $.jgrid.extend({
 							for(ik = 0; ik < cm.length; ik++) {
 								if(cm[ik]._expcol) {
 									arr[k] = $.jgrid.formatCellCsv(
-										$.jgrid.formatCell( $.jgrid.getAccessor(to, cm[ik].name), ik, to, cm[ik], $t, 'csv' ) , p);
+										$.jgrid.formatCell( $.jgrid.getAccessor(to, cm[ik].name), ik, to, cm[ik], $t, 'csv', p.applyDefFmt, p.applyCustFmt ) , p);
 									k++;
 								}
 							}
@@ -750,7 +812,7 @@ $.jgrid.extend({
 					k =0;
 					for(i = 0; i < cmlen; i++) {
 						if(cm[i]._expcol) {
-							tmp[k] = $.jgrid.formatCellCsv( $.jgrid.formatCell( $.jgrid.getAccessor(row, cm[i].name) , i, row, cm[i], $t, 'csv' ), p );
+							tmp[k] = $.jgrid.formatCellCsv( $.jgrid.formatCell( $.jgrid.getAccessor(row, cm[i].name) , i, row, cm[i], $t, 'csv', p.applyDefFmt, p.applyCustFmt ), p );
 							k++;
 						}
 					}
@@ -865,7 +927,9 @@ $.jgrid.extend({
 			replaceStr : null,
 			treeindent : ' ',
 			visibleTreeNodes : false,
-			loadIndicator : true // can be a function
+			loadIndicator : true, // can be a function
+			applyDefFmt : true,
+			applyCustFmt : true
 		}, o || {} );
 		this.each(function() {
 			var $t = this,
@@ -1044,7 +1108,7 @@ $.jgrid.extend({
 					}
 					if(!header) {
 						omit = (i===0 && skipfirstcol);
-						v = omit || (skipfirstcol && v==='') ? v : $.jgrid.formatCell( v, data.map[i], row, cm[data.map[i]], $t, 'excel');
+						v = omit || (skipfirstcol && v==='') ? v : $.jgrid.formatCell( v, data.map[i], row, cm[data.map[i]], $t, 'excel', o.applyDefFmt, o.applyCustFmt);
 						// convert whitespace from formatter to empty string
 						if(v && (v==='&nbsp;' || v==='&#160;' || (v.length===1 && v.charCodeAt(0)===160))) { 
 							v = '';
@@ -1099,7 +1163,7 @@ $.jgrid.extend({
 											break;
 										}
 									}
-									cell = _makeCellSpecial( {r: cellId,s: special.style}, v );
+									cell = _makeCellSpecial( { r: cellId,s: special.style}, v );
 								}
 								rowNode.appendChild( cell );
 								break;
@@ -1520,7 +1584,9 @@ $.jgrid.extend({
 			treeindent : "-",
 			visibleTreeNodes : false,
 			centerTableOnPage : false,
-			loadIndicator : true // can be a function
+			loadIndicator : true, // can be a function
+			applyDefFmt : true,
+			applyCustFmt : true
 
 		}, o || {} );
 		return this.each(function() {
@@ -1554,7 +1620,7 @@ $.jgrid.extend({
 						ommit = !(key === 0 && skipfirstcol);// ? false : true;
 						val = row[def[key]];
 						obj = {
-							text: val == null || val === '' ? '' : (fmt && ommit ? $.jgrid.formatCell( val + '', map[k], data[i], cm[map[k]], $t, 'pdf') : val),
+							text: fmt && ommit ? $.jgrid.formatCell( val + '', map[k], data[i], cm[map[k]], $t, 'pdf', o.applyDefFmt, o.applyCustFmt) : val,
 							alignment : align[key],
 							style : 'tableBody'
 						};
@@ -1832,7 +1898,7 @@ $.jgrid.extend({
 					row = data[i];
 					for( key = 0;key < def.length; key++ ) {
 						obj	= {
-							text: row[def[key]] == null ? '' : $.jgrid.stripHtml($.jgrid.formatCell( $.jgrid.getAccessor(row, def[key]) + '', map[k], data[i], cm[map[k]], $t, 'pdf')),
+							text: $.jgrid.stripHtml($.jgrid.formatCell( $.jgrid.getAccessor(row, def[key]) + '', map[k], data[i], cm[map[k]], $t, 'pdf', o.applyDefFmt, o.applyCustFmt)),
 							alignment : align[def[key]],
 							style : 'tableBody'
 						};
@@ -1971,7 +2037,9 @@ $.jgrid.extend({
 			returnAsString : false,
 			treeindent : '&nbsp;',
 			visibleTreeNodes : false,
-			loadIndicator : true // can be a function
+			loadIndicator : true, // can be a function
+			applyDefFmt : true,
+			applyCustFmt : true
 		}, o || {} );
 		var ret;
 		this.each(function() {
@@ -2053,7 +2121,7 @@ $.jgrid.extend({
 					}
 					f= data.header[i];
 					if (d.hasOwnProperty(f) ) {
-						str += '<'+tag+stl+'>'+ (frm ? $.jgrid.formatCell( $.jgrid.getAccessor( d, f ), data.map[i], d, cm[data.map[i]], $t, 'html') : d[f])+'</'+tag+'>';
+						str += '<'+tag+stl+'>'+ (frm ? $.jgrid.formatCell( $.jgrid.getAccessor( d, f ), data.map[i], d, cm[data.map[i]], $t, 'html', o.applyDefFmt, o.applyCustFmt) : d[f])+'</'+tag+'>';
 					}
 					if(colsp) {
 						break;
