@@ -14,11 +14,11 @@
     "unpkg": "https://unpkg.com/<PKG>@<VER>/dist/<TYPE>/<NAME>"
   },
   "bignumber.js": {
-    "version": "9.1.2",
+    "version": "9.2.0",
     "cdnjs": ""
   },
   "bootstrap": {
-    "version": "5.3.3",
+    "version": "5.3.4",
     "jsdelivr-dist": ""
   },
   "bootstrap-datetimepicker": {
