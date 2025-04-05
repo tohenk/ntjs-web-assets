@@ -18,7 +18,7 @@
     "cdnjs": ""
   },
   "bootstrap": {
-    "version": "5.3.4",
+    "version": "5.3.5",
     "jsdelivr-dist": ""
   },
   "bootstrap-datetimepicker": {
@@ -42,7 +42,7 @@
     "cdnjs": "bootstrap-3-typeahead"
   },
   "bootswatch": {
-    "version": "5.3.3",
+    "version": "5.3.5",
     "jsdelivr-dist": ""
   },
   "ckeditor": {
