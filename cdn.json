@@ -14,7 +14,7 @@
     "unpkg": "https://unpkg.com/<PKG>@<VER>/dist/<TYPE>/<NAME>"
   },
   "bignumber.js": {
-    "version": "9.2.1",
+    "version": "9.3.0",
     "cdnjs": ""
   },
   "bootstrap": {
