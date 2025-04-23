@@ -15,7 +15,7 @@
   },
   "bignumber.js": {
     "version": "9.3.0",
-    "cdnjs": ""
+    "jsdelivr": ""
   },
   "bootstrap": {
     "version": "5.3.5",
