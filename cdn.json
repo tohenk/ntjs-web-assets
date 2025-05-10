@@ -26,7 +26,7 @@
     "jsdelivr-dist": "@eonasdan/tempus-dominus"
   },
   "bootstrap-icons": {
-    "version": "1.12.1",
+    "version": "1.13.1",
     "jsdelivr": ""
   },
   "bootstrap-select": {
@@ -42,7 +42,7 @@
     "cdnjs": "bootstrap-3-typeahead"
   },
   "bootswatch": {
-    "version": "5.3.5",
+    "version": "5.3.6",
     "jsdelivr-dist": ""
   },
   "ckeditor": {
