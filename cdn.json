@@ -227,7 +227,7 @@
     "socket.io": ""
   },
   "strophe": {
-    "version": "3.1.0",
+    "version": "3.1.1",
     "cdnjs": "strophe.js",
     "js": {
       "strophe": "strophe",
