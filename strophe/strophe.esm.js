@@ -539,6 +539,31 @@ function xmlTextNode(text) {
 }
 
 /**
+ * @param {Element} stanza
+ * @return {Element}
+ */
+function stripWhitespace(stanza) {
+  const childNodes = Array.from(stanza.childNodes);
+  if (childNodes.length === 1 && childNodes[0].nodeType === ElementType.TEXT) {
+    // If the element has only one child and it's a text node, we assume
+    // it's significant and don't remove it, even if it's only whitespace.
+    return stanza;
+  }
+  childNodes.forEach(node => {
+    if (node.nodeName.toLowerCase() === 'body') {
+      // We don't remove anything inside <body> elements
+      return;
+    }
+    if (node.nodeType === ElementType.TEXT && !/\S/.test(node.nodeValue)) {
+      stanza.removeChild(node);
+    } else if (node.nodeType === ElementType.NORMAL) {
+      stripWhitespace(/** @type {Element} */node);
+    }
+  });
+  return stanza;
+}
+
+/**
  * Creates an XML DOM node.
  * @param {string} text - The contents of the XML element.
  * @return {XMLDocument}
@@ -979,6 +1004,7 @@ var utils$1 = /*#__PURE__*/Object.freeze({
     addCookies: addCookies,
     xmlGenerator: xmlGenerator,
     xmlTextNode: xmlTextNode,
+    stripWhitespace: stripWhitespace,
     xmlHtmlNode: xmlHtmlNode,
     getParserError: getParserError,
     getFirstElementChild: getFirstElementChild,
@@ -1288,10 +1314,13 @@ class Builder {
    * name and an attributes object to create the child it uses an
    * existing DOM element object.
    *
-   * @param {Element} elem - A DOM element.
+   * @param {Element|Builder} elem - A DOM element.
    * @return {Builder} The Strophe.Builder object.
    */
   cnode(elem) {
+    if (elem instanceof Builder) {
+      elem = elem.tree();
+    }
     let impNode;
     const xmlGen = xmlGenerator();
     try {
@@ -5501,6 +5530,8 @@ class Connection {
   }
 }
 
+class UnsafeXML extends String {}
+
 /**
  * A Stanza represents a XML element used in XMPP (commonly referred to as stanzas).
  */
@@ -5533,7 +5564,7 @@ class Stanza extends Builder {
    * untrusted input.
    *
    * @param {string} string
-   * @returns {Builder}
+   * @returns {UnsafeXML}
    * @example
    *    const status = '<status>I am busy!</status>';
    *    const pres = stx`
@@ -5544,7 +5575,7 @@ class Stanza extends Builder {
    *    connection.send(pres);
    */
   static unsafeXML(string) {
-    return Builder.fromString(string);
+    return new UnsafeXML(string);
   }
 
   /**
@@ -5559,7 +5590,7 @@ class Stanza extends Builder {
     if (parserError) {
       throw new Error(`Parser Error: ${parserError}`);
     }
-    const node = getFirstElementChild(doc);
+    const node = stripWhitespace(getFirstElementChild(doc));
     if (['message', 'iq', 'presence'].includes(node.nodeName.toLowerCase()) && node.namespaceURI !== 'jabber:client' && node.namespaceURI !== 'jabber:server') {
       const err_msg = `Invalid namespaceURI ${node.namespaceURI}`;
       if (throwErrorIfInvalidNS) {
@@ -5578,10 +5609,9 @@ class Stanza extends Builder {
    * @return {string}
    */
   toString() {
-    this.#string = this.#string || this.#strings.reduce((acc, str) => {
-      const idx = this.#strings.indexOf(str);
+    this.#string = this.#string || this.#strings.reduce((acc, str, idx) => {
       const value = this.#values.length > idx ? this.#values[idx] : '';
-      return acc + str + (Array.isArray(value) ? value.map(v => v instanceof Stanza || v instanceof Builder ? v : xmlescape(v.toString())).join('') : value instanceof Stanza || value instanceof Builder ? value : xmlescape(value.toString()));
+      return acc + str + (Array.isArray(value) ? value.map(v => v instanceof UnsafeXML || v instanceof Builder ? v : xmlescape(v.toString())).join('') : value instanceof UnsafeXML || value instanceof Builder ? value : xmlescape((value !== null && value !== void 0 ? value : '').toString()));
     }, '').trim();
     return this.#string;
   }
