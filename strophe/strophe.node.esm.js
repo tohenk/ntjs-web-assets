@@ -1,18 +1,13 @@
-'use strict';
-
-
-                const { JSDOM } = require('jsdom');
-                const WebSocket = require('ws');
-                const { window } = new JSDOM();
-                globalThis.WebSocket = WebSocket;
-                globalThis.XMLSerializer = window.XMLSerializer;
-                globalThis.DOMParser = window.DOMParser;
-                globalThis.document = window.document;
-            
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-/**
+async function setupShims() {
+                                    const { JSDOM } = await import('jsdom');
+                                    const { default: ws } = await import('ws');
+                                    const { window } = new JSDOM();
+                                    globalThis.WebSocket = ws;
+                                    globalThis.XMLSerializer = window.XMLSerializer;
+                                    globalThis.DOMParser = window.DOMParser;
+                                    globalThis.document = window.document;
+                                }
+                                setupShims();/**
  * Common namespace constants from the XMPP RFCs and XEPs.
  *
  * @typedef { Object } NS
@@ -5653,13 +5648,4 @@ globalThis.stx = stx;
 const toStanza = Stanza.toElement;
 globalThis.toStanza = Stanza.toElement; // Deprecated
 
-exports.$build = $build;
-exports.$iq = $iq;
-exports.$msg = $msg;
-exports.$pres = $pres;
-exports.Builder = Builder;
-exports.Request = Request;
-exports.Stanza = Stanza;
-exports.Strophe = Strophe;
-exports.stx = stx;
-exports.toStanza = toStanza;
+export { $build, $iq, $msg, $pres, Builder, Request, Stanza, Strophe, stx, toStanza };

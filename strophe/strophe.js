@@ -1,128 +1,8 @@
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
     typeof define === 'function' && define.amd ? define(['exports'], factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.strophe = {}));
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.Strophe = {}));
 })(this, (function (exports) { 'use strict';
-
-    /**
-     * This module provides uniform
-     * Shims APIs and globals that are not present in all JS environments,
-     * the most common example for Strophe being browser APIs like WebSocket
-     * and DOM that don't exist under nodejs.
-     *
-     * Usually these will be supplied in nodejs by conditionally requiring a
-     * NPM module that provides a compatible implementation.
-     */
-
-    /* global globalThis */
-
-    /**
-     * WHATWG WebSockets API
-     * https://www.w3.org/TR/websockets/
-     *
-     * Interface to use the web socket protocol
-     *
-     * Used implementations:
-     * - supported browsers: built-in in WebSocket global
-     *   https://developer.mozilla.org/en-US/docs/Web/API/WebSocket#Browser_compatibility
-     * - nodejs: use standard-compliant 'ws' module
-     *   https://www.npmjs.com/package/ws
-     */
-    function getWebSocketImplementation() {
-      if (typeof globalThis.WebSocket === 'undefined') {
-        try {
-          return require('ws');
-          // eslint-disable-next-line no-unused-vars
-        } catch (e) {
-          throw new Error('You must install the "ws" package to use Strophe in nodejs.');
-        }
-      }
-      return globalThis.WebSocket;
-    }
-    const WebSocket = getWebSocketImplementation();
-
-    /**
-     * Retrieves the XMLSerializer implementation for the current environment.
-     *
-     * In browser environments, it uses the built-in XMLSerializer.
-     * In Node.js environments, it attempts to load the 'jsdom' package
-     * to create a compatible XMLSerializer.
-     */
-    function getXMLSerializerImplementation() {
-      if (typeof globalThis.XMLSerializer === 'undefined') {
-        let JSDOM;
-        try {
-          JSDOM = require('jsdom').JSDOM;
-          // eslint-disable-next-line no-unused-vars
-        } catch (e) {
-          throw new Error('You must install the "ws" package to use Strophe in nodejs.');
-        }
-        const dom = new JSDOM('');
-        return dom.window.XMLSerializer;
-      }
-      return globalThis.XMLSerializer;
-    }
-    const XMLSerializer = getXMLSerializerImplementation();
-
-    /**
-     * DOMParser
-     * https://w3c.github.io/DOM-Parsing/#the-domparser-interface
-     *
-     * Interface to parse XML strings into Document objects
-     *
-     * Used implementations:
-     * - supported browsers: built-in in DOMParser global
-     *   https://developer.mozilla.org/en-US/docs/Web/API/DOMParser#Browser_compatibility
-     * - nodejs: use 'jsdom' https://www.npmjs.com/package/jsdom
-     */
-    function getDOMParserImplementation() {
-      const DOMParserImplementation = globalThis.DOMParser;
-      if (typeof DOMParserImplementation === 'undefined') {
-        // NodeJS
-        let JSDOM;
-        try {
-          JSDOM = require('jsdom').JSDOM;
-          // eslint-disable-next-line no-unused-vars
-        } catch (e) {
-          throw new Error('You must install the "jsdom" package to use Strophe in nodejs.');
-        }
-        const dom = new JSDOM('');
-        return dom.window.DOMParser;
-      }
-      return DOMParserImplementation;
-    }
-    const DOMParser = getDOMParserImplementation();
-
-    /**
-     * Creates a dummy XML DOM document to serve as an element and text node generator.
-     *
-     * Used implementations:
-     *  - browser: use document's createDocument
-     * - nodejs: use 'jsdom' https://www.npmjs.com/package/jsdom
-     */
-    function getDummyXMLDOMDocument() {
-      if (typeof document === 'undefined') {
-        // NodeJS
-        let JSDOM;
-        try {
-          JSDOM = require('jsdom').JSDOM;
-          // eslint-disable-next-line no-unused-vars
-        } catch (e) {
-          throw new Error('You must install the "jsdom" package to use Strophe in nodejs.');
-        }
-        const dom = new JSDOM('');
-        return dom.window.document.implementation.createDocument('jabber:client', 'strophe', null);
-      }
-      return document.implementation.createDocument('jabber:client', 'strophe', null);
-    }
-
-    var shims = /*#__PURE__*/Object.freeze({
-        __proto__: null,
-        WebSocket: WebSocket,
-        XMLSerializer: XMLSerializer,
-        DOMParser: DOMParser,
-        getDummyXMLDOMDocument: getDummyXMLDOMDocument
-    });
 
     /**
      * Common namespace constants from the XMPP RFCs and XEPs.
@@ -529,7 +409,7 @@
      */
     function xmlGenerator() {
       if (!_xmlGenerator) {
-        _xmlGenerator = getDummyXMLDOMDocument();
+        _xmlGenerator = document.implementation.createDocument('jabber:client', 'strophe', null);
       }
       return _xmlGenerator;
     }
@@ -757,8 +637,7 @@
               el.appendChild(createHtml(elem.childNodes[i]));
             }
           }
-        } catch (e) {
-          // eslint-disable-line no-unused-vars
+        } catch (_e) {
           // invalid elements
           el = xmlTextNode('');
         }
@@ -1331,8 +1210,7 @@
         const xmlGen = xmlGenerator();
         try {
           impNode = xmlGen.importNode !== undefined;
-          // eslint-disable-next-line no-unused-vars
-        } catch (e) {
+        } catch (_e) {
           impNode = false;
         }
         const newElem = impNode ? xmlGen.importNode(elem, true) : copyElement(elem);
@@ -2474,11 +2352,10 @@
        * > }
        *
        * See <SASL mechanisms> for a list of available mechanisms.
-       * @param {Connection} connection - Target Connection.
+       * @param {Connection} _connection - Target Connection.
        * @return {boolean} If mechanism was able to run.
        */
-      // eslint-disable-next-line class-methods-use-this, no-unused-vars
-      test(connection) {
+      test(_connection) {
         return true;
       }
 
@@ -2496,12 +2373,11 @@
        * By deafult, if the client is expected to send data first (isClientFirst === true),
        * this method is called with `challenge` as null on the first call,
        * unless `clientChallenge` is overridden in the relevant subclass.
-       * @param {Connection} connection - Target Connection.
-       * @param {string} [challenge] - current challenge to handle.
+       * @param {Connection} _connection - Target Connection.
+       * @param {string} [_challenge] - current challenge to handle.
        * @return {string|Promise<string|false>} Mechanism response.
        */
-      // eslint-disable-next-line no-unused-vars, class-methods-use-this
-      onChallenge(connection, challenge) {
+      onChallenge(_connection, _challenge) {
         throw new Error('You should implement challenge handling!');
       }
 
@@ -2547,7 +2423,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.authcid === null;
       }
@@ -2572,7 +2447,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       onChallenge(connection) {
         /* According to XEP-178, an authzid SHOULD NOT be presented when the
          * authcid contained or implied in the client certificate is the JID (i.e.
@@ -2599,7 +2473,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.pass !== null;
       }
@@ -2607,7 +2480,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       onChallenge(connection) {
         let auth_str = 'n,';
         if (connection.authcid !== null) {
@@ -2637,7 +2509,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.authcid !== null;
       }
@@ -2645,7 +2516,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       onChallenge(connection) {
         const {
           authcid,
@@ -2889,7 +2759,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.authcid !== null;
       }
@@ -2899,7 +2768,6 @@
        * @param {string} [challenge]
        * @return {Promise<string|false>} Mechanism response.
        */
-      // eslint-disable-next-line class-methods-use-this
       async onChallenge(connection, challenge) {
         return await scram.scramResponse(connection, challenge, 'SHA-1', 160);
       }
@@ -2908,7 +2776,6 @@
        * @param {Connection} connection
        * @param {string} [test_cnonce]
        */
-      // eslint-disable-next-line class-methods-use-this
       clientChallenge(connection, test_cnonce) {
         return scram.clientChallenge(connection, test_cnonce);
       }
@@ -2928,7 +2795,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.authcid !== null;
       }
@@ -2937,7 +2803,6 @@
        * @param {Connection} connection
        * @param {string} [challenge]
        */
-      // eslint-disable-next-line class-methods-use-this
       async onChallenge(connection, challenge) {
         return await scram.scramResponse(connection, challenge, 'SHA-256', 256);
       }
@@ -2946,7 +2811,6 @@
        * @param {Connection} connection
        * @param {string} [test_cnonce]
        */
-      // eslint-disable-next-line class-methods-use-this
       clientChallenge(connection, test_cnonce) {
         return scram.clientChallenge(connection, test_cnonce);
       }
@@ -2966,7 +2830,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.authcid !== null;
       }
@@ -2975,7 +2838,6 @@
        * @param {Connection} connection
        * @param {string} [challenge]
        */
-      // eslint-disable-next-line class-methods-use-this
       async onChallenge(connection, challenge) {
         return await scram.scramResponse(connection, challenge, 'SHA-384', 384);
       }
@@ -2984,7 +2846,6 @@
        * @param {Connection} connection
        * @param {string} [test_cnonce]
        */
-      // eslint-disable-next-line class-methods-use-this
       clientChallenge(connection, test_cnonce) {
         return scram.clientChallenge(connection, test_cnonce);
       }
@@ -3004,7 +2865,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.authcid !== null;
       }
@@ -3013,7 +2873,6 @@
        * @param {Connection} connection
        * @param {string} [challenge]
        */
-      // eslint-disable-next-line class-methods-use-this
       async onChallenge(connection, challenge) {
         return await scram.scramResponse(connection, challenge, 'SHA-512', 512);
       }
@@ -3022,7 +2881,6 @@
        * @param {Connection} connection
        * @param {string} [test_cnonce]
        */
-      // eslint-disable-next-line class-methods-use-this
       clientChallenge(connection, test_cnonce) {
         return scram.clientChallenge(connection, test_cnonce);
       }
@@ -3043,7 +2901,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       test(connection) {
         return connection.pass !== null;
       }
@@ -3051,7 +2908,6 @@
       /**
        * @param {Connection} connection
        */
-      // eslint-disable-next-line class-methods-use-this
       onChallenge(connection) {
         let auth_str = '\u0000';
         if (connection.authcid !== null) {
@@ -3192,7 +3048,6 @@
        * This function is called by the reset function of the Strophe Connection.
        * Is not needed by WebSockets.
        */
-      // eslint-disable-next-line class-methods-use-this
       _reset() {
         return;
       }
@@ -3377,7 +3232,6 @@
        * This is used so Strophe can process stanzas from WebSockets like BOSH
        * @param {string} stanza
        */
-      // eslint-disable-next-line class-methods-use-this
       _streamWrap(stanza) {
         return '<wrapper>' + stanza + '</wrapper>';
       }
@@ -3405,7 +3259,6 @@
        * _Private_ function to check if the message queue is empty.
        * @return {true} - True, because WebSocket messages are send immediately after queueing.
        */
-      // eslint-disable-next-line class-methods-use-this
       _emptyQueue() {
         return true;
       }
@@ -3453,12 +3306,12 @@
        *
        * This does nothing for WebSockets
        */
-      _onDisconnectTimeout() {} // eslint-disable-line class-methods-use-this
+      _onDisconnectTimeout() {}
 
       /**
        * _Private_ helper function that makes sure all pending requests are aborted.
        */
-      _abortAllRequests() {} // eslint-disable-line class-methods-use-this
+      _abortAllRequests() {}
 
       /**
        * _Private_ function to handle websockets errors.
@@ -4115,7 +3968,6 @@
        * @param {string} suffix - A optional suffix to append to the id.
        * @returns {string} A unique string to be used for the id attribute.
        */
-      // eslint-disable-next-line class-methods-use-this
       getUniqueId(suffix) {
         const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
           const r = Math.random() * 16 | 0,
@@ -4321,8 +4173,7 @@
           try {
             sessionStorage.setItem('_strophe_', '_strophe_');
             sessionStorage.removeItem('_strophe_');
-          } catch (e) {
-            // eslint-disable-line no-unused-vars
+          } catch (_e) {
             return false;
           }
           return true;
@@ -4345,10 +4196,9 @@
        * BOSH-Connections will have all stanzas wrapped in a <body> tag. See
        * <Bosh.strip> if you want to strip this tag.
        *
-       * @param {Node|MessageEvent} elem - The XML data received by the connection.
+       * @param {Node|MessageEvent} _elem - The XML data received by the connection.
        */
-      // eslint-disable-next-line no-unused-vars, class-methods-use-this
-      xmlInput(elem) {
+      xmlInput(_elem) {
         return;
       }
 
@@ -4367,10 +4217,9 @@
        * BOSH-Connections will have all stanzas wrapped in a <body> tag. See
        * <Bosh.strip> if you want to strip this tag.
        *
-       * @param {Element} elem - The XMLdata sent by the connection.
+       * @param {Element} _elem - The XMLdata sent by the connection.
        */
-      // eslint-disable-next-line no-unused-vars, class-methods-use-this
-      xmlOutput(elem) {
+      xmlOutput(_elem) {
         return;
       }
 
@@ -4383,10 +4232,9 @@
        * >   (user code)
        * > };
        *
-       * @param {string} data - The data received by the connection.
+       * @param {string} _data - The data received by the connection.
        */
-      // eslint-disable-next-line no-unused-vars, class-methods-use-this
-      rawInput(data) {
+      rawInput(_data) {
         return;
       }
 
@@ -4399,10 +4247,9 @@
        * >   (user code)
        * > };
        *
-       * @param {string} data - The data sent by the connection.
+       * @param {string} _data - The data sent by the connection.
        */
-      // eslint-disable-next-line no-unused-vars, class-methods-use-this
-      rawOutput(data) {
+      rawOutput(_data) {
         return;
       }
 
@@ -4414,10 +4261,9 @@
        * >    (user code)
        * > };
        *
-       * @param {number} rid - The next valid rid
+       * @param {number} _rid - The next valid rid
        */
-      // eslint-disable-next-line no-unused-vars, class-methods-use-this
-      nextValidRid(rid) {
+      nextValidRid(_rid) {
         return;
       }
 
@@ -5035,7 +4881,6 @@
        * their priorities.
        * @param {SASLMechanism[]} mechanisms - Array of SASL mechanisms.
        */
-      // eslint-disable-next-line  class-methods-use-this
       sortMechanismsByPriority(mechanisms) {
         // Sorting mechanisms according to priority.
         for (let i = 0; i < mechanisms.length - 1; ++i) {
@@ -5650,7 +5495,7 @@
       return new Stanza(strings, values);
     }
 
-    /*global globalThis*/
+    /*global globalThis */
 
     /**
      * A container for all Strophe library functions.
@@ -5715,7 +5560,6 @@
       },
       ...utils$1,
       ...log,
-      shims,
       Request,
       // Transports
       Bosh,
