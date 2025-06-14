@@ -121,6 +121,10 @@
     "version": "1.4.1",
     "datatables-extension": "staterestore"
   },
+  "exif-js": {
+    "version": "2.3.0",
+    "jsdelivr": ""
+  },
   "fontawesome": {
     "version": "6.7.2",
     "cdnjs": "font-awesome"
