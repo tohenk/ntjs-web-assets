@@ -18,7 +18,7 @@
     "jsdelivr": ""
   },
   "bootstrap": {
-    "version": "5.3.6",
+    "version": "5.3.7",
     "jsdelivr-dist": ""
   },
   "bootstrap-datetimepicker": {
@@ -78,7 +78,7 @@
     "datatables-extension": "fixedcolumns"
   },
   "DataTables-FixedHeader": {
-    "version": "4.0.2",
+    "version": "4.0.3",
     "datatables-extension": "fixedheader"
   },
   "DataTables-I18N": {
