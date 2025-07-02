@@ -62,7 +62,7 @@
     "datatables-extension": "autofill"
   },
   "DataTables-Buttons": {
-    "version": "3.2.3",
+    "version": "3.2.4",
     "datatables-extension": "buttons"
   },
   "DataTables-ColReorder": {
@@ -70,7 +70,7 @@
     "datatables-extension": "colreorder"
   },
   "DataTables-DateTime": {
-    "version": "1.5.5",
+    "version": "1.5.6",
     "datatables-extension": "datetime"
   },
   "DataTables-FixedColumns": {
@@ -90,7 +90,7 @@
     "datatables-extension": "keytable"
   },
   "DataTables-Responsive": {
-    "version": "3.0.4",
+    "version": "3.0.5",
     "datatables-extension": "responsive"
   },
   "DataTables-RowGroup": {
@@ -106,7 +106,7 @@
     "datatables-extension": "scroller"
   },
   "DataTables-SearchBuilder": {
-    "version": "1.8.2",
+    "version": "1.8.3",
     "datatables-extension": "searchbuilder"
   },
   "DataTables-SearchPanes": {
