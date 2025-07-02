@@ -1,4 +1,4 @@
-/*! DateTime picker for DataTables.net v1.5.5
+/*! DateTime picker for DataTables.net v1.5.6
  *
  * © SpryMedia Ltd, all rights reserved.
  * License: MIT datatables.net/license/mit
@@ -48,7 +48,7 @@
 
 /**
  * @summary     DateTime picker for DataTables.net
- * @version     1.5.5
+ * @version     1.5.6
  * @file        dataTables.dateTime.js
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net/contact
@@ -77,7 +77,7 @@ var dateLib;
  * options based on the `DateTime.defaults` object.
  */
 var DateTime = function (input, opts) {
-	// Check if called with a window or jQuery object for DOM less applications
+        // Check if called with a window or jQuery object for DOM less applications
 	// This is for backwards compatibility with CommonJS loader
 	if (DateTime.factory(input, opts)) {
 		return DateTime;
@@ -101,6 +101,10 @@ var DateTime = function (input, opts) {
 	// Only IS8601 dates are supported without moment, dayjs or luxon
 	if (!dateLib && this.c.format !== 'YYYY-MM-DD') {
 		throw "DateTime: Without momentjs, dayjs or luxon only the format 'YYYY-MM-DD' can be used";
+	}
+
+	if (this._isLuxon() && this.c.format == 'YYYY-MM-DD') {
+		this.c.format =  'yyyy-MM-dd'
 	}
 
 	// Min and max need to be `Date` objects in the config
@@ -179,7 +183,7 @@ var DateTime = function (input, opts) {
 
 		/** @type {Object} Parts of the picker that should be shown */
 		parts: {
-			date: this.c.format.match(/[YMD]|L(?!T)|l/) !== null,
+			date: this.c.format.match(/[yYMDd]|L(?!T)|l/) !== null,
 			time: this.c.format.match(/[Hhm]|LT|LTS/) !== null,
 			seconds: this.c.format.indexOf('s') !== -1,
 			hours12: this.c.format.match(/[haA]/) !== null
@@ -902,12 +906,12 @@ $.extend(DateTime.prototype, {
 	 * @return {string}     HTML cell
 	 */
 	_htmlDay: function (day) {
+		var classPrefix = this.c.classPrefix;
 		if (day.empty) {
-			return '<td class="empty"></td>';
+			return '<td class="' + classPrefix + '-empty"></td>';
 		}
 
 		var classes = ['selectable'];
-		var classPrefix = this.c.classPrefix;
 
 		if (day.disabled) {
 			classes.push('disabled');
@@ -1726,7 +1730,7 @@ DateTime.defaults = {
 	yearRange: 25
 };
 
-DateTime.version = '1.5.5';
+DateTime.version = '1.5.6';
 
 /**
  * CommonJS factory function pass through. Matches DataTables.
