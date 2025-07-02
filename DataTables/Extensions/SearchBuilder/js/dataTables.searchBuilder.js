@@ -1,4 +1,4 @@
-/*! SearchBuilder 1.8.2
+/*! SearchBuilder 1.8.3
  * ©SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -1326,7 +1326,6 @@ var DataTable = $.fn.dataTable;
                 .addClass(Criteria.classes.value)
                 .addClass(Criteria.classes.input)
                 .dtDateTime({
-                attachTo: 'input',
                 format: that.s.dateFormat ? that.s.dateFormat : undefined,
                 i18n: i18n
             })
@@ -1370,7 +1369,6 @@ var DataTable = $.fn.dataTable;
                     .addClass(Criteria.classes.value)
                     .addClass(Criteria.classes.input)
                     .dtDateTime({
-                    attachTo: 'input',
                     format: that.s.dateFormat ? that.s.dateFormat : undefined,
                     i18n: i18n
                 })
@@ -1394,7 +1392,6 @@ var DataTable = $.fn.dataTable;
                     .addClass(Criteria.classes.value)
                     .addClass(Criteria.classes.input)
                     .dtDateTime({
-                    attachTo: 'input',
                     format: that.s.dateFormat ? that.s.dateFormat : undefined,
                     i18n: i18n
                 })
@@ -3310,7 +3307,7 @@ var DataTable = $.fn.dataTable;
          */
         SearchBuilder.prototype.rebuild = function (details, redraw) {
             if (redraw === void 0) { redraw = true; }
-            this.dom.clearAll.click();
+            this.dom.clearAll.trigger('click', false);
             // If there are no details to rebuild then return
             if (details === undefined || details === null) {
                 return this;
@@ -3564,10 +3561,12 @@ var DataTable = $.fn.dataTable;
         SearchBuilder.prototype._setClearListener = function () {
             var _this = this;
             this.dom.clearAll.unbind('click');
-            this.dom.clearAll.on('click.dtsb', function () {
+            this.dom.clearAll.on('click.dtsb', function (e, draw) {
                 _this.s.topGroup = new Group(_this.s.dt, _this.c, undefined, undefined, undefined, undefined, _this.s.serverData);
                 _this._build();
-                _this.s.dt.draw();
+                if (draw !== false) {
+                    _this.s.dt.draw();
+                }
                 _this.s.topGroup.setListeners();
                 _this.dom.clearAll.remove();
                 _this._setEmptyListener();
@@ -3644,7 +3643,7 @@ var DataTable = $.fn.dataTable;
                 _this.dom.clearAll.remove();
             });
         };
-        SearchBuilder.version = '1.8.2';
+        SearchBuilder.version = '1.8.3';
         SearchBuilder.classes = {
             button: 'dtsb-button',
             clearAll: 'dtsb-clearAll',
@@ -3752,7 +3751,7 @@ var DataTable = $.fn.dataTable;
         return SearchBuilder;
     }());
 
-    /*! SearchBuilder 1.8.2
+    /*! SearchBuilder 1.8.3
      * ©SpryMedia Ltd - datatables.net/license/mit
      */
     setJQuery($);
