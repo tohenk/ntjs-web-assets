@@ -110,7 +110,7 @@
     "datatables-extension": "searchbuilder"
   },
   "DataTables-SearchPanes": {
-    "version": "2.3.3",
+    "version": "2.3.4",
     "datatables-extension": "searchpanes"
   },
   "DataTables-Select": {
