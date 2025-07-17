@@ -1,4 +1,4 @@
-/*! SearchPanes 2.3.3
+/*! SearchPanes 2.3.4
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -124,10 +124,12 @@ var DataTable = $.fn.dataTable;
                     .addClass(this.classes.disabledButton)
                     .addClass(this.classes.paneButton)
                     .addClass(this.classes.clearButton)
+                    .attr('aria-label', table.i18n('searchPanes.buttons.clearPane', this.c.i18n.aria.clearPane))
                     .html(this.s.dt.i18n('searchPanes.clearPane', this.c.i18n.clearPane)),
                 collapseButton: $$5('<button type="button"><span class="' + this.classes.caret + '">&#x5e;</span></button>')
                     .addClass(this.classes.paneButton)
-                    .addClass(this.classes.collapseButton),
+                    .addClass(this.classes.collapseButton)
+                    .attr('aria-label', table.i18n('searchPanes.buttons.collapse', this.c.i18n.aria.collapse)),
                 container: $$5('<div/>')
                     .addClass(this.classes.container)
                     .addClass(this.s.colOpts.className)
@@ -140,17 +142,20 @@ var DataTable = $.fn.dataTable;
                     : ''),
                 countButton: $$5('<button type="button"><span></span></button>')
                     .addClass(this.classes.paneButton)
-                    .addClass(this.classes.countButton),
+                    .addClass(this.classes.countButton)
+                    .attr('aria-label', table.i18n('searchPanes.buttons.orderByCount', this.c.i18n.aria.orderByCount)),
                 dtP: $$5('<table width="100%"><thead><tr><th></th><th></th></tr></thead></table>'),
                 lower: $$5('<div/>').addClass(this.classes.subRow2).addClass(this.classes.narrowButton),
                 nameButton: $$5('<button type="button"><span></span></button>')
                     .addClass(this.classes.paneButton)
-                    .addClass(this.classes.nameButton),
+                    .addClass(this.classes.nameButton)
+                    .attr('aria-label', table.i18n('searchPanes.buttons.orderByLabel', this.c.i18n.aria.orderByLabel)),
                 panesContainer: $$5(panesContainer),
                 searchBox: $$5('<input/>').addClass(this.classes.paneInputButton).addClass(this.classes.search),
                 searchButton: $$5('<button type="button"><span></span></button>')
                     .addClass(this.classes.searchIcon)
-                    .addClass(this.classes.paneButton),
+                    .addClass(this.classes.paneButton)
+                    .attr('aria-label', table.i18n('searchPanes.buttons.clearSearch', this.c.i18n.aria.clearSearch)),
                 searchCont: $$5('<div/>').addClass(this.classes.searchCont),
                 searchLabelCont: $$5('<div/>').addClass(this.classes.searchLabelCont),
                 topRow: $$5('<div/>').addClass(this.classes.topRow),
@@ -539,7 +544,8 @@ var DataTable = $.fn.dataTable;
             //  change the ordering to whatever it isn't currently
             this.dom.countButton.off('click.dtsp').on('click.dtsp', function () {
                 var currentOrder = _this.s.dtPane.order()[0][1];
-                _this.s.dtPane.order([[1, currentOrder === 'asc' ? 'desc' : 'asc']]).draw();
+                var dir = currentOrder === 'asc' ? 'desc' : 'asc';
+                _this.s.dtPane.order([[2, dir], [1, dir]]).draw();
                 // This state save is required so that the ordering of the panes is maintained
                 _this.s.dt.state.save();
             });
@@ -811,6 +817,13 @@ var DataTable = $.fn.dataTable;
                         searchable: false,
                         targets: 1,
                         visible: false
+                    },
+                    {
+                        data: 'shown',
+                        searchable: false,
+                        targets: 2,
+                        visible: false,
+                        defaultContent: 0
                     }
                 ],
                 deferRender: true,
@@ -1165,7 +1178,12 @@ var DataTable = $.fn.dataTable;
                     : this.s.dt.settings()[0].aoColumns[this.s.index].sTitle;
             }
             headerText = this._escapeHTML(headerText);
-            this.dom.searchBox.attr('placeholder', headerText);
+            var titleText = this.s.dt
+                .i18n('searchBuilder.searchTitle', this.c.i18n.searchTitle)
+                .replace('{name}', headerText);
+            this.dom.searchBox
+                .attr('placeholder', headerText)
+                .attr('title', titleText);
             $$5.fn.dataTable.ext.errMode = errMode;
             // If it is not a custom pane
             if (this.s.colExists) {
@@ -1533,9 +1551,17 @@ var DataTable = $.fn.dataTable;
             emptyMessage: null,
             hideCount: false,
             i18n: {
+                aria: {
+                    clearPane: 'Clear selection',
+                    clearSearch: 'Clear search',
+                    collapse: 'Collapse / show pane',
+                    orderByCount: 'Order by count',
+                    orderByLabel: 'Order by label'
+                },
                 clearPane: '&times;',
                 count: '{total}',
-                emptyMessage: '<em>No data</em>'
+                emptyMessage: '<em>Empty</em>',
+                searchTitle: 'Search: {name}'
             },
             initCollapsed: false,
             layout: 'auto',
@@ -2531,9 +2557,9 @@ var DataTable = $.fn.dataTable;
                 var pane = _a[_i];
                 this.dom.panes.append(pane.dom.container);
             }
+            this.dom.container.children().detach();
             // Attach everything to the document
             this.dom.container
-                .text('')
                 .removeClass(this.classes.hide)
                 .append(this.dom.titleRow)
                 .append(this.dom.panes);
@@ -2877,12 +2903,8 @@ var DataTable = $.fn.dataTable;
                         if (filterCount !== _this.s.filterCount) {
                             data.start = 0;
                             _this.s.page = 0;
+                            _this.s.dt.page(_this.s.page);
                         }
-                        // Otherwise it is a paging request and we need to read from whatever the paging has been set to
-                        else {
-                            data.start = _this.s.page * _this.s.dt.page.len();
-                        }
-                        _this.s.dt.page(_this.s.page);
                         _this.s.filterCount = filterCount;
                     }
                     if (_this.s.selectionList.length > 0) {
@@ -3005,7 +3027,7 @@ var DataTable = $.fn.dataTable;
                 this.dom.clearAll.removeClass(this.classes.disabledButton).removeAttr('disabled');
             }
         };
-        SearchPanes.version = '2.3.3';
+        SearchPanes.version = '2.3.4';
         SearchPanes.classes = {
             clear: 'dtsp-clear',
             clearAll: 'dtsp-clearAll',
@@ -3039,7 +3061,7 @@ var DataTable = $.fn.dataTable;
                 },
                 collapseMessage: 'Collapse All',
                 count: '{total}',
-                emptyMessage: '<em>No data</em>',
+                emptyMessage: '<em>Empty</em>',
                 emptyPanes: 'No SearchPanes',
                 loadMessage: 'Loading Search Panes...',
                 showMessage: 'Show All',
@@ -3382,7 +3404,7 @@ var DataTable = $.fn.dataTable;
         return SearchPanesST;
     }(SearchPanes));
 
-    /*! SearchPanes 2.3.3
+    /*! SearchPanes 2.3.4
      * © SpryMedia Ltd - datatables.net/license
      */
     setJQuery$4($);
