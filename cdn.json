@@ -82,7 +82,7 @@
     "datatables-extension": "fixedheader"
   },
   "DataTables-I18N": {
-    "version": "2.3.0",
+    "version": "2.3.2",
     "datatables-plugin": "i18n"
   },
   "DataTables-KeyTable": {
@@ -126,7 +126,7 @@
     "jsdelivr": ""
   },
   "fontawesome": {
-    "version": "6.7.2",
+    "version": "7.0.0",
     "cdnjs": "font-awesome"
   },
   "Gallery": {
