@@ -50,7 +50,7 @@
     "ckeditor": ""
   },
   "cropper": {
-    "version": "2.0.0",
+    "version": "2.0.1",
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
@@ -243,7 +243,7 @@
     "jsdelivr": ""
   },
   "tinymce-i18n": {
-    "version": "25.6.2",
+    "version": "25.7.25",
     "jsdelivr": ""
   },
   "typeahead.js": {
