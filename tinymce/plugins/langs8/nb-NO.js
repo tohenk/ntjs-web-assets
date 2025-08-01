@@ -1,4 +1,4 @@
-tinymce.addI18n("nb_NO", {
+tinymce.addI18n("nb-NO", {
     "#": "#",
     "Accessibility": "Tilgjengelighet",
     "Accordion": "Trekkspillmeny",

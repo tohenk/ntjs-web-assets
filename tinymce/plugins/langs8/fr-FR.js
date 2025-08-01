@@ -1,4 +1,4 @@
-tinymce.addI18n("fr_FR", {
+tinymce.addI18n("fr-FR", {
     "#": "#",
     "Accessibility": "Accessibilit\xe9",
     "Accordion": "Accord\xe9on",

@@ -1,4 +1,4 @@
-tinymce.addI18n("sl_SI", {
+tinymce.addI18n("sl-SI", {
     "#": "#",
     "Accessibility": "Dostopnost",
     "Accordion": "Harmonika",

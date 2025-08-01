@@ -1,4 +1,4 @@
-tinymce.addI18n("ka_GE", {
+tinymce.addI18n("ka-GE", {
     "#": "#",
     "Accessibility": "\u10ee\u10d4\u10da\u10db\u10d8\u10e1\u10d0\u10ec\u10d5\u10d3\u10dd\u10db\u10dd\u10d1\u10d0",
     "Accordion": "",

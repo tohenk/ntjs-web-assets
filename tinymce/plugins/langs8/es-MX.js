@@ -1,4 +1,4 @@
-tinymce.addI18n("es_MX", {
+tinymce.addI18n("es-MX", {
     "#": "#",
     "Accessibility": "Accesibilidad",
     "Accordion": "Acorde\xf3n",

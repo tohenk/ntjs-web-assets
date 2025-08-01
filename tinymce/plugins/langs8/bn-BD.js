@@ -1,4 +1,4 @@
-tinymce.addI18n("bn_BD", {
+tinymce.addI18n("bn-BD", {
     "#": "#",
     "Accessibility": "\u0985\u09cd\u09af\u09be\u0995\u09cd\u09b8\u09c7\u09b8\u09af\u09cb\u0997\u09cd\u09af\u09a4\u09be",
     "Accordion": "",

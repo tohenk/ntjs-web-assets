@@ -1,4 +1,4 @@
-tinymce.addI18n("th_TH", {
+tinymce.addI18n("th-TH", {
     "#": "",
     "Accessibility": "\u0e04\u0e27\u0e32\u0e21\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e43\u0e19\u0e01\u0e32\u0e23\u0e40\u0e02\u0e49\u0e32\u0e16\u0e36\u0e07",
     "Accordion": "",

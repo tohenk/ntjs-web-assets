@@ -1,4 +1,4 @@
-tinymce.addI18n("sv_SE", {
+tinymce.addI18n("sv-SE", {
     "#": "#",
     "Accessibility": "Tillg\xe4nglighet",
     "Accordion": "Dragspelsmeny",

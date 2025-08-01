@@ -1,4 +1,4 @@
-tinymce.addI18n("bg_BG", {
+tinymce.addI18n("bg-BG", {
     "#": "#",
     "Accessibility": "\u0414\u043e\u0441\u0442\u044a\u043f\u043d\u043e\u0441\u0442",
     "Accordion": "",

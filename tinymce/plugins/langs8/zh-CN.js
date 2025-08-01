@@ -1,4 +1,4 @@
-tinymce.addI18n("zh_CN", {
+tinymce.addI18n("zh-CN", {
     "#": "#",
     "Accessibility": "\u8f85\u52a9\u529f\u80fd",
     "Accordion": "\u6298\u53e0\u9762\u677f",

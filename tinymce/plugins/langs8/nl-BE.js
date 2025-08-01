@@ -1,4 +1,4 @@
-tinymce.addI18n("nl_BE", {
+tinymce.addI18n("nl-BE", {
     "#": "#",
     "Accessibility": "Toegankelijkheid",
     "Accordion": "",

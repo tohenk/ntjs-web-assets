@@ -1,4 +1,4 @@
-tinymce.addI18n("is_IS", {
+tinymce.addI18n("is-IS", {
     "#": "",
     "Accessibility": "",
     "Accordion": "",
