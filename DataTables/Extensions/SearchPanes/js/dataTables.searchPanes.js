@@ -1,4 +1,4 @@
-/*! SearchPanes 2.3.4
+/*! SearchPanes 2.3.5
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -445,6 +445,12 @@ var DataTable = $.fn.dataTable;
                 ? this.s.customPaneSettings.className
                 : '');
             this.adjustTopRow();
+            // Force the width for the table to be 100% - the use of flexbox for the content
+            // in each row makes this difficult as the content will expand to fit it, causing
+            // the host table to widen and we need to force it smaller.
+            this.dom.dtP.css('table-layout', 'fixed');
+            this.dom.dtP.css('width', '100%');
+            this.dom.dtP.find('colgroup col').css('width', '100%');
         };
         /**
          * Sets the listeners for the pane.
@@ -2557,7 +2563,8 @@ var DataTable = $.fn.dataTable;
                 var pane = _a[_i];
                 this.dom.panes.append(pane.dom.container);
             }
-            this.dom.container.children().detach();
+            // Remove everything - need to use childNodes to make sure we get text nodes
+            this.dom.container[0].childNodes.forEach(function (el) { return el.remove(); });
             // Attach everything to the document
             this.dom.container
                 .removeClass(this.classes.hide)
@@ -3027,7 +3034,7 @@ var DataTable = $.fn.dataTable;
                 this.dom.clearAll.removeClass(this.classes.disabledButton).removeAttr('disabled');
             }
         };
-        SearchPanes.version = '2.3.4';
+        SearchPanes.version = '2.3.5';
         SearchPanes.classes = {
             clear: 'dtsp-clear',
             clearAll: 'dtsp-clearAll',
@@ -3404,7 +3411,7 @@ var DataTable = $.fn.dataTable;
         return SearchPanesST;
     }(SearchPanes));
 
-    /*! SearchPanes 2.3.4
+    /*! SearchPanes 2.3.5
      * © SpryMedia Ltd - datatables.net/license
      */
     setJQuery$4($);
