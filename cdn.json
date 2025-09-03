@@ -46,7 +46,7 @@
     "jsdelivr-dist": ""
   },
   "ckeditor": {
-    "version": "46.0.2",
+    "version": "46.0.3",
     "ckeditor": ""
   },
   "cropper": {
@@ -126,7 +126,7 @@
     "jsdelivr": ""
   },
   "fontawesome": {
-    "version": "7.0.0",
+    "version": "7.0.1",
     "cdnjs": "font-awesome"
   },
   "Gallery": {
