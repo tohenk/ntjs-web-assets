@@ -1,4 +1,4 @@
-/*! AutoFill 2.7.0
+/*! AutoFill 2.7.1
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -52,7 +52,7 @@ var DataTable = $.fn.dataTable;
 /**
  * @summary     AutoFill
  * @description Add Excel like click and drag auto-fill options to DataTables
- * @version     2.7.0
+ * @version     2.7.1
  * @author      SpryMedia Ltd (www.sprymedia.co.uk)
  * @copyright   SpryMedia Ltd.
  *
@@ -244,7 +244,9 @@ $.extend( AutoFill.prototype, {
 	{
 		var that = this;
 		var dt = this.s.dt;
-		var dtScroll = $('div.dataTables_scrollBody', this.s.dt.table().container());
+
+		// Selectors for DataTables 1 and 2 - only one will be matched
+		var dtScroll = $('div.dataTables_scrollBody, div.dt-scroll-body', this.s.dt.table().container());
 
 		// Make the instance accessible to the API
 		dt.settings()[0].autoFill = this;
@@ -1172,7 +1174,7 @@ AutoFill.actions = {
  * @static
  * @type      String
  */
-AutoFill.version = '2.7.0';
+AutoFill.version = '2.7.1';
 
 
 /**
