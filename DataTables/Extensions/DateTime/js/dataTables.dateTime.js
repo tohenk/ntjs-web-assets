@@ -1,4 +1,4 @@
-/*! DateTime picker for DataTables.net v1.5.6
+/*! DateTime picker for DataTables.net v1.6.0
  *
  * © SpryMedia Ltd, all rights reserved.
  * License: MIT datatables.net/license/mit
@@ -48,7 +48,7 @@
 
 /**
  * @summary     DateTime picker for DataTables.net
- * @version     1.5.6
+ * @version     1.6.0
  * @file        dataTables.dateTime.js
  * @author      SpryMedia Ltd
  * @contact     www.datatables.net/contact
@@ -138,6 +138,7 @@ var DateTime = function (input, opts) {
 		'<div class="' + classPrefix + '-buttons">' +
 		'<a class="' + classPrefix + '-clear"></a>' +
 		'<a class="' + classPrefix + '-today"></a>' +
+		'<a class="' + classPrefix + '-selected"></a>' +
 		'</div>' +
 		'<div class="' + classPrefix + '-calendar"></div>' +
 		'</div>' +
@@ -160,6 +161,7 @@ var DateTime = function (input, opts) {
 		buttons: structure.find('.' + classPrefix + '-buttons'),
 		clear: structure.find('.' + classPrefix + '-clear'),
 		today: structure.find('.' + classPrefix + '-today'),
+		selected: structure.find('.' + classPrefix + '-selected'),
 		previous: structure.find('.' + classPrefix + '-iconLeft'),
 		next: structure.find('.' + classPrefix + '-iconRight'),
 		input: $(input)
@@ -179,7 +181,7 @@ var DateTime = function (input, opts) {
 		secondsRange: null,
 
 		/** @type {String} Unique namespace string for this instance */
-		namespace: 'dateime-' + (DateTime._instance++),
+		namespace: 'datetime-' + (DateTime._instance++),
 
 		/** @type {Object} Parts of the picker that should be shown */
 		parts: {
@@ -424,6 +426,10 @@ $.extend(DateTime.prototype, {
 			this.dom.today.css('display', 'none');
 		}
 
+		if (!this.c.buttons.selected) {
+			this.dom.selected.css('display', 'none');
+		}
+
 		// Render the options
 		this._optionsTitle();
 
@@ -436,7 +442,7 @@ $.extend(DateTime.prototype, {
 
 		// When attached to a hidden input, we always show the input picker, and
 		// do so inline
-		if (this.dom.input.attr('type') === 'hidden') {
+		if (this.dom.input.attr('type') === 'hidden' || this.c.alwaysVisible) {
 			this.dom.container.addClass('inline');
 			this.c.attachTo = 'input';
 
@@ -460,15 +466,14 @@ $.extend(DateTime.prototype, {
 				}
 
 				// In case the value has changed by text
-				that.val(that.dom.input.val(), false);
+				last = that.dom.input.val();
+				that.val(last, false);
 
 				that._show();
 			})
 			.on('keyup.datetime', function () {
 				// Update the calendar's displayed value as the user types
-				if (that.dom.container.is(':visible')) {
-					that.val(that.dom.input.val(), false);
-				}
+				that.val(that.dom.input.val(), false);
 			});
 
 		// Want to prevent the focus bubbling up the document to account for
@@ -572,6 +577,13 @@ $.extend(DateTime.prototype, {
 						// Don't change the value, but jump to the month
 						// containing today
 						that.s.display = new Date();
+
+						that._setTitle();
+						that._setCalander();
+					}
+					else if ($(target).hasClass(classPrefix + '-selected')) {
+						// Don't change the value, but jump to where the selected value is
+						that.s.display = new Date(that.s.d.getTime());
 
 						that._setTitle();
 						that._setCalander();
@@ -866,7 +878,7 @@ $.extend(DateTime.prototype, {
 	 * @private
 	 */
 	_hide: function (destroy) {
-		if (!destroy && this.dom.input.attr('type') === 'hidden') {
+		if (!destroy && (this.dom.input.attr('type') === 'hidden' || this.c.alwaysVisible)) {
 			return;
 		}
 
@@ -875,10 +887,12 @@ $.extend(DateTime.prototype, {
 		this.dom.container.detach();
 
 		$(window).off('.' + namespace);
-		$(document).off('keydown.' + namespace);
+		$(document)
+			.off('keydown.' + namespace)
+			.off('keyup.' + namespace)
+			.off('click.' + namespace);
 		$('div.dataTables_scrollBody').off('scroll.' + namespace);
 		$('div.DTE_Body_Content').off('scroll.' + namespace);
-		$(document).off('click.' + namespace);
 		$(this.dom.input[0].offsetParent).off('.' + namespace);
 	},
 
@@ -1343,6 +1357,7 @@ $.extend(DateTime.prototype, {
 
 		// Set the language strings in case any have changed
 		this.dom.today.text(i18n.today).text(i18n.today);
+		this.dom.selected.text(i18n.selected).text(i18n.selected);
 		this.dom.clear.text(i18n.clear).text(i18n.clear);
 		this.dom.previous
 			.attr('title', i18n.previous)
@@ -1566,10 +1581,20 @@ $.extend(DateTime.prototype, {
 		// in the date picker - this might need to be changed).
 		$(document).on('keydown.' + namespace, function (e) {
 			if (
-				e.keyCode === 9 || // tab
-				e.keyCode === 27 || // esc
-				e.keyCode === 13    // return
+				that.dom.container.is(':visible') && (
+					e.keyCode === 9 || // tab
+					e.keyCode === 13    // return
+				)
 			) {
+				that._hide();
+			}
+		});
+
+		// Esc is on keyup to allow Editor to know that the container was hidden and thus
+		// not act on the esc itself.
+		$(document).on('keyup.' + namespace, function (e) {
+			if (that.dom.container.is(':visible') && e.keyCode === 27 ) { // esc
+				e.preventDefault();
 				that._hide();
 			}
 		});
@@ -1671,10 +1696,13 @@ DateTime.type = 'DateTime';
  * @type {Object}
  */
 DateTime.defaults = {
+	alwaysVisible: false,
+
 	attachTo: 'body',
 
 	buttons: {
 		clear: false,
+		selected: false,
 		today: false
 	},
 
@@ -1702,7 +1730,8 @@ DateTime.defaults = {
 		minutes: 'Minute',
 		seconds: 'Second',
 		unknown: '-',
-		today: 'Today'
+		today: 'Today',
+		selected: 'Selected'
 	},
 
 	maxDate: null,
@@ -1730,7 +1759,7 @@ DateTime.defaults = {
 	yearRange: 25
 };
 
-DateTime.version = '1.5.6';
+DateTime.version = '1.6.0';
 
 /**
  * CommonJS factory function pass through. Matches DataTables.
