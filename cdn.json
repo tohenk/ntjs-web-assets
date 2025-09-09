@@ -54,15 +54,15 @@
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
-    "version": "2.3.3",
+    "version": "2.3.4",
     "datatables": ""
   },
   "DataTables-AutoFill": {
-    "version": "2.7.0",
+    "version": "2.7.1",
     "datatables-extension": "autofill"
   },
   "DataTables-Buttons": {
-    "version": "3.2.4",
+    "version": "3.2.5",
     "datatables-extension": "buttons"
   },
   "DataTables-ColReorder": {
@@ -70,11 +70,11 @@
     "datatables-extension": "colreorder"
   },
   "DataTables-DateTime": {
-    "version": "1.5.6",
+    "version": "1.6.0",
     "datatables-extension": "datetime"
   },
   "DataTables-FixedColumns": {
-    "version": "5.0.4",
+    "version": "5.0.5",
     "datatables-extension": "fixedcolumns"
   },
   "DataTables-FixedHeader": {
@@ -94,7 +94,7 @@
     "datatables-extension": "responsive"
   },
   "DataTables-RowGroup": {
-    "version": "1.5.2",
+    "version": "1.6.0",
     "datatables-extension": "rowgroup"
   },
   "DataTables-RowReorder": {
@@ -106,7 +106,7 @@
     "datatables-extension": "scroller"
   },
   "DataTables-SearchBuilder": {
-    "version": "1.8.3",
+    "version": "1.8.4",
     "datatables-extension": "searchbuilder"
   },
   "DataTables-SearchPanes": {
@@ -118,7 +118,7 @@
     "datatables-extension": "select"
   },
   "DataTables-StateRestore": {
-    "version": "1.4.1",
+    "version": "1.4.2",
     "datatables-extension": "staterestore"
   },
   "exif-js": {
