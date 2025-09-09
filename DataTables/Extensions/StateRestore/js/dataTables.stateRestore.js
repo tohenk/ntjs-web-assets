@@ -1,4 +1,4 @@
-/*! StateRestore 1.4.1
+/*! StateRestore 1.4.2
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -79,7 +79,7 @@ var DataTable = $.fn.dataTable;
                 dt: table,
                 identifier: identifier,
                 isPreDefined: isPreDefined,
-                savedState: null,
+                savedState: state,
                 tableId: state && state.stateRestore ? state.stateRestore.tableId : undefined
             };
             this.dom = {
@@ -529,13 +529,6 @@ var DataTable = $.fn.dataTable;
                     }
                 }
             }
-            // If the state is predefined there is no need to save it over ajax or to local storage
-            if (this.s.isPreDefined) {
-                if (passedSuccessCallback) {
-                    passedSuccessCallback.call(this);
-                }
-                return;
-            }
             var ajaxData = {
                 action: 'save',
                 stateRestore: (_a = {},
@@ -602,6 +595,12 @@ var DataTable = $.fn.dataTable;
          * @returns boolean indicating if the objects match
          */
         StateRestore.prototype._deepCompare = function (state1, state2) {
+            if (state1 === null && state2 === null) {
+                return true;
+            }
+            else if (state1 === null || state2 === null) {
+                return false;
+            }
             // Put keys and states into arrays as this makes the later code easier to work
             var states = [state1, state2];
             var keys = [Object.keys(state1).sort(), Object.keys(state2).sort()];
@@ -678,6 +677,12 @@ var DataTable = $.fn.dataTable;
                 }
                 // If the type is an object then further deep comparisons are required
                 if (typeof states[0][keys[0][i]] === 'object') {
+                    // Arrays must be the same length to be matched
+                    if (Array.isArray(states[0][keys[0][i]]) && Array.isArray(states[1][keys[1][i]])) {
+                        if (states[0][keys[0][i]].length !== states[1][keys[0][i]].length) {
+                            return false;
+                        }
+                    }
                     if (!this._deepCompare(states[0][keys[0][i]], states[1][keys[1][i]])) {
                         return false;
                     }
@@ -754,7 +759,7 @@ var DataTable = $.fn.dataTable;
             });
             $$2(document).on('keyup', function (e) { return _this._keyupFunction(e); });
         };
-        StateRestore.version = '1.4.1';
+        StateRestore.version = '1.4.2';
         StateRestore.classes = {
             background: 'dtsr-background',
             closeButton: 'dtsr-popover-close',
@@ -798,13 +803,13 @@ var DataTable = $.fn.dataTable;
                 duplicateError: 'A state with this name already exists.',
                 emptyError: 'Name cannot be empty.',
                 emptyStates: 'No saved states',
-                removeConfirm: 'Are you sure you want to remove %s?',
+                removeConfirm: 'Are you sure you want to remove "%s"?',
                 removeError: 'Failed to remove state.',
                 removeJoiner: ' and ',
                 removeSubmit: 'Remove',
                 removeTitle: 'Remove State',
                 renameButton: 'Rename',
-                renameLabel: 'New Name for %s:',
+                renameLabel: 'New Name for "%s":',
                 renameTitle: 'Rename State'
             },
             modalCloseButton: true,
@@ -845,7 +850,9 @@ var DataTable = $.fn.dataTable;
                 searchBuilder: false,
                 searchPanes: false,
                 select: false
-            }
+            },
+            createButton: null,
+            createState: null
         };
         return StateRestore;
     }());
@@ -1031,6 +1038,7 @@ var DataTable = $.fn.dataTable;
                 ajaxFunction = function () {
                     $$1.ajax({
                         data: ajaxData,
+                        dataType: 'json',
                         success: function (data) {
                             _this._addPreDefined(data);
                         },
@@ -1277,11 +1285,19 @@ var DataTable = $.fn.dataTable;
                     that.s.states.push(this);
                     that._collectionRebuild();
                 };
-                var loadedState = preDefined[state];
-                var newState = new StateRestore(this_1.s.dt, $$1.extend(true, {}, this_1.c, loadedState.c !== undefined ?
-                    { saveState: loadedState.c.saveState } :
-                    undefined, true), state, loadedState, true, successCallback);
-                newState.s.savedState = loadedState;
+                var loadedState = this_1._fixTypes(preDefined[state]);
+                var stateConfig = $$1.extend(true, {}, this_1.c, loadedState.c !== undefined ?
+                    {
+                        saveState: loadedState.c.saveState,
+                        remove: loadedState.c.remove,
+                        rename: loadedState.c.rename,
+                        save: loadedState.c.save
+                    } :
+                    undefined, true);
+                if (this_1.c.createState) {
+                    this_1.c.createState(stateConfig, loadedState);
+                }
+                var newState = new StateRestore(this_1.s.dt, stateConfig, state, loadedState, true, successCallback);
                 $$1(this_1.s.dt.table().node()).on('dtsr-modal-inserted', function () {
                     newState.dom.confirmation.one('dtsr-remove', function () { return _this._removeCallback(newState.s.identifier); });
                     newState.dom.confirmation.one('dtsr-rename', function () { return _this._collectionRebuild(); });
@@ -1367,7 +1383,7 @@ var DataTable = $.fn.dataTable;
                     if (split.includes('removeState') && (!this.c.remove || !state.c.remove)) {
                         split.splice(split.indexOf('removeState'), 1);
                     }
-                    stateButtons.push({
+                    var buttonConfig = {
                         _stateRestore: state,
                         attr: {
                             title: state.s.identifier
@@ -1378,7 +1394,11 @@ var DataTable = $.fn.dataTable;
                         extend: 'stateRestore',
                         text: StateRestore.entityEncode(state.s.identifier),
                         popoverTitle: StateRestore.entityEncode(state.s.identifier)
-                    });
+                    };
+                    if (this.c.createButton) {
+                        this.c.createButton(buttonConfig, state.s.savedState);
+                    }
+                    stateButtons.push(buttonConfig);
                 }
             }
             button.collectionRebuild(stateButtons);
@@ -1540,6 +1560,7 @@ var DataTable = $.fn.dataTable;
             });
             // Append all of the toggles that are to be inserted
             var checkboxesEl = this.dom.checkboxInputRow
+                .css('display', togglesToInsert.length ? 'block' : 'none')
                 .appendTo(this.dom.creationForm)
                 .find('div.dtsr-input')
                 .empty();
@@ -1635,6 +1656,59 @@ var DataTable = $.fn.dataTable;
             this.s.dt.state.save();
         };
         /**
+         * Make sure the data for a state contains the expected data types
+         *
+         * @param state State
+         */
+        StateRestoreCollection.prototype._fixTypes = function (state) {
+            var i;
+            var fixNum = function (d, prop) {
+                var val = d[prop];
+                if (val !== undefined) {
+                    d[prop] = typeof val === 'number' ? val : parseInt(val);
+                }
+            };
+            var fixBool = function (d, prop) {
+                var val = d[prop];
+                if (val !== undefined) {
+                    d[prop] = typeof val !== 'string'
+                        ? val
+                        : val === 'true'
+                            ? true
+                            : false;
+                }
+            };
+            fixNum(state, 'start');
+            fixNum(state, 'length');
+            fixNum(state, 'time');
+            if (state.order) {
+                for (i = 0; i < state.order.length; i++) {
+                    fixNum(state.order[i], 0);
+                }
+            }
+            if (state.search) {
+                fixBool(state.search, 'caseInsensitive');
+                fixBool(state.search, 'regex');
+                fixBool(state.search, 'smart');
+                fixBool(state.search, 'visible');
+                fixBool(state.search, 'return');
+            }
+            if (state.columns) {
+                for (i = 0; i < state.columns.length; i++) {
+                    fixBool(state.columns[i], 'caseInsensitive');
+                    fixBool(state.columns[i], 'regex');
+                    fixBool(state.columns[i], 'smart');
+                    fixBool(state.columns[i], 'visible');
+                }
+            }
+            if (state.colReorder) {
+                for (i = 0; i < state.colReorder.length; i++) {
+                    fixNum(state.colReorder, i);
+                }
+            }
+            return state;
+        };
+        /**
          * This callback is called when a state is removed.
          * This removes the state from storage and also strips it's button from the container
          *
@@ -1726,10 +1800,10 @@ var DataTable = $.fn.dataTable;
             var _this = this;
             var keys = Object.keys(localStorage);
             var _loop_2 = function (key) {
-                // eslint-disable-next-line no-useless-escape
-                if (key.match(new RegExp('^DataTables_stateRestore_.*_' + location.pathname + '$')) ||
-                    key.match(new RegExp('^DataTables_stateRestore_.*_' + location.pathname +
-                        '_' + this_2.s.dt.table().node().id + '$'))) {
+                // Check if the key belongs to this page / table
+                if (key.startsWith('DataTables_stateRestore_') &&
+                    (key.endsWith(location.pathname) ||
+                        key.endsWith(location.pathname + '_' + this_2.s.dt.table().node().id))) {
                     var loadedState_1 = JSON.parse(localStorage.getItem(key));
                     if (loadedState_1.stateRestore.isPreDefined ||
                         (loadedState_1.stateRestore.tableId &&
@@ -1873,12 +1947,14 @@ var DataTable = $.fn.dataTable;
                 searchBuilder: false,
                 searchPanes: false,
                 select: false
-            }
+            },
+            createButton: null,
+            createState: null
         };
         return StateRestoreCollection;
     }());
 
-    /*! StateRestore 1.4.1
+    /*! StateRestore 1.4.2
      * © SpryMedia Ltd - datatables.net/license
      */
     setJQuery$1($);
@@ -2140,8 +2216,9 @@ var DataTable = $.fn.dataTable;
                         0;
             });
             var button = dt.button('SaveStateRestore:name');
-            var stateButtons = button[0] !== undefined && button[0].inst.c.buttons[0].buttons !== undefined ?
-                button[0].inst.c.buttons[0].buttons :
+            var buttonIndex = parseInt(button.index());
+            var stateButtons = button[0] !== undefined && button[0].inst.c.buttons[buttonIndex].buttons !== undefined ?
+                button[0].inst.c.buttons[buttonIndex].buttons :
                 [];
             // remove any states from the previous rebuild - if they are still there they will be added later
             for (var i = 0; i < stateButtons.length; i++) {

@@ -180,6 +180,7 @@ var StateRestoreCollection = /** @class */ (function () {
             ajaxFunction = function () {
                 $.ajax({
                     data: ajaxData,
+                    dataType: 'json',
                     success: function (data) {
                         _this._addPreDefined(data);
                     },
@@ -426,11 +427,19 @@ var StateRestoreCollection = /** @class */ (function () {
                 that.s.states.push(this);
                 that._collectionRebuild();
             };
-            var loadedState = preDefined[state];
-            var newState = new StateRestore(this_1.s.dt, $.extend(true, {}, this_1.c, loadedState.c !== undefined ?
-                { saveState: loadedState.c.saveState } :
-                undefined, true), state, loadedState, true, successCallback);
-            newState.s.savedState = loadedState;
+            var loadedState = this_1._fixTypes(preDefined[state]);
+            var stateConfig = $.extend(true, {}, this_1.c, loadedState.c !== undefined ?
+                {
+                    saveState: loadedState.c.saveState,
+                    remove: loadedState.c.remove,
+                    rename: loadedState.c.rename,
+                    save: loadedState.c.save
+                } :
+                undefined, true);
+            if (this_1.c.createState) {
+                this_1.c.createState(stateConfig, loadedState);
+            }
+            var newState = new StateRestore(this_1.s.dt, stateConfig, state, loadedState, true, successCallback);
             $(this_1.s.dt.table().node()).on('dtsr-modal-inserted', function () {
                 newState.dom.confirmation.one('dtsr-remove', function () { return _this._removeCallback(newState.s.identifier); });
                 newState.dom.confirmation.one('dtsr-rename', function () { return _this._collectionRebuild(); });
@@ -516,7 +525,7 @@ var StateRestoreCollection = /** @class */ (function () {
                 if (split.includes('removeState') && (!this.c.remove || !state.c.remove)) {
                     split.splice(split.indexOf('removeState'), 1);
                 }
-                stateButtons.push({
+                var buttonConfig = {
                     _stateRestore: state,
                     attr: {
                         title: state.s.identifier
@@ -527,7 +536,11 @@ var StateRestoreCollection = /** @class */ (function () {
                     extend: 'stateRestore',
                     text: StateRestore.entityEncode(state.s.identifier),
                     popoverTitle: StateRestore.entityEncode(state.s.identifier)
-                });
+                };
+                if (this.c.createButton) {
+                    this.c.createButton(buttonConfig, state.s.savedState);
+                }
+                stateButtons.push(buttonConfig);
             }
         }
         button.collectionRebuild(stateButtons);
@@ -689,6 +702,7 @@ var StateRestoreCollection = /** @class */ (function () {
         });
         // Append all of the toggles that are to be inserted
         var checkboxesEl = this.dom.checkboxInputRow
+            .css('display', togglesToInsert.length ? 'block' : 'none')
             .appendTo(this.dom.creationForm)
             .find('div.dtsr-input')
             .empty();
@@ -784,6 +798,59 @@ var StateRestoreCollection = /** @class */ (function () {
         this.s.dt.state.save();
     };
     /**
+     * Make sure the data for a state contains the expected data types
+     *
+     * @param state State
+     */
+    StateRestoreCollection.prototype._fixTypes = function (state) {
+        var i;
+        var fixNum = function (d, prop) {
+            var val = d[prop];
+            if (val !== undefined) {
+                d[prop] = typeof val === 'number' ? val : parseInt(val);
+            }
+        };
+        var fixBool = function (d, prop) {
+            var val = d[prop];
+            if (val !== undefined) {
+                d[prop] = typeof val !== 'string'
+                    ? val
+                    : val === 'true'
+                        ? true
+                        : false;
+            }
+        };
+        fixNum(state, 'start');
+        fixNum(state, 'length');
+        fixNum(state, 'time');
+        if (state.order) {
+            for (i = 0; i < state.order.length; i++) {
+                fixNum(state.order[i], 0);
+            }
+        }
+        if (state.search) {
+            fixBool(state.search, 'caseInsensitive');
+            fixBool(state.search, 'regex');
+            fixBool(state.search, 'smart');
+            fixBool(state.search, 'visible');
+            fixBool(state.search, 'return');
+        }
+        if (state.columns) {
+            for (i = 0; i < state.columns.length; i++) {
+                fixBool(state.columns[i], 'caseInsensitive');
+                fixBool(state.columns[i], 'regex');
+                fixBool(state.columns[i], 'smart');
+                fixBool(state.columns[i], 'visible');
+            }
+        }
+        if (state.colReorder) {
+            for (i = 0; i < state.colReorder.length; i++) {
+                fixNum(state.colReorder, i);
+            }
+        }
+        return state;
+    };
+    /**
      * This callback is called when a state is removed.
      * This removes the state from storage and also strips it's button from the container
      *
@@ -875,10 +942,10 @@ var StateRestoreCollection = /** @class */ (function () {
         var _this = this;
         var keys = Object.keys(localStorage);
         var _loop_2 = function (key) {
-            // eslint-disable-next-line no-useless-escape
-            if (key.match(new RegExp('^DataTables_stateRestore_.*_' + location.pathname + '$')) ||
-                key.match(new RegExp('^DataTables_stateRestore_.*_' + location.pathname +
-                    '_' + this_2.s.dt.table().node().id + '$'))) {
+            // Check if the key belongs to this page / table
+            if (key.startsWith('DataTables_stateRestore_') &&
+                (key.endsWith(location.pathname) ||
+                    key.endsWith(location.pathname + '_' + this_2.s.dt.table().node().id))) {
                 var loadedState_1 = JSON.parse(localStorage.getItem(key));
                 if (loadedState_1.stateRestore.isPreDefined ||
                     (loadedState_1.stateRestore.tableId &&
@@ -1022,7 +1089,9 @@ var StateRestoreCollection = /** @class */ (function () {
             searchBuilder: false,
             searchPanes: false,
             select: false
-        }
+        },
+        createButton: null,
+        createState: null
     };
     return StateRestoreCollection;
 }());

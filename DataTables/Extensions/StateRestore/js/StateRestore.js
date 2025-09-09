@@ -26,7 +26,7 @@ var StateRestore = /** @class */ (function () {
             dt: table,
             identifier: identifier,
             isPreDefined: isPreDefined,
-            savedState: null,
+            savedState: state,
             tableId: state && state.stateRestore ? state.stateRestore.tableId : undefined
         };
         this.dom = {
@@ -476,13 +476,6 @@ var StateRestore = /** @class */ (function () {
                 }
             }
         }
-        // If the state is predefined there is no need to save it over ajax or to local storage
-        if (this.s.isPreDefined) {
-            if (passedSuccessCallback) {
-                passedSuccessCallback.call(this);
-            }
-            return;
-        }
         var ajaxData = {
             action: 'save',
             stateRestore: (_a = {},
@@ -549,6 +542,12 @@ var StateRestore = /** @class */ (function () {
      * @returns boolean indicating if the objects match
      */
     StateRestore.prototype._deepCompare = function (state1, state2) {
+        if (state1 === null && state2 === null) {
+            return true;
+        }
+        else if (state1 === null || state2 === null) {
+            return false;
+        }
         // Put keys and states into arrays as this makes the later code easier to work
         var states = [state1, state2];
         var keys = [Object.keys(state1).sort(), Object.keys(state2).sort()];
@@ -625,6 +624,12 @@ var StateRestore = /** @class */ (function () {
             }
             // If the type is an object then further deep comparisons are required
             if (typeof states[0][keys[0][i]] === 'object') {
+                // Arrays must be the same length to be matched
+                if (Array.isArray(states[0][keys[0][i]]) && Array.isArray(states[1][keys[1][i]])) {
+                    if (states[0][keys[0][i]].length !== states[1][keys[0][i]].length) {
+                        return false;
+                    }
+                }
                 if (!this._deepCompare(states[0][keys[0][i]], states[1][keys[1][i]])) {
                     return false;
                 }
@@ -701,7 +706,7 @@ var StateRestore = /** @class */ (function () {
         });
         $(document).on('keyup', function (e) { return _this._keyupFunction(e); });
     };
-    StateRestore.version = '1.4.1';
+    StateRestore.version = '1.4.2';
     StateRestore.classes = {
         background: 'dtsr-background',
         closeButton: 'dtsr-popover-close',
@@ -745,13 +750,13 @@ var StateRestore = /** @class */ (function () {
             duplicateError: 'A state with this name already exists.',
             emptyError: 'Name cannot be empty.',
             emptyStates: 'No saved states',
-            removeConfirm: 'Are you sure you want to remove %s?',
+            removeConfirm: 'Are you sure you want to remove "%s"?',
             removeError: 'Failed to remove state.',
             removeJoiner: ' and ',
             removeSubmit: 'Remove',
             removeTitle: 'Remove State',
             renameButton: 'Rename',
-            renameLabel: 'New Name for %s:',
+            renameLabel: 'New Name for "%s":',
             renameTitle: 'Rename State'
         },
         modalCloseButton: true,
@@ -792,7 +797,9 @@ var StateRestore = /** @class */ (function () {
             searchBuilder: false,
             searchPanes: false,
             select: false
-        }
+        },
+        createButton: null,
+        createState: null
     };
     return StateRestore;
 }());
