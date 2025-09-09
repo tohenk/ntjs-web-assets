@@ -1,4 +1,4 @@
-/*! SearchBuilder 1.8.3
+/*! SearchBuilder 1.8.4
  * ©SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -1320,7 +1320,7 @@ var DataTable = $.fn.dataTable;
         Criteria.initDate = function (that, fn, preDefined) {
             if (preDefined === void 0) { preDefined = null; }
             var searchDelay = that.s.dt.settings()[0].searchDelay;
-            var i18n = that.s.dt.i18n('datetime', {});
+            var i18n = that.s.dt.i18n('datetime', {}, false);
             // Declare date element using DataTables dateTime plugin
             var el = $$3('<input/>')
                 .addClass(Criteria.classes.value)
@@ -1362,7 +1362,7 @@ var DataTable = $.fn.dataTable;
             var _this = this;
             if (preDefined === void 0) { preDefined = null; }
             var searchDelay = that.s.dt.settings()[0].searchDelay;
-            var i18n = that.s.dt.i18n('datetime', {});
+            var i18n = that.s.dt.i18n('datetime', {}, false);
             // Declare all of the date elements that are required using DataTables dateTime plugin
             var els = [
                 $$3('<input/>')
@@ -1470,7 +1470,9 @@ var DataTable = $.fn.dataTable;
             for (var _i = 0, el_3 = el; _i < el_3.length; _i++) {
                 var element = el_3[_i];
                 if (element.is('select')) {
-                    values.push(Criteria._escapeHTML(element.children('option:selected').data('sbv')));
+                    var escapedItems = [].concat(element.children('option:selected').data('sbv'))
+                        .map(function (item) { return Criteria._escapeHTML(item); });
+                    values.push.apply(values, escapedItems);
                 }
             }
             return values;
@@ -1528,10 +1530,11 @@ var DataTable = $.fn.dataTable;
                     }
                 }
             }
-            if (!that.c.enterSearch &&
+            if ((!that.c.enterSearch &&
                 !(that.s.dt.settings()[0].oInit.search !== undefined &&
-                    that.s.dt.settings()[0].oInit.search["return"]) ||
-                code === 13) {
+                    that.s.dt.settings()[0].oInit.search["return"])) ||
+                code === 13 ||
+                el.nodeName.toLowerCase() === 'select') {
                 // Trigger a search
                 that.doSearch();
             }
@@ -2330,6 +2333,8 @@ var DataTable = $.fn.dataTable;
                 isInputValid: Criteria.isInputValidSelect,
                 search: function (value, comparison) {
                     if (value.length === comparison.length) {
+                        // Sort the comparison array to match the already-sorted value array
+                        comparison.sort();
                         for (var i = 0; i < value.length; i++) {
                             if (value[i] !== comparison[i]) {
                                 return false;
@@ -2349,6 +2354,8 @@ var DataTable = $.fn.dataTable;
                 isInputValid: Criteria.isInputValidSelect,
                 search: function (value, comparison) {
                     if (value.length === comparison.length) {
+                        // Sort the comparison array to match the already-sorted value array
+                        comparison.sort();
                         for (var i = 0; i < value.length; i++) {
                             if (value[i] !== comparison[i]) {
                                 return true;
@@ -3643,7 +3650,7 @@ var DataTable = $.fn.dataTable;
                 _this.dom.clearAll.remove();
             });
         };
-        SearchBuilder.version = '1.8.3';
+        SearchBuilder.version = '1.8.4';
         SearchBuilder.classes = {
             button: 'dtsb-button',
             clearAll: 'dtsb-clearAll',
@@ -3751,7 +3758,7 @@ var DataTable = $.fn.dataTable;
         return SearchBuilder;
     }());
 
-    /*! SearchBuilder 1.8.3
+    /*! SearchBuilder 1.8.4
      * ©SpryMedia Ltd - datatables.net/license/mit
      */
     setJQuery($);
