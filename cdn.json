@@ -42,7 +42,7 @@
     "cdnjs": "bootstrap-3-typeahead"
   },
   "bootswatch": {
-    "version": "5.3.7",
+    "version": "5.3.8",
     "jsdelivr-dist": ""
   },
   "ckeditor": {
