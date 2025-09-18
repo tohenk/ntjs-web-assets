@@ -239,7 +239,7 @@
     }
   },
   "tinymce": {
-    "version": "8.1.1",
+    "version": "8.1.2",
     "jsdelivr": ""
   },
   "tinymce-i18n": {
