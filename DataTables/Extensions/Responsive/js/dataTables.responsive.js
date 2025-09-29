@@ -1,4 +1,4 @@
-/*! Responsive 3.0.6
+/*! Responsive 3.0.7
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -52,7 +52,7 @@ var DataTable = $.fn.dataTable;
 /**
  * @summary     Responsive
  * @description Responsive tables plug-in for DataTables
- * @version     3.0.6
+ * @version     3.0.7
  * @author      SpryMedia Ltd
  * @copyright   SpryMedia Ltd.
  *
@@ -413,7 +413,6 @@ $.extend(Responsive.prototype, {
 
 			for (var j = 0, jen = a.length; j < jen; j++) {
 				node.appendChild(a[j]);
-				console.log('restore', name, node, a[j]);
 			}
 		}
 
@@ -827,7 +826,13 @@ $.extend(Responsive.prototype, {
 		}
 
 		$(dt.table().body()).on('keyup.dtr', 'td, th', function (e) {
-			if (e.keyCode === 13 && $(this).data('dtr-keyboard')) {
+			let activeNodeName = document.activeElement.nodeName.toLowerCase();
+
+			if (
+				e.keyCode === 13 &&
+				$(this).data('dtr-keyboard') &&
+				(activeNodeName === 'td' || activeNodeName === 'th')
+			) {
 				$(this).click();
 			}
 		});
@@ -1844,7 +1849,7 @@ Api.registerPlural(
  * @name Responsive.version
  * @static
  */
-Responsive.version = '3.0.6';
+Responsive.version = '3.0.7';
 
 $.fn.dataTable.Responsive = Responsive;
 $.fn.DataTable.Responsive = Responsive;
