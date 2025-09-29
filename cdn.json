@@ -78,7 +78,7 @@
     "datatables-extension": "fixedcolumns"
   },
   "DataTables-FixedHeader": {
-    "version": "4.0.3",
+    "version": "4.0.4",
     "datatables-extension": "fixedheader"
   },
   "DataTables-I18N": {
@@ -90,7 +90,7 @@
     "datatables-extension": "keytable"
   },
   "DataTables-Responsive": {
-    "version": "3.0.6",
+    "version": "3.0.7",
     "datatables-extension": "responsive"
   },
   "DataTables-RowGroup": {
@@ -114,7 +114,7 @@
     "datatables-extension": "searchpanes"
   },
   "DataTables-Select": {
-    "version": "3.1.0",
+    "version": "3.1.1",
     "datatables-extension": "select"
   },
   "DataTables-StateRestore": {
