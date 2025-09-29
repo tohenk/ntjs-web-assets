@@ -1,4 +1,4 @@
-/*! Select for DataTables 3.1.0
+/*! Select for DataTables 3.1.1
  * © SpryMedia Ltd - datatables.net/license/mit
  */
 
@@ -56,7 +56,7 @@ DataTable.select.classes = {
 	checkbox: 'dt-select-checkbox'
 };
 
-DataTable.select.version = '3.1.0';
+DataTable.select.version = '3.1.1';
 
 DataTable.select.init = function (dt) {
 	var ctx = dt.settings()[0];
@@ -590,9 +590,11 @@ function info(api, node) {
 
 	// Check that the ids are still in ctx.aIds - row might have been deleted before it was
 	// unselected
-	for (var i=rowSet.length-1 ; i>=0 ; i--) {
-		if (! ctx.aIds[rowSet[i]]) {
-			rowSet.splice(i, 1);
+	if (! api.page.info().serverSide) {
+		for (var i=rowSet.length-1 ; i>=0 ; i--) {
+			if (! ctx.aIds[rowSet[i]]) {
+				rowSet.splice(i, 1);
+			}
 		}
 	}
 
