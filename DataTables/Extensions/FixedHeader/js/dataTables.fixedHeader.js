@@ -1,4 +1,4 @@
-/*! FixedHeader 4.0.3
+/*! FixedHeader 4.0.4
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -53,7 +53,7 @@ var DataTable = $.fn.dataTable;
  * @summary     FixedHeader
  * @description Fix a table's header or footer, so it is always visible while
  *              scrolling
- * @version     4.0.3
+ * @version     4.0.4
  * @author      SpryMedia Ltd
  * @contact     datatables.net
  *
@@ -383,10 +383,10 @@ $.extend(FixedHeader.prototype, {
 		else {
 			if (itemDom.floating) {
 				if (itemDom.placeholder !== null) {
-					itemDom.placeholder.remove();
+					itemDom.placeholder.detach();
 				}
 
-				itemDom.floating.remove();
+				itemDom.floating.detach();
 			}
 
 			var tableNode = $(dt.table().node());
@@ -1090,7 +1090,7 @@ $.extend(FixedHeader.prototype, {
  * @type {String}
  * @static
  */
-FixedHeader.version = '4.0.3';
+FixedHeader.version = '4.0.4';
 
 /**
  * Defaults
