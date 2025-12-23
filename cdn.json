@@ -54,7 +54,7 @@
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
-    "version": "2.3.5",
+    "version": "2.3.6",
     "datatables": ""
   },
   "DataTables-AutoFill": {
@@ -62,7 +62,7 @@
     "datatables-extension": "autofill"
   },
   "DataTables-Buttons": {
-    "version": "3.2.5",
+    "version": "3.2.6",
     "datatables-extension": "buttons"
   },
   "DataTables-ColReorder": {
@@ -82,7 +82,7 @@
     "datatables-extension": "fixedheader"
   },
   "DataTables-I18N": {
-    "version": "2.3.2",
+    "version": "2.3.6",
     "datatables-plugin": "i18n"
   },
   "DataTables-KeyTable": {
@@ -227,7 +227,7 @@
     "jsdelivr-dist": "fomantic-ui"
   },
   "socket.io": {
-    "version": "4.8.2",
+    "version": "4.8.3",
     "socket.io": ""
   },
   "strophe": {
