@@ -228,7 +228,7 @@
   },
   "socket.io": {
     "version": "4.8.3",
-    "socket.io": ""
+    "jsdelivr-dist": "socket.io-client"
   },
   "strophe": {
     "version": "4.0.0-rc0",
