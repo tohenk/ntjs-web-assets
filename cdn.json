@@ -70,7 +70,7 @@
     "datatables-extension": "colreorder"
   },
   "DataTables-DateTime": {
-    "version": "1.6.2",
+    "version": "1.6.3",
     "datatables-extension": "datetime"
   },
   "DataTables-FixedColumns": {
