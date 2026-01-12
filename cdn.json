@@ -134,7 +134,7 @@
     "cdnjs": "blueimp-gallery"
   },
   "highcharts": {
-    "version": "12.4.0",
+    "version": "12.5.0",
     "highcharts": ""
   },
   "hotkeys": {
@@ -243,7 +243,7 @@
     "jsdelivr": ""
   },
   "tinymce-i18n": {
-    "version": "25.11.17",
+    "version": "26.1.12",
     "jsdelivr": ""
   },
   "typeahead.js": {
