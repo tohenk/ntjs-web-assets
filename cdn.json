@@ -178,6 +178,14 @@
     "version": "10.32.0",
     "cdnjs": "blueimp-file-upload"
   },
+  "jquery-migrate": {
+    "version": "4.0.2",
+    "jquery": "",
+    "js": {
+      "jquery-migrate": "jquery-migrate-%VER%",
+      "jquery-migrate.min": "jquery-migrate-%VER%.min"
+    }
+  },
   "jquery-numberformatter": {
     "version": "1.2.4",
     "jsdelivr-src": ""
