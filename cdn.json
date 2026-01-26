@@ -165,7 +165,7 @@
     "cdnjs": "jqgrid"
   },
   "jquery": {
-    "version": "3.7.1",
+    "version": "4.0.0",
     "jquery": "",
     "js": {
       "jquery": "jquery-%VER%",
