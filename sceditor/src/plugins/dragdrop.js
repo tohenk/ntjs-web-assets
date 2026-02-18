@@ -61,7 +61,8 @@
 
 		try {
 			return new Blob([binary], { type: mime });
-		} catch (e) {
+			// eslint-disable-next-line no-unused-vars
+		} catch (ex) {
 			return null;
 		}
 	}
@@ -183,9 +184,13 @@
 
 			cover = container.appendChild(sceditor.dom.parseHTML(
 				'<div class="sceditor-dnd-cover" style="display: none">' +
-					'<p>' + editor._('Drop files here') + '</p>' +
+					'<p></p>' +
 				'</div>'
 			).firstChild);
+
+			cover.firstChild.appendChild(
+				document.createTextNode(editor._('Drop files here'))
+			);
 
 			container.addEventListener('dragover', handleDragOver);
 			container.addEventListener('dragleave', hideCover);

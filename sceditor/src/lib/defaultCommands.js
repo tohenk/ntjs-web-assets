@@ -213,6 +213,11 @@ var defaultCmds = {
 					html += '<div class="sceditor-color-column">';
 
 					column.split(',').forEach(function (color) {
+						// Only allow named, #aaa, hsl(1.1 50% / 1), etc.
+						if (!/^[\#a-z0-9\-\(\) \/%\.]+$/i.test(color)) {
+							color = '';
+						}
+
 						html +=
 							'<a href="#" class="sceditor-color-option"' +
 							' style="background-color: ' + color + '"' +
@@ -695,7 +700,8 @@ var defaultCmds = {
 
 				utils.each(emoticons, function (code, emoticon) {
 					dom.appendChild(line, dom.createElement('img', {
-						src: emoticonsRoot + (emoticon.url || emoticon),
+						src: escape.uriScheme(
+							emoticonsRoot + (emoticon.url || emoticon)),
 						alt: code,
 						title: emoticon.tooltip || code
 					}));
@@ -775,10 +781,12 @@ var defaultCmds = {
 			var editor = this;
 
 			defaultCmds.youtube._dropDown(editor, btn, function (id, time) {
+				// Set sanatise to false as sanatisaion is handled by
+				//  wysiwygEditorInsertHtml()
 				editor.wysiwygEditorInsertHtml(_tmpl('youtube', {
 					id: id,
 					time: time
-				}));
+				}, false, false));
 			});
 		},
 		tooltip: 'Insert a YouTube video'

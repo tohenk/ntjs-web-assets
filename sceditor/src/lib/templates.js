@@ -1,6 +1,6 @@
 import * as dom from './dom.js';
 import * as escape from './escape.js';
-
+import DOMPurify from 'dompurify';
 
 /**
  * HTML templates used by the editor and default commands
@@ -92,17 +92,28 @@ var _templates = {
  * @param {string} name
  * @param {Object} [params]
  * @param {boolean} [createHtml]
+ * @param {boolean} [sanitize=true]
  * @returns {string|DocumentFragment}
  * @private
  */
-export default function (name, params, createHtml) {
+export default function (name, params, createHtml, sanitize) {
 	var template = _templates[name];
 
 	Object.keys(params).forEach(function (name) {
+		// Default to sanitizing
+		if (sanitize !== false) {
+			params[name] = escape.entities(String(params[name]));
+		}
+
 		template = template.replace(
 			new RegExp(escape.regex('{' + name + '}'), 'g'), params[name]
 		);
 	});
+
+	// Default to sanitizing
+	if (sanitize !== false) {
+		template = DOMPurify.sanitize(template, {ADD_ATTR: ['unselectable']});
+	}
 
 	if (createHtml) {
 		template = dom.parseHTML(template);

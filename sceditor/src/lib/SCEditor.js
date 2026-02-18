@@ -571,17 +571,23 @@ export default function SCEditor(original, userOptions) {
 			options.height || dom.height(original)
 		);
 
-		// Add ios to HTML so can apply CSS fix to only it
-		var className = browser.ios ? ' ios' : '';
+		if (!domPurify.isValidAttribute('link', 'href', options.style)) {
+			options.style = '';
+		}
+
+		if (!/^[a-z\-0-9 ]+$/i.test(options.charset)) {
+			options.charset = 'UTF-8';
+		}
 
 		wysiwygDocument = wysiwygEditor.contentDocument;
 		wysiwygDocument.open();
 		wysiwygDocument.write(_tmpl('html', {
-			attrs: ' class="' + className + '"',
+			// Add ios to HTML so can apply CSS fix to only it
+			attrs: browser.ios ? ' class="ios"' : '',
 			spellcheck: options.spellcheck ? '' : 'spellcheck="false"',
 			charset: options.charset,
-			style: options.style
-		}));
+			style: escape.entities(options.style)
+		}, false, false));
 		wysiwygDocument.close();
 
 		wysiwygBody = wysiwygDocument.body;
@@ -969,7 +975,7 @@ export default function SCEditor(original, userOptions) {
 			// Preload the emoticon
 			if (options.emoticonsEnabled) {
 				preLoadCache.push(dom.createElement('img', {
-					src: root + (url.url || url)
+					src: escape.uriScheme(root + (url.url || url))
 				}));
 			}
 		});
@@ -2316,6 +2322,7 @@ export default function SCEditor(original, userOptions) {
 
 		try {
 			executed = wysiwygDocument.execCommand(command, false, param);
+		// eslint-disable-next-line no-unused-vars
 		} catch (ex) { }
 
 		// show error if execution failed and an error message exists
@@ -2480,6 +2487,7 @@ export default function SCEditor(original, userOptions) {
 						if (state > -1) {
 							state = doc.queryCommandState(stateFn) ? 1 : 0;
 						}
+						// eslint-disable-next-line no-unused-vars
 					} catch (ex) {}
 				}
 			} else if (!isDisabled) {
