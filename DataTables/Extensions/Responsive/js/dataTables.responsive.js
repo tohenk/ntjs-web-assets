@@ -1,4 +1,4 @@
-/*! Responsive 3.0.7
+/*! Responsive 3.0.8
  * © SpryMedia Ltd - datatables.net/license
  */
 
@@ -52,7 +52,7 @@ var DataTable = $.fn.dataTable;
 /**
  * @summary     Responsive
  * @description Responsive tables plug-in for DataTables
- * @version     3.0.7
+ * @version     3.0.8
  * @author      SpryMedia Ltd
  * @copyright   SpryMedia Ltd.
  *
@@ -1289,6 +1289,10 @@ $.extend(Responsive.prototype, {
 			.css('display', display)
 			.toggleClass('dtr-hidden', !showHide);
 
+		// We need to set a variable that DT can use when selecting visible
+		// columns without needing to query the DOM
+		dt.settings()[0].aoColumns[col].responsiveVisible = showHide;
+
 		// If the are child nodes stored, we might need to reinsert them
 		if (!$.isEmptyObject(this.s.childNodeStore)) {
 			dt.cells(null, col)
@@ -1849,7 +1853,7 @@ Api.registerPlural(
  * @name Responsive.version
  * @static
  */
-Responsive.version = '3.0.7';
+Responsive.version = '3.0.8';
 
 $.fn.dataTable.Responsive = Responsive;
 $.fn.DataTable.Responsive = Responsive;
