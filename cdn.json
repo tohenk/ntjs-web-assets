@@ -46,7 +46,7 @@
     "jsdelivr-dist": ""
   },
   "ckeditor": {
-    "version": "47.4.0",
+    "version": "47.5.0",
     "ckeditor": ""
   },
   "cropper": {
@@ -54,7 +54,7 @@
     "jsdelivr-dist": "cropperjs"
   },
   "DataTables": {
-    "version": "2.3.6",
+    "version": "2.3.7",
     "datatables": ""
   },
   "DataTables-AutoFill": {
@@ -78,7 +78,7 @@
     "datatables-extension": "fixedcolumns"
   },
   "DataTables-FixedHeader": {
-    "version": "4.0.5",
+    "version": "4.0.6",
     "datatables-extension": "fixedheader"
   },
   "DataTables-I18N": {
@@ -90,7 +90,7 @@
     "datatables-extension": "keytable"
   },
   "DataTables-Responsive": {
-    "version": "3.0.7",
+    "version": "3.0.8",
     "datatables-extension": "responsive"
   },
   "DataTables-RowGroup": {
@@ -98,7 +98,7 @@
     "datatables-extension": "rowgroup"
   },
   "DataTables-RowReorder": {
-    "version": "1.5.0",
+    "version": "1.5.1",
     "datatables-extension": "rowreorder"
   },
   "DataTables-Scroller": {
@@ -126,7 +126,7 @@
     "jsdelivr": ""
   },
   "fontawesome": {
-    "version": "7.1.0",
+    "version": "7.2.0",
     "cdnjs": "font-awesome"
   },
   "Gallery": {
@@ -227,7 +227,7 @@
     "jsdelivr-dist": "@popperjs/core"
   },
   "sceditor": {
-    "version": "3.2.0",
+    "version": "3.2.1",
     "jsdelivr": ""
   },
   "semantic-ui": {
@@ -251,7 +251,7 @@
     "jsdelivr": ""
   },
   "tinymce-i18n": {
-    "version": "26.1.12",
+    "version": "26.2.16",
     "jsdelivr": ""
   },
   "typeahead.js": {
