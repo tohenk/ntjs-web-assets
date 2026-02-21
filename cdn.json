@@ -161,7 +161,7 @@
     "cdnjs": "blueimp-JavaScript-Templates"
   },
   "jqGrid": {
-    "version": "5.8.10",
+    "version": "5.8.11",
     "cdnjs": "jqgrid"
   },
   "jquery": {
