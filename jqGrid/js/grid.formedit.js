@@ -121,14 +121,14 @@ $.jgrid.extend({
 									let cvr = this.editoptions.custom_value.call($t, $("#"+$.jgrid.jqID(nm),frmtb),'get');
 									if( cvr === "#ignoreme#") {
 										
-									} else if (crv === undefined) {
+									} else if (cvr === undefined) {
 										throw "e1";
 									} else {
 										postdata[nm] = cvr;
 									}
 								} catch (e) {
-									if (e==="e1") {$.jgrid.info_dialog(errors.errcap,"function 'custom_value' "+rp_ge[$(this)[0]].p.msg.novalue,rp_ge[$(this)[0]].p.bClose, {styleUI : rp_ge[$(this)[0]].p.styleUI });}
-									else {$.jgrid.info_dialog(errors.errcap,e.message,rp_ge[$(this)[0]].p.bClose, {styleUI : rp_ge[$(this)[0]].p.styleUI });}
+									if (e==="e1") {$.jgrid.info_dialog(errors.errcap,"function 'custom_value' "+rp_ge[$t.p.id].msg.novalue,rp_ge[$t.p.id].bClose, {styleUI : rp_ge[$t.p.id].styleUI });}
+									else {$.jgrid.info_dialog(errors.errcap,e.message,rp_ge[$t.p.id].bClose, {styleUI : rp_ge[$t.p.id].styleUI });}
 								}
 								return true;
 							}
@@ -194,20 +194,16 @@ $.jgrid.extend({
 						hc = this.hidden === true ? true : false;
 					}
 					dc = hc ? "style='display:none'" : "";
-					if ( nm !== 'cb' && nm !== 'subgrid' && this.editable===true && nm !== 'rn' && nm!=='sc') {
+					if ( !$.jgrid.isServiceCol() && this.editable===true ) {
 						if(ind === false) {
 							tmp = "";
 						} else {
-							if(nm === obj.p.ExpandColumn && obj.p.treeGrid === true) {
-								tmp = $("td[role='gridcell']",obj.rows[ind]).eq( i ).text();
-							} else {
-								try {
-									tmp =  $.unformat.call(obj, $("td[role='gridcell']",obj.rows[ind]).eq( i ),{rowId:rowid, colModel:this},i);
-								} catch (_) {
-									tmp =  (this.edittype && this.edittype === "textarea") ? $("td[role='gridcell']",obj.rows[ind]).eq( i ).text() : $("td[role='gridcell']",obj.rows[ind]).eq( i ).html();
-								}
-								if(!tmp || tmp === "&nbsp;" || tmp === "&#160;" || (tmp.length===1 && tmp.charCodeAt(0)===160) ) {tmp='';}
+							try {
+								tmp =  $.unformat.call(obj, $("td[role='gridcell']",obj.rows[ind]).eq( i ),{rowId:rowid, colModel:this},i);
+							} catch (_) {
+								tmp =  (this.edittype && this.edittype === "textarea") ? $("td[role='gridcell']",obj.rows[ind]).eq( i ).text() : $("td[role='gridcell']",obj.rows[ind]).eq( i ).html();
 							}
+							if(!tmp || tmp === "&nbsp;" || tmp === "&#160;" || (tmp.length===1 && tmp.charCodeAt(0)===160) ) {tmp='';}
 						}
 						var opt = $.extend({}, this.editoptions || {} ,{id:nm,name:nm, rowId: rowid, oper:frmoper, module : 'form', checkUpdate : rp_ge[$t.p.id].checkOnSubmit || rp_ge[$t.p.id].checkOnUpdate}),
 						frmopt = $.extend({}, {elmprefix:'',elmsuffix:'',rowabove:false,rowcontent:''}, this.formoptions || {}),
@@ -222,7 +218,10 @@ $.jgrid.extend({
 						if($t.p.autoencode) {
 							tmp = $.jgrid.htmlDecode(tmp);
 						}
-						elc = $.jgrid.createEl.call($t,this.edittype,opt,tmp,false,$.extend({},$.jgrid.ajaxOptions,obj.p.ajaxSelectOptions || {}));
+						if(!Object.hasOwn(opt, "aria-label")) {
+							opt["aria-label"] = "Edit form value";
+						}
+						elc = $.jgrid.createEl.call($t, this.edittype, opt, tmp, false, $.extend( {}, $.jgrid.ajaxOptions,obj.p.ajaxSelectOptions || {}));
 						//if(tmp === "" && this.edittype == "checkbox") {tmp = $(elc).attr("offval");}
 						//if(tmp === "" && this.edittype == "select") {tmp = $("option:eq(0)",elc).text();}
 						if(this.edittype === "select") {
@@ -875,10 +874,10 @@ $.jgrid.extend({
 			var rtlb = $t.p.direction === "rtl" ? true :false,
 			bp = rtlb ? "nData" : "pData",
 			bn = rtlb ? "pData" : "nData";
-			var bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
-			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
-			bS  ="<a id='sData' class='fm-button " + commonstyle.button + "'>"+p.bSubmit+"</a>",
-			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "'>"+p.bCancel+"</a>",
+			var bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.prevRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
+			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.nextRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
+			bS  ="<a id='sData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Submit data'>"+p.bSubmit+"</a>",
+			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Close modal dialog'>"+p.bCancel+"</a>",
 			user_buttons = ( Array.isArray( rp_ge[$t.p.id].buttons ) ? $.jgrid.buildButtons( rp_ge[$t.p.id].buttons, bS + bC, commonstyle ) : bS + bC );
 			var bt = "<table style='height:auto' class='EditTable ui-common-table' id='"+frmtborg+"_2'><tbody><tr><td colspan='2'><hr class='"+commonstyle.content+"' style='margin:1px'/></td></tr><tr id='Act_Buttons'><td class='navButton'>"+(rtlb ? bN+bP : bP+bN)+"</td><td class='EditButton'>"+ user_buttons +"</td></tr>";
 			//bt += "<tr style='display:none' class='binfo'><td class='bottominfo' colspan='2'>"+rp_ge[$t.p.id].bottominfo+"</td></tr>";
@@ -974,9 +973,9 @@ $.jgrid.extend({
 				.append("<span class='" + commonstyle.icon_base +" "+p.closeicon[2]+"'></span>");
 			}
 			if(rp_ge[$t.p.id].checkOnSubmit || rp_ge[$t.p.id].checkOnUpdate) {
-				bS  ="<a id='sNew' class='fm-button "+commonstyle.button + "' style='z-index:1002'>"+p.bYes+"</a>";
-				bN  ="<a id='nNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px'>"+p.bNo+"</a>";
-				bC  ="<a id='cNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px;'>"+p.bExit+"</a>";
+				bS  ="<a id='sNew' class='fm-button "+commonstyle.button + "' style='z-index:1002' role='button' tabindex='0' href='#'>"+p.bYes+"</a>";
+				bN  ="<a id='nNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px' role='button' tabindex='0' href='#'>"+p.bNo+"</a>";
+				bC  ="<a id='cNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px;' role='button' tabindex='0' href='#'>"+p.bExit+"</a>";
 				var zI = p.zIndex  || 999;zI ++;
 				$("#"+IDs.themodal).append("<div class='"+ p.overlayClass+" jqgrid-overlay confirm' style='z-index:"+zI+";display:none;position:absolute;'>&#160;"+"</div><div class='confirm ui-jqconfirm "+commonstyle.content+"' style='z-index:"+(zI+1)+"'>"+p.saveData+"<br/><br/>"+bS+bN+bC+"</div>");
 				$("#sNew","#"+$.jgrid.jqID(IDs.themodal)).click(function(){
@@ -1366,9 +1365,9 @@ $.jgrid.extend({
 			bp = rtlb ? "nData" : "pData",
 			bn = rtlb ? "pData" : "nData",
 				// buttons at footer
-			bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
-			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
-			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "'>"+p.bClose+"</a>",
+			bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.prevRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
+			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.nextRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
+			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Close the modal dialog'>"+p.bClose+"</a>",
 			user_buttons = ( Array.isArray( rp_ge[$t.p.id].buttons ) ? $.jgrid.buildButtons( rp_ge[$t.p.id].buttons, bC, commonstyle ) : bC );
 			if(maxRows >  0) {
 				var sd=[];
@@ -1478,7 +1477,7 @@ $.jgrid.extend({
 					}
 					updateNav(npos[0]+1,npos);
 				}
-				focusaref();
+				//focusaref();
 				return false;
 			});
 			$("#pData", "#"+frmtb+"_2").click(function(){
@@ -1499,7 +1498,7 @@ $.jgrid.extend({
 					}
 					updateNav(ppos[0]-1,ppos);
 				}
-				focusaref();
+				//focusaref();
 				return false;
 			});
 			var posInit =getCurrPos();
@@ -1602,8 +1601,8 @@ $.jgrid.extend({
 				tbl += "<tr><td class=\"delmsg\" style=\"white-space:pre;\">"+rp_ge[$t.p.id].msg+"</td></tr><tr><td >&#160;</td></tr>";
 				// buttons at footer
 				tbl += "</tbody></table></div>";
-				var bS  = "<a id='dData' class='fm-button " + commonstyle.button + "'>"+p.bSubmit+"</a>",
-				bC  = "<a id='eData' class='fm-button " + commonstyle.button + "'>"+p.bCancel+"</a>",
+				var bS  = "<a id='dData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Delete grid row(s)'>"+p.bSubmit+"</a>",
+				bC  = "<a id='eData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Close the modal dialog'>"+p.bCancel+"</a>",
 				user_buttons = ( Array.isArray( rp_ge[$t.p.id].buttons ) ? $.jgrid.buildButtons( rp_ge[$t.p.id].buttons, bS + bC, commonstyle ) : bS + bC ),
 				fs =  $('.ui-jqgrid').css('font-size') || '11px';
 
@@ -1798,9 +1797,9 @@ $.jgrid.extend({
 					rp_ge[$t.p.id].afterShowForm.call($t,$("#"+dtbl));
 				}
 			}
-			if(rp_ge[$t.p.id].closeOnEscape===true) {
+			//if(rp_ge[$t.p.id].closeOnEscape===true) {
 				setTimeout(function(){$(".ui-jqdialog-titlebar-close","#"+$.jgrid.jqID(IDs.modalhead)).attr("tabindex","-1").focus();},0);
-			}
+			//}
 		});
 	},
 	navGrid : function (elem, p, pEdit, pAdd, pDel, pSearch, pView) {

@@ -219,7 +219,7 @@ $.fn.jqFilter = function( arg ) {
 
 			if(this.p.ruleButtons === true) {
 			// dropdown for: choosing group operator type
-			var groupOpSelect = $("<select size='1' name='select_group_op' class='opsel " + classes.srSelect + "'></select>");
+			var groupOpSelect = $("<select size='1' aria-label='Select group operation' name='select_group_op' class='opsel " + classes.srSelect + "'></select>");
 			th.append(groupOpSelect);
 			// populate dropdown with all posible group operators: or, and
 			var str= "", selected;
@@ -386,7 +386,7 @@ $.fn.jqFilter = function( arg ) {
 
 
 			// dropdown for: choosing field
-			var ruleFieldSelect = $("<select size='1' name='select_field' class='" + classes.srSelect + "'></select>"), ina, aoprs = [];
+			var ruleFieldSelect = $("<select size='1' aria-label='Select Field' name='select_field' class='" + classes.srSelect + "'></select>"), ina, aoprs = [];
 			ruleFieldTd.append(ruleFieldSelect);
 			ruleFieldSelect.on('change',function() {
 				if( that.p.ruleButtons && that.p.uniqueSearchFields ) {
@@ -413,6 +413,7 @@ $.fn.jqFilter = function( arg ) {
 				cm.searchoptions.id = $.jgrid.randId();
 				cm.searchoptions.name = rule.field;
 				cm.searchoptions.oper = 'filter';
+				cm.searchoptions["aria-label"] = "Enter value to search";
 
 				if(isIE && cm.inputtype === "text") {
 					if(!cm.searchoptions.size) {
@@ -511,13 +512,14 @@ $.fn.jqFilter = function( arg ) {
 			}
 			cm.searchoptions.name = rule.field;
 			cm.searchoptions.oper = 'filter';
+			cm.searchoptions["aria-label"] = "Enter value to search";
 			var ruleDataInput = $.jgrid.createEl.call($t, cm.inputtype,cm.searchoptions, rule.data, true, that.p.ajaxSelectOptions || {}, true);
 			if(rule.op === 'nu' || rule.op === 'nn' || $.inArray(rule.op, that.p.unaryOperations) >=0 ) {
 				$(ruleDataInput).attr('readonly','true');
 				$(ruleDataInput).attr('disabled','true');
 			} //retain the state of disabled text fields in case of null ops
 			// dropdown for: choosing operator
-			var ruleOperatorSelect = $("<select size='1' name='select_oper' class='selectopts " + classes.srSelect + "'></select>");
+			var ruleOperatorSelect = $("<select size='1' aria-label='Select operation' name='select_oper' class='selectopts " + classes.srSelect + "'></select>");
 			ruleOperatorTd.append(ruleOperatorSelect);
 			ruleOperatorSelect.on('change',function() {
 				rule.op = $(ruleOperatorSelect).val();
@@ -1304,6 +1306,7 @@ $.jgrid.extend({
 					if( p.restoreFromFilters && restores) {
 						df = restores.data;
 					}
+					soptions["aria-label"]="Enter toolbar search value";
 					elem = $.jgrid.createEl.call($t, this.stype, soptions , df, false, $.extend({},$.jgrid.ajaxOptions, $t.p.ajaxSelectOptions || {}));
 					if( this.stype !== 'custom') {
 						if(this.stype==='select') {
@@ -1639,7 +1642,7 @@ $.jgrid.extend({
 				defaultFilters = $t.p.postData[p.sFilter];
 			}
 			if(typeof defaultFilters === "string") {
-				defaultFilters = $.jgrid.parse( defaultFilters );
+				defaultFilters = $.jgrid.parse( defaultFilters || "{}" );
 			}
 			if(p.recreateFilter === true) {
 				$("#"+$.jgrid.jqID(IDs.themodal)).remove();
@@ -1671,8 +1674,8 @@ $.jgrid.extend({
 					fil.attr("dir","rtl");
 				}
 				var columns = $.extend([],$t.p.colModel),
-				bS  ="<a id='"+fid+"_search' class='fm-button " + common.button + " fm-button-icon-right ui-search'><span class='" + common.icon_base + " " +classes.icon_search + "'></span>"+p.Find+"</a>",
-				bC  ="<a id='"+fid+"_reset' class='fm-button " + common.button +" fm-button-icon-left ui-reset'><span class='" + common.icon_base + " " +classes.icon_reset + "'></span>"+p.Reset+"</a>",
+				bS  ="<a id='"+fid+"_search' class='fm-button " + common.button + " fm-button-icon-right ui-search' role='button' tabindex='0' href='#'><span class='" + common.icon_base + " " +classes.icon_search + "'></span>"+p.Find+"</a>",
+				bC  ="<a id='"+fid+"_reset' class='fm-button " + common.button +" fm-button-icon-left ui-reset' role='button' tabindex='0' href='#'><span class='" + common.icon_base + " " +classes.icon_reset + "'></span>"+p.Reset+"</a>",
 				bQ = "", tmpl="", colnm, found = false, bt, cmi=-1, ms = false, ssfield = [];
 				if(p.showQuery) {
 					bQ ="<a id='"+fid+"_query' class='fm-button " + common.button + " fm-button-icon-left'><span class='" + common.icon_base + " " +classes.icon_query + "'></span>Query</a>";
@@ -2037,38 +2040,36 @@ $.jgrid.extend({
 				result, i;
 
 				try {
-					query = $.jgrid.from.call($t, $t.p.data);
-					result = query.groupBy( o.field, o.direction, "text", o.src_date);
-					i = result.length;
+					query = $.jgrid.from($t.p.data);
+					query.orderBy([o.field], [{so:o.direction, stype:'text', srcfmt:'Y-m-d', sfunc:null}]);
+					result = $.jgrid.jLinq().util.group( query.select(), o.field, false);
 				} catch(e) {
 
 				}
-				if(result && result.length) {
-					res =  $("#gsh_"+$t.p.id+"_"+o.field).find("td.ui-search-input > select");
-					i = result.length;
-					if(o.allValues) {
-						sdata = "<option value=''>"+ o.allValues +"</option>";
-						tmp.push(":" + o.allValues);
+				if(o.allValues) {
+					sdata = "<option value=''>"+ o.allValues +"</option>";
+					tmp.push(":" + o.allValues);
+				}
+				for (let key in result) {
+					if( Object.hasOwn(result,key)) {
+						res =  $("#gsh_"+$t.p.id+"_"+o.field).find("td.ui-search-input > select");
+						s_cnt = o.count_item ? " (" +result[key].length+")" : "";
+						sdata += "<option value='"+key+"'>"+ key + s_cnt+"</option>";
+						tmp.push(key+":"+ key + s_cnt);
 					}
-					while(i--) {
-						item = result[i];
-						s_cnt = o.count_item ? " (" +item.items.length+")" : "";
-						sdata += "<option value='"+item.unique+"'>"+ item.unique + s_cnt+"</option>";
-						tmp.push(item.unique+":"+item.unique + s_cnt);
-					}
-					res.append(sdata);
-					res.on('change',function(){
-						$t.triggerToolbar();
-					});
-					if( o.create_value ) {
-						cm = $.jgrid.getElemByAttrVal($t.p.colModel, 'name', o.field, false);
-						if( !$.isEmptyObject( cm ) ) {
-							if( cm.searchoptions ) {
-								$.extend(cm.searchoptions, {value: tmp.join(";")});
-							} else {
-								cm.searchoptions = {};
-								cm.searchoptions.value = tmp.join(";");
-							}
+				}
+				res.append(sdata);
+				res.on('change',function(){
+					$t.triggerToolbar();
+				});
+				if( o.create_value ) {
+					cm = $.jgrid.getElemByAttrVal($t.p.colModel, 'name', o.field, false);
+					if( !$.isEmptyObject( cm ) ) {
+						if( cm.searchoptions ) {
+							$.extend(cm.searchoptions, {value: tmp.join(";")});
+						} else {
+							cm.searchoptions = {};
+							cm.searchoptions.value = tmp.join(";");
 						}
 					}
 				}

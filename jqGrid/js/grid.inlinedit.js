@@ -99,7 +99,10 @@ $.jgrid.extend({
 							var opt = $.extend({},cm[i].editoptions || {},{id:rowid+"_"+nm,name:nm,rowId:rowid, oper:'edit', module : 'inline'});
 							if(!cm[i].edittype) { cm[i].edittype = "text"; }
 							if(tmp === "&nbsp;" || tmp === "&#160;" || (tmp !== null && tmp.length===1 && tmp.charCodeAt(0)===160) ) {tmp='';}
-							var elc = $.jgrid.createEl.call($t,cm[i].edittype,opt,tmp,true,$.extend({},$.jgrid.ajaxOptions,$t.p.ajaxSelectOptions || {}));
+							if(!Object.hasOwn(opt, "aria-label")) {
+								opt["aria-label"] = "Enter row value";
+							}
+							var elc = $.jgrid.createEl.call($t, cm[i].edittype, opt, tmp, true, $.extend( {}, $.jgrid.ajaxOptions,$t.p.ajaxSelectOptions || {}));
 							$(elc).addClass("editable inline-edit-cell");
 							if( $.inArray(cm[i].edittype, ['text','textarea','password']) > -1) {
 								$(elc).addClass( inpclass );
@@ -416,8 +419,7 @@ $.jgrid.extend({
 					url:o.url,
 					data: $.jgrid.isFunction($t.p.serializeRowData) ? $t.p.serializeRowData.call($t, tmp3) : tmp3,
 					type: o.mtype,
-					async : false, //?!?
-					success: function(resuly,stat,res){
+					success: function(result,stat,res){
 						$($t).jqGrid("progressBar", {method:"hide", loadtype : o.saveui, htmlcontent: o.savetext});
 						if (stat === "success"){
 							var ret = true, sucret, k;
@@ -467,6 +469,7 @@ $.jgrid.extend({
 						}
 					},
 					error:function(res,stat,err){
+						$($t).jqGrid("progressBar", {method:"hide", loadtype : o.saveui, htmlcontent: o.savetext});
 						$("#lui_"+$.jgrid.jqID($t.p.id)).hide();
 						$($t).triggerHandler("jqGridInlineErrorSaveRow", [rowid, res, stat, err, o]);
 						if($.jgrid.isFunction(o.errorfunc) ) {

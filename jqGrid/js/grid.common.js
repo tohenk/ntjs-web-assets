@@ -85,7 +85,7 @@ $.extend($.jgrid,{
 		mh.className = "ui-jqdialog-titlebar " + classes.header;
 		mh.id = aIDs.modalhead;
 		$(mh).append("<span class='ui-jqdialog-title "+classes.title+"'>"+p.caption+"</span>");
-		var ahr= $("<a class='ui-jqdialog-titlebar-close "+common.cornerall+"' aria-label='Close'></a>")
+		var ahr= $("<a class='ui-jqdialog-titlebar-close "+common.cornerall+"' aria-label='Close' role='button'></a>")
 		.hover(function(){ahr.addClass(common.hover);},
 			function(){ahr.removeClass(common.hover);})
 		.append("<span class='" + common.icon_base+" " + classes.icon_close + "'></span>");
@@ -282,10 +282,14 @@ $.extend($.jgrid,{
 		}
 		var dh = isNaN(mopt.dataheight) ? mopt.dataheight : mopt.dataheight+"px";
 		//cn = "text-align:"+mopt.align+";";
+		var stylebut ="";
+		if( ["left","center", "right"].includes(mopt.buttonalign) ) {
+			stylebut = "style='text-align:"+ mopt.buttonalign+"'";
+		}
 		var cnt = "<div id='info_id'>";
 		cnt += "<div id='infocnt' class='info_content "+classes.body+"'>"+content+"</div>";
-		cnt += c_b ? "<div class='info_footer " + classes.footer + "'><a id='closedialog' class='fm-button " + common.button + "'>"+c_b+"</a>"+buttstr+"</div>" :
-			buttstr !== ""  ? "<div class='info_footer " + classes.footer + "'>"+buttstr+"</div>" : "";
+		cnt += c_b ? "<div class='info_footer " + classes.footer + "' "+stylebut+"><a id='closedialog' class='fm-button " + common.button + "'>"+c_b+"</a>"+buttstr+"</div>" :
+			buttstr !== ""  ? "<div class='info_footer " + classes.footer + "' "+stylebut+">"+buttstr+"</div>" : "";
 		cnt += "</div>";
 
 		try {
@@ -367,7 +371,7 @@ $.extend($.jgrid,{
 		);
 		if($.jgrid.isFunction(mopt.beforeOpen) ) { mopt.beforeOpen(); }
 		if(mopt.type && mopt.type !== "default") {
-			$("#info_dialog").addClass("toast-"+mopt.type)
+			$("#info_dialog").addClass("jqgrid-toast-"+mopt.type)
 		}
 		$.jgrid.viewModal("#info_dialog",{
 			onHide: function(h) {
@@ -596,6 +600,9 @@ $.extend($.jgrid,{
 						so = options.value.split(delim);
 						for(i=0; i<so.length;i++){
 							sv = so[i].split(sep);
+							if(sv.length === 1) {
+								sv.unshift("");
+							}
 							if(sv.length > 2 ) {
 								sv[1] = $.map(sv,function(n,ii){if(ii>0) { return n;} }).join(sep);
 							}

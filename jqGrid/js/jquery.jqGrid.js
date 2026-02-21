@@ -1,6 +1,6 @@
 /**
 *
-* @license Guriddo jqGrid JS - v5.8.10 - 2025-04-03
+* @license Guriddo jqGrid JS - v5.8.11 - 2026-02-21
 * Copyright(c) 2008, Tony Tomov, tony@trirand.com
 * 
 * License: http://guriddo.net/?page_id=103334
@@ -18,13 +18,28 @@
  	}
 }(function( $ ) {
 "use strict";
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid = $.jgrid || {};
 if(!$.jgrid.hasOwnProperty("defaults")) {
 	$.jgrid.defaults = {};
 }
 $.extend($.jgrid,{
-	version : "5.8.10",
+	version : "5.8.11",
 	isNull : function( p, strict_eq) {
 		if(strict_eq && strict_eq === true) {
 			return p === null;
@@ -134,18 +149,14 @@ $.extend($.jgrid,{
 		return v.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ");
 	},
 	useJSON : true,
-	runCode : function (obj){	
-		return Function('"use strict";return (' + obj + ')')();
-	},
 	parse : function(jsonString) {
-		var js = jsonString;
-		if (js.slice(0,9) === "while(1);") { js = js.slice(9); }
-		if (js.slice(0,2) === "/*") { js = js.slice(2,js.length-2); }
-		if(!js) { js = "{}"; }
-		return ($.jgrid.useJSON===true && typeof JSON === 'object' && typeof JSON.parse === 'function') ?
-			JSON.parse(js) :
-			$.jgrid.runCode( js );
-			//eval('(' + js + ')');
+		const js = jsonString.replace(/^while\(1\);/,'').replace(/^\/\*/,'');
+		try {
+			return JSON.parse( js )
+		} catch (exception) {
+			console.log(exception);
+		}
+		return undefined;
 	},
 	dateToOADate :function  (date) {
 		// Add 1462 in 1904 system (apple)
@@ -457,469 +468,1487 @@ $.extend($.jgrid,{
 		return (w1 - w2) < 0 ? 18 : (w1 - w2);
 	},
 	ajaxOptions: {},
-	from : function(source){
-		// Original Author Hugo Bonacci
-		// License MIT http://jlinq.codeplex.com/license
-		var $t = this,
-		QueryObject=function(d,q){
-		if(typeof d==="string"){
-			d=$.data(d);
-		}
-		var self=this,
-		_data=d,
-		_usecase=true,
-		_trim=false,
-		_query=q,
-		_stripNum = /[\$,%]/g,
-		_lastCommand=null,
-		_lastField=null,
-		_orDepth=0,
-		_negate=false,
-		_queuedOperator="",
-		_sorting=[],
-		_this = "a_d_d_t_h_i_s",
-		_useProperties=true;
-		if(typeof d==="object"&&d.push) {
-			if(d.length>0){
-				if(typeof d[0]!=="object"){
-					_useProperties=false;
-				}else{
-					_useProperties=true;
-				}
-			}
-		}else{
-			throw "data provides is not an array";
-		}
-		this._hasData=function(){
-			return _data===null?false:_data.length===0?false:true;
-		};
-		this._getStr=function(s){
-			var phrase=[];
-			if(_trim){
-				phrase.push("$.jgrid.trim(");
-			}
-			phrase.push("String("+s+")");
-			if(_trim){
-				phrase.push(")");
-			}
-			if(!_usecase){
-				phrase.push(".toLowerCase()");
-			}
-			return phrase.join("");
-		};
-		this._strComp=function(val){
-			if(typeof val==="string"){
-				return".toString()";
-			}
-			return"";
-		};
-		this._group=function(f,u){
-			return({field:f.toString(),unique:u,items:[]});
-		};
-		this._toStr=function(phrase){
-			if(_trim){
-				phrase=$.jgrid.trim(phrase);
-			}
-			phrase=phrase.toString().replace(/\\/g,'\\\\').replace(/\"/g,'\\"');
-			return _usecase ? phrase : phrase.toLowerCase();
-		};
-		this._funcLoop=function(func){
-			var results=[];
-			$.each(_data,function(i,v){
-				results.push(func(v));
-			});
-			return results;
-		};
-		this._append=function(s){
-			var i;
-			if(_query===null){
-				_query="";
-			} else {
-				_query+=_queuedOperator === "" ? " && " :_queuedOperator;
-			}
-			for (i=0;i<_orDepth;i++){
-				_query+="(";
-			}
-			if(_negate){
-				_query+="!";
-			}
-			_query+="("+s+")";
-			_negate=false;
-			_queuedOperator="";
-			_orDepth=0;
-		};
-		this._setCommand=function(f,c){
-			_lastCommand=f;
-			_lastField=c;
-		};
-		this._resetNegate=function(){
-			_negate=false;
-		};
-		this._repeatCommand=function(f,v){
-			if(_lastCommand===null){
-				return self;
-			}
-			if(f!==null&&v!==null){
-				return _lastCommand(f,v);
-			}
-			if(_lastField===null){
-				return _lastCommand(f);
-			}
-			if(!_useProperties){
-				return _lastCommand(f);
-			}
-			return _lastCommand(_lastField,f);
-		};
-		this._equals=function(a,b){
-			return(self._compare(a,b,1)===0);
-		};
-		this._compare=function(a,b,d){
-			var toString = Object.prototype.toString;
-			if( d === undefined) { d = 1; }
-			if(a===undefined) { a = null; }
-			if(b===undefined) { b = null; }
-			if(a===null && b===null){
-				return 0;
-			}
-			if(a===null&&b!==null){
-				return 1;
-			}
-			if(a!==null&&b===null){
-				return -1;
-			}
-			if( (toString.call(a) === '[object Date]' && toString.call(b) === '[object Date]') || 
-				(typeof a === "number" && typeof b === "number") ) {
-				return a > b ? d : a < b ? -d : 0;
-			}
-			var ret = String(a).localeCompare(String(b));
-			return ret < 0 ? -d : ret > 0 ? d : 0;
-		};
-		this._performSort=function(){
-			if(_sorting.length===0){return;}
-			_data=self._doSort(_data,0);
-		};
-		this._doSort=function(d,q){
-			var by=_sorting[q].by,
-			dir=_sorting[q].dir,
-			type = _sorting[q].type,
-			dfmt = _sorting[q].datefmt,
-			sfunc = _sorting[q].sfunc;
-			if(q===_sorting.length-1){
-				return self._getOrder(d, by, dir, type, dfmt, sfunc);
-			}
-			q++;
-			var values=self._getGroup(d,by,dir,type,dfmt), results=[], i, j, sorted;
-			for(i=0;i<values.length;i++){
-				sorted=self._doSort(values[i].items,q);
-				for(j=0;j<sorted.length;j++){
-					results.push(sorted[j]);
-				}
-			}
-			return results;
-		};
-		this._getOrder=function(data,by,dir,type, dfmt, sfunc){
-			var sortData=[],_sortData=[], newDir = dir==="a" ? 1 : -1, i,ab,j,
-			findSortKey;
+	/*
+	 * jLinq - 3.0.1
+	 * Hugo Bonacci - hugoware.com
+	 */
+	//jLinq functionality
 
-			if(type === undefined ) { type = "text"; }
-			if (type === 'float' || type=== 'number' || type=== 'currency' || type=== 'numeric') {
-				findSortKey = function($cell) {
-					var key = parseFloat( String($cell).replace(_stripNum, ''));
-					return isNaN(key) ? Number.NEGATIVE_INFINITY : key;
-				};
-			} else if (type==='int' || type==='integer') {
-				findSortKey = function($cell) {
-					return $cell ? parseFloat(String($cell).replace(_stripNum, '')) : Number.NEGATIVE_INFINITY;
-				};
-			} else if(type === 'date' || type === 'datetime') {
-				findSortKey = function($cell) {
-					return $.jgrid.parseDate.call($t, dfmt, $cell).getTime();
-				};
-			} else if($.jgrid.isFunction(type)) {
-				findSortKey = type;
-			} else {
-				findSortKey = function($cell) {
-					$cell = $cell ? $.jgrid.trim(String($cell)) : "";
-					return _usecase ? $cell : $cell.toLowerCase();
-				};
-			}
-			$.each(data,function(i,v){
-				ab = by!=="" ? $.jgrid.getAccessor(v,by) : v;
-				if(ab === undefined) { ab = ""; }
-				ab = findSortKey(ab, v);
-				_sortData.push({ 'vSort': ab,'index':i});
-			});
-			if($.jgrid.isFunction(sfunc)) {
-				_sortData.sort(function(a,b){
-					return sfunc.call(this,a.vSort, b.vSort, newDir, a, b);
-				});
-			} else {
-				_sortData.sort(function(a,b){
-					return self._compare(a.vSort, b.vSort,newDir);
-				});
-			}
-			j=0;
-			var nrec= data.length;
-			// overhead, but we do not change the original data.
-			while(j<nrec) {
-				i = _sortData[j].index;
-				sortData.push(data[i]);
-				j++;
-			}
-			return sortData;
-		};
-		this._getGroup=function(data,by,dir,type, dfmt){
-			var results=[],
-			group=null,
-			last=null, val;
-			$.each(self._getOrder(data,by,dir,type, dfmt),function(i,v){
-				val = $.jgrid.getAccessor(v, by);
-				if($.jgrid.isNull(val)) { val = ""; }
-				if(!self._equals(last,val)){
-					last=val;
-					if(group !== null){
-						results.push(group);
+	jLinq: function () {
+		var jLinq;
+
+		var framework = {
+			//command types for extensions
+			command: {
+				//queues a comparison to filter records
+				query: 0,
+				//executes all queued commands and filters the records
+				select: 1,
+				//performs an immediate action to the query
+				action: 2
+			},
+			//common expressions
+			exp: {
+				//gets each part of a dot notation path
+				get_path: /\./g,
+				//escapes string so it can be used in a regular expression
+				escape_regex: /[\-\[\]\{\}\(\)\*\+\?\.\,\\\^\$\|\#\s]/g
+			},
+			//common javascript types
+			type: {
+				nothing: -1,
+				undefined: 0,
+				string: 1,
+				number: 2,
+				array: 3,
+				regex: 4,
+				bool: 5,
+				method: 6,
+				datetime: 7,
+				object: 99
+			},
+			//contains jLinq commands and functions
+			library: {
+				//the current commands in jLinq
+				commands: {},
+				//the type comparisons for jLinq
+				types: {},
+				//includes a comparison to identify types
+				addType: function (type, compare) {
+					framework.library.types[type] = compare;
+				},
+				//adds a command to the jLinq library
+				extend: function (commands) {
+					//convert to an array if not already
+					if (!framework.util.isType(framework.type.array, commands)) {
+						commands = [commands];
 					}
-					group=self._group(by,val);
-				}
-				group.items.push(v);
-			});
-			if(group !== null){
-				results.push(group);
+					//append each method
+					framework.util.each(commands, function (command) {
+						framework.library.commands[command.name] = command;
+					});
+				},
+				//starts a new jLinq query
+				query: function (collection, params) {
+					//make sure something is there
+					if (!framework.util.isType(framework.type.array, collection)) {
+						throw "jLinq can only query arrays of objects.";
+					}
+					//clone the array to prevent changing objects - by default
+					//this is off
+					collection = params && (params.clone || (params.clone == null && jLinq.alwaysClone))
+							? framework.util.clone(collection)
+							: collection;
+
+					//holds the state of the current query
+					var self = {
+						//the public instance of the query
+						instance: {
+							//should this query ignore case
+							ignoreCase: jLinq.ignoreCase,
+							//should the next command be evaluated as not
+							not: false,
+							//the action that was last invoked
+							lastCommand: null,
+							//the name of the last field queried
+							lastField: null,
+							//the current records available
+							records: collection,
+							//records that have been filtered out
+							removed: [],
+							//tells a query to start a new function
+							or: function () {
+								self.startNewCommandSet();
+							},
+							//the query creator object
+							query: {}
+						},
+						//determines if the arguments provided meet the
+						//requirements to be a repeated command
+						canRepeatCommand: function (args) {
+							return self.instance.lastCommand != null &&
+									args.length == (self.instance.lastCommand.method.length + 1) &&
+									framework.util.isType(framework.type.string, args[0])
+						},
+						//commands waiting to execute
+						commands: [[]],
+						//executes the current query and updated the records
+						execute: function () {
+							var results = [];
+							//get the current state of the query
+							var state = self.instance;
+							//start checking each record
+							framework.util.each(self.instance.records, function (record) {
+								//update the state
+								state.record = record;
+								//perform the evaluation
+								if (self.evaluate(state)) {
+									results.push(record);
+								} else {
+									self.instance.removed.push(record);
+								}
+							});
+							//update the matching records
+							self.instance.records = results;
+						},
+						//tries to find a value from the path name
+						findValue: framework.util.findValue,
+						//evaluates each queued command for matched
+						evaluate: function (state) {
+							//check each of the command sets
+							for (var command = 0, l = self.commands.length; command < l; command++) {
+								//each set represents an 'or' set - if any
+								//match then return this worked
+								var set = self.commands[command];
+								if (self.evaluateSet(set, state)) {
+									return true;
+								}
+							};
+							//since nothing evaluated, return it failed
+							return false;
+						},
+						//evaluates a single set of commands
+						evaluateSet: function (set, state) {
+							//check each command in this set
+							for (var item in set) {
+								if (!set.hasOwnProperty(item))
+									continue;
+								//get the details to use
+								var command = set[item];
+								state.value = self.findValue(state.record, command.path);
+								state.compare = function (types, opt) {
+									return framework.util.compare(state.value, types, state, opt);
+								};
+								state.when = function (types, opt) {
+									return framework.util.when(state.value, types, state, opt);
+								};
+								//evaluate the command
+								try {
+									var result = command.method.apply(state, command.args);
+									if (command.not) {
+										result = !result;
+									}
+									if (!result) {
+										return false;
+									}
+								}
+								//errors and exceptions just result in a failed
+								//to evaluate as true
+								catch (e) {
+									return false;
+								}
+							}
+							//if nothing failed then return it worked
+							return true;
+						},
+						//repeats the previous command with new
+						//arguments
+						repeat: function (args) {
+							//check if there is anything to repeat
+							if (!self.instance.lastCommand || args == null) {
+								return;
+							}
+							//get the array of args to work with
+							args = framework.util.toArray(args);
+							//check if there is a field name has changed, and
+							//if so, update the args to match
+							if (self.canRepeatCommand(args)) {
+								self.instance.lastField = args[0];
+								args = framework.util.select(args, null, 1, null);
+							}
+							//invoke the command now
+							self.queue(self.instance.lastCommand, args);
+						},
+						//saves a command to evaluate later
+						queue: function (command, args) {
+							self.instance.lastCommand = command;
+							//the base detail for the command
+							var detail = {
+								name: command.name,
+								method: command.method,
+								field: self.instance.lastField,
+								count: command.method.length,
+								args: args,
+								not: self.not
+							};
+							//check to see if there is an extra argument which should
+							//be the field name argument
+							if (detail.args.length > command.method.length) {
+								//if so, grab the name and update the arguments
+								detail.field = detail.args[0];
+								detail.args = framework.util.remaining(detail.args, 1);
+								self.instance.lastField = detail.field;
+							}
+							//get the full path for the field name
+							detail.path = detail.field;
+							//queue the command to the current set
+							self.commands[self.commands.length - 1].push(detail);
+							//then reset the not state
+							self.not = false;
+						},
+						//creates a new set of methods that should be evaluated
+						startNewCommandSet: function () {
+							self.commands.push([]);
+						},
+						//marks a command to evaluate as NOT
+						setNot: function () {
+							self.not = !self.not;
+						}
+					};
+					//append each of the functions
+					framework.util.each(framework.library.commands, function (command) {
+						//Query methods queue up and are not evaluated until
+						//a selection or action command is called
+						if (command.type == framework.command.query) {
+							//the default action to perform
+							var action = function () {
+								self.queue(command, arguments);
+								return self.instance.query;
+							};
+							//create the default action
+							self.instance.query[command.name] = action;
+							//orCommand
+							var name = framework.util.operatorName(command.name);
+							self.instance.query["or" + name] = function () {
+								self.startNewCommandSet();
+								return action.apply(null, arguments);
+							};
+							//orNotCommand
+							self.instance.query["orNot" + name] = function () {
+								self.startNewCommandSet();
+								self.setNot();
+								return action.apply(null, arguments);
+							};
+							//andCommand
+							self.instance.query["and" + name] = function () {
+								return action.apply(null, arguments);
+							};
+							//andNotCommand
+							self.instance.query["andNot" + name] = function () {
+								self.setNot();
+								return action.apply(null, arguments);
+							};
+							//notCommand
+							self.instance.query["not" + name] = function () {
+								self.setNot();
+								return action.apply(null, arguments);
+							};
+						}
+						//Selections commands flush the queue of commands
+						//before they are executed. A selection command
+						//must return something (even if it is the current query)
+						else if (command.type == framework.command.select) {
+							self.instance.query[command.name] = function () {
+								//apply the current changes
+								self.execute();
+								//get the current state of the query
+								var state = self.instance;
+								state.compare = function (value, types) {
+									return framework.util.compare(value, types, state);
+								};
+								state.when = function (value, types) {
+									return framework.util.when(value, types, state);
+								};
+								//perform the work
+								return command.method.apply(state, arguments);
+							};
+						}
+						//actions evaluate immediately then return control to
+						//the query 
+						else if (command.type == framework.command.action) {
+							self.instance.query[command.name] = function () {
+								//get the current state of the query
+								var state = self.instance;
+								state.compare = function (value, types) {
+									return framework.util.compare(value, types, state);
+								};
+								state.when = function (value, types) {
+									return framework.util.when(value, types, state);
+								};
+								//perform the work
+								command.method.apply(state, arguments);
+								return self.instance.query;
+							};
+						}
+					});
+					//causes the next command to be an 'or'
+					self.instance.query.or = function () {
+						self.startNewCommandSet();
+						self.repeat(arguments);
+						return self.instance.query;
+					};
+					//causes the next command to be an 'and' (which is default)
+					self.instance.query.and = function () {
+						self.repeat(arguments);
+						return self.instance.query;
+					};
+					//causes the next command to be a 'not'
+					self.instance.query.not = function () {
+						self.setNot();
+						self.repeat(arguments);
+						return self.instance.query;
+					};
+					//causes the next command to be a 'not'
+					self.instance.query.andNot = function () {
+						self.setNot();
+						self.repeat(arguments);
+						return self.instance.query;
+					};
+					//causes the next command to be a 'not' and 'or'
+					self.instance.query.orNot = function () {
+						self.startNewCommandSet();
+						self.setNot();
+						self.repeat(arguments);
+						return self.instance.query;
+					};
+					//return the query information
+					return self.instance.query;
 			}
+			},
+			//variety of helper methods
+			util: {
+				//removes trailing and leading spaces from a value
+				trim: function (value) {
+					//get the string value
+					value = value == null ? "" : value;
+					value = value.toString();
+					//trim the spaces
+					return value.replace(/^\s*|\s*$/g, "");
+				},
+				//clones each item in an array
+				cloneArray: function (array) {
+					var result = [];
+					framework.util.each(array, function (item) {
+						result.push(framework.util.clone(item));
+					});
+					return result;
+				},
+				//creates a copy of an object
+				clone: function (obj) {
+					//for arrays, copy each item
+					if (framework.util.isType(framework.type.array, obj)) {
+						return framework.util.cloneArray(obj);
+					}
+					//for object check each value
+					else if (framework.util.isType(framework.type.object, obj)) {
+						var clone = {};
+						for (var item in obj) {
+							if (obj.hasOwnProperty(item))
+								clone[item] = framework.util.clone(obj[item]);
+						}
+						return clone;
+					}
+					//all other types just return the value
+					else {
+						return obj;
+					}
+				},
+				//creates an invocation handler for a field
+				//name instead of grabbing values
+				invoke: function (obj, args) {
+					//copy the array to avoid breaking any other calls
+					args = args.concat();
+					//start by getting the path
+					var path = args[0];
+					//find the method and extract the arguments
+					var method = framework.util.findValue(obj, path);
+					args = framework.util.select(args, null, 1, null);
+					//if we are invoking a method that hangs off
+					//another object then we need to find the value
+					path = path.replace(/\..*$/, "");
+					var parent = framework.util.findValue(obj, path);
+					obj = parent === method ? obj : parent;
+					//return the result of the call
+					try {
+						var result = method.apply(obj, args);
+						return result;
+					} catch (e) {
+						return null;
+					}
+				},
+				//gets a path from a field name
+				getPath: function (path) {
+					return framework.util.toString(path).split(framework.exp.get_path);
+				},
+				//searches an object to find a value
+				findValue: function (obj, path) {
+					//start by checking if this is actualy an attempt to 
+					//invoke a value on this property
+					if (framework.util.isType(framework.type.array, path)) {
+						return framework.util.invoke(obj, path);
+					}
+					//if this referring to a field
+					else if (framework.util.isType(framework.type.string, path)) {
+						//get each part of the path
+						path = framework.util.getPath(path);
+						//search for the record
+						var index = 0;
+						while (obj != null && index < path.length) {
+							obj = obj[path[index++]];
+						}
+						//return the final found object
+						return obj;
+					}
+					//nothing that can be read, just return the value
+					else {
+						return obj;
+				}
+				},
+				//returns the value at the provided index
+				elementAt: function (collection, index) {
+					return collection && collection.length > 0 && index < collection.length && index >= 0
+							? collection[index]
+							: null;
+				},
+				//makes a string save for regular expression searching
+				regexEscape: function (val) {
+					return (val ? val : "").toString().replace(framework.exp.escape_regex, "\\$&");
+				},
+				//matches expressions to a value
+				regexMatch: function (expression, source, ignoreCase) {
+					//get the string value if needed
+					if (framework.util.isType(framework.type.regex, expression)) {
+						expression = expression.source;
+					}
+					//create the actual expression and match
+					expression = new RegExp(framework.util.toString(expression), ignoreCase ? "gi" : "g");
+					return framework.util.toString(source).match(expression) != null;
+				},
+				//converts a command to an operator name
+				operatorName: function (name) {
+					return name.replace(/^\w/, function (match) {
+						return match.toUpperCase();
+					});
+				},
+				//changes a value based on the type
+				compare: function (value, types, state, opt) {
+					var result = framework.util.when(value, types, state, opt);
+					return result == true ? result : false;
+				},
+				//performs the correct action depending on the type
+				when: function (value, types, state, opt) {
+					if(opt !== undefined && typeof opt === 'object') {
+						if( ['number', 'float', 'numeric'].includes(opt.stype) ) {
+							value = parseFloat( value);
+						} else if (['integer', 'int'].includes(opt.stype)) {
+							value = parseInt(value, 10);
+						} else if( ['date', 'datetime'].includes(opt.stype)) {
+							value = $.jgrid.parseDate(opt.srcfmt || 'Y-m-d', value).getTime();
+						}
+					}
+					state.value = value;
+					//get the kind of object this is
+					var kind = framework.util.getType(value);
+					//check each of the types
+					for (var item in types) {
+						if (!types.hasOwnProperty(item))
+							continue;
+						var type = framework.type[item];
+						if (type == kind) {
+							return types[item].apply(state, [value]);
+						}
+					}
+					//if there is a fallback comparison
+					if (types.other) {
+						return types.other.apply(state, [value]);
+					}
+					//no matches were found
+					return null;
+				},
+				//performs an action on each item in a collection
+				each: function (collection, action) {
+					var index = 0;
+					for (var item in collection) {
+						if (collection.hasOwnProperty(item))
+							action(collection[item], index++);
+					}
+				},
+				//performs an action to each item in a collection and then returns the items
+				grab: function (collection, action) {
+					var list = [];
+					framework.util.each(collection, function (item) {
+						list.push(action(item));
+					});
+					return list;
+				},
+				//performs an action on each item in a collection
+				until: function (collection, action) {
+					for (var item = 0, l = collection.length; item < l; item++) {
+						var result = action(collection[item], item + 1);
+						if (result === true) {
+							return true;
+						}
+					}
+					return false;
+				},
+				//checks if the types match
+				isType: function (type, value) {
+					return framework.util.getType(value) == type;
+				},
+				//finds the type for an object
+				getType: function (obj) {
+					//check if this even has a value
+					if (obj == null) {
+						return framework.type.nothing;
+					}
+					//check each type except object
+					for (var item in framework.library.types) {
+						if (framework.library.types[item](obj)) {
+							return item;
+						}
+					}
+					//no matching type was found
+					return framework.type.object;
+				},
+				//grabs remaining elements from and array
+				remaining: function (array, at) {
+					var results = [];
+					for (; at < array.length; at++)
+						results.push(array[at]);
 			return results;
-		};
-		this.ignoreCase=function(){
-			_usecase=false;
-			return self;
-		};
-		this.useCase=function(){
-			_usecase=true;
-			return self;
-		};
-		this.trim=function(){
-			_trim=true;
-			return self;
-		};
-		this.noTrim=function(){
-			_trim=false;
-			return self;
-		};
-		this.execute=function(){
-			var match=_query, results=[];
-			if(match === null){
-				return self;
-			}
-			const re = new RegExp(`${_this}`, 'g');
-			$.each(_data,function(){
-				if($.jgrid.runCode.call($t, match.replace(re, JSON.stringify(this)) ) ){ //eval(match)
-					results.push(this);
+				},
+				//append items onto a target object
+				apply: function (target, source) {
+					for (var item in source) {
+						if (source.hasOwnProperty(item))
+							target[item] = source[item];
+					}
+					return target;
+				},
+				//performs sorting on a collection of records
+				reorder: function (collection, fields, ignoreCase) {
+					//reverses the fields so that they are organized
+					//in the correct order
+					return framework.util._performSort(collection, fields, ignoreCase);
+				},
+				//handles actual work of reordering (call reorder)
+				_performSort: function (collection, fields, ignoreCase) {
+					//get the next field to use
+					var field = fields.splice(0, 1);
+					if (field.length == 0) {
+						return collection;
+					}
+					field = field[0];
+					//get the name of the field and descending or not
+					var invoked = framework.util.isType(framework.type.array, field);
+					var name = (invoked ? field[0] : field);
+					var desc = name.match(/^\-/);
+					name = desc ? name.substr(1) : name;
+
+					//updat the name if needed
+					if (desc) {
+						if (invoked) {
+							field[0] = name;
+						} else {
+							field = name;
+						}
+					}
+					//IE sorting bug resolved (Thanks @rizil)
+					//http://webcache.googleusercontent.com/search?q=cache:www.zachleat.com/web/2010/02/24/array-sort/+zach+array+sort
+
+					//create the sorting method for this field
+					var sort = function (val1, val2) {
+
+						//find the values to compare
+						var a = framework.util.findValue(val1, field);
+						var b = framework.util.findValue(val2, field);
+						//default to something when null
+						if (a == null && b == null) {
+							a = 0;
+							b = 0;
+						} else if (a == null && b != null) {
+							a = 0;
+							b = 1;
+						} else if (a != null && b == null) {
+							a = 1;
+							b = 0;
+						}
+						//check for string values
+						else if (ignoreCase &&
+								framework.util.isType(framework.type.string, a) &&
+								framework.util.isType(framework.type.string, b)) {
+							a = a.toLowerCase();
+							b = b.toLowerCase();
+						}
+						//if there is a length attribute use it instead
+						else if (a.length && b.length) {
+							a = a.length;
+							b = b.length;
+						}
+						//perform the sorting
+						var result = (a < b) ? -1 : (a > b) ? 1 : 0;
+						return desc ? -result : result;
+					};
+					//then perform the sorting
+					collection.sort(sort);
+					//check for sub groups if required
+					if (fields.length > 0) {
+						//create the container for the results
+						var sorted = [];
+						var groups = framework.util.group(collection, field, ignoreCase);
+						framework.util.each(groups, function (group) {
+							var listing = fields.slice();
+							var records = framework.util._performSort(group, listing, ignoreCase);
+							sorted = sorted.concat(records);
+						});
+						//update the main collection
+						collection = sorted;
+					}
+					//the final results
+					return collection;
+				},
+				//performs sorting on a collection of records
+				orderby: function (collection, fields, params, ignoreCase) {
+					//reverses the fields so that they are organized
+					//in the correct order
+					return framework.util._performOrder(collection, fields, params, ignoreCase);
+				},
+				//handles actual work of reordering (call reorder)
+				_performOrder: function (collection, fields, params, ignoreCase) {
+					if (params == null) {
+						params = [];
+						for (var i = 0; i < fields.length; i++) {
+							params.push({so: "a", stype: "string", srcfmt: "Y-m_d", sfunc: null})
+						}
+					}
+					//get the next field to use
+					var field = fields.splice(0, 1);
+					var param = params.splice(0, 1);
+					if (field.length == 0) {
+						return collection;
+					}
+					field = field[0];
+
+					//get the name of the field and descending or not
+					var invoked = framework.util.isType(framework.type.array, field);
+					var name = (invoked ? field[0] : field);
+					var pname = (invoked ? param[0] : param);
+					//var desc = name.match(/^\-/);
+					//name = desc ? name.substr(1) : name;
+
+					param = param[0];
+
+					var stype = param.stype ? ($.jgrid.isFunction(param.stype) ? 'function' : param.stype) : 'string';
+					var funcstype = (stype === 'function') ? param.stype : null;
+					var dfmt = param.srcfmt ? param.srcfmt : "Y-m-d";
+					var sfunc = param.sfunc ? param.sfunc : null;
+
+					var dir = "a";
+					if (param["so"]) {
+						dir = param["so"].toString().toLowerCase();
+					}
+					if (dir === "desc" || dir === "descending") {
+						dir = "d";
+					}
+					if (dir === "asc" || dir === "ascending") {
+						dir = "a";
+					}
+
+					//updat the name if needed
+					if (dir === "d") {
+						if (invoked) {
+							field[0] = name;
+							param[0] = pname;
+						} else {
+							field = name;
+							param = pname;
+						}
+					}
+					//get the name of the field and descending or not
+					//IE sorting bug resolved (Thanks @rizil)
+					//http://webcache.googleusercontent.com/search?q=cache:www.zachleat.com/web/2010/02/24/array-sort/+zach+array+sort
+					//create the sorting method for this field
+					var sort = function (val1, val2) {
+						//find the values to compare
+						var a = framework.util.findValue(val1, field);
+						var b = framework.util.findValue(val2, field);
+						switch (stype) {
+							case 'int':
+							case 'integer':
+								a = parseInt(a, 10);
+								b = parseInt(b, 10);
+							break;
+							case 'float':
+							case 'number':
+							case 'numeric':
+								a = parseFloat(String(a).replace(/[\$,%]/g, ''));
+								b = parseFloat(String(b).replace(/[\$,%]/g, ''));
+								break;
+							case 'date':
+							case 'datetime':
+								a = $.jgrid.parseDate( dfmt, a);
+								b = $.jgrid.parseDate( dfmt, b);
+								break;
+							case 'function' :
+								a = funcstype.call(this, a, val1);
+								b = funcstype.call(this, b, val2);
+								break;
+						}
+						//default to something when null
+						if (a == null && b == null) {
+							a = 0;
+							b = 0;
+						} else if (a == null && b != null) {
+							a = 0;
+							b = 1;
+						} else if (a != null && b == null) {
+							a = 1;
+							b = 0;
+						}
+						//check for string values
+						else if (ignoreCase &&
+								framework.util.isType(framework.type.string, a) &&
+								framework.util.isType(framework.type.string, b)) {
+							a = a.toLowerCase();
+							b = b.toLowerCase();
+						}
+						//if there is a length attribute use it instead
+						else if (a.length && b.length) {
+							a = a.length;
+							b = b.length;
+						}
+
+						//perform the sorting
+						var result = (a < b) ? -1 : (a > b) ? 1 : 0;
+						return dir === "d" ? -result : result;
+					};
+					if ($.jgrid.isFunction(sfunc)) {
+						collection.sort(function (a, b) {
+							return sfunc.call(this, a, b, dir === "d" ? -1 : 1);
+						});
+					} else {
+						//then perform the sorting
+						collection.sort(sort);
+					}
+					//check for sub groups if required
+					if (fields.length > 0) {
+						//create the container for the results
+						var sorted = [];
+						var groups = framework.util.group(collection, field, ignoreCase);
+						framework.util.each(groups, function (group) {
+							var listing = fields.slice();
+							var lparams = params.slice();
+							var records = framework.util._performOrder(group, listing, lparams, ignoreCase);
+							sorted = sorted.concat(records);
+						});
+						//update the main collection
+						collection = sorted;
+					}
+					//the final results
+					return collection;
+				},
+				//returns groups of unique field values
+				group: function (records, field, ignoreCase) {
+
+					//create a container to track group names
+					var groups = {};
+					for (var item = 0, l = records.length; item < l; item++) {
+						//get the values
+						var record = records[item];
+						var alias = framework.util.toString(framework.util.findValue(record, field));
+						alias = ignoreCase ? alias.toUpperCase() : alias;
+						//check for existing values
+						if (!groups[alias]) {
+							groups[alias] = [record];
+						} else {
+							groups[alias].push(record);
+						}
+					}
+					//return the matches
+					return groups;
+				},
+				//compares two values for equality
+				equals: function (val1, val2, ignoreCase, prm) {
+					return framework.util.when(val1, {
+						string: function () {
+							return framework.util.regexMatch(
+									"^" + framework.util.regexEscape(val2) + "$",
+									val1,
+									ignoreCase);
+						},
+						other: function () {
+							return (val1 == null && val2 == null) || (val1 === val2);
+						}
+					}, prm, prm);
+				},
+				//converts an object to an array of elements
+				toArray: function (obj) {
+					var items = [];
+					if (obj.length) {
+						for (var i = 0; i < obj.length; i++) {
+							items.push(obj[i]);
+						}
+					} else {
+						for (var item in obj) {
+							if (obj.hasOwnProperty(item))
+								items.push(obj[item]);
+						}
+					}
+					return items;
+				},
+				//converts a value into a string
+				toString: function (val) {
+					return val == null ? "" : val.toString();
+				},
+				//grabs a range of records from a collection
+				skipTake: function (collection, action, skip, take) {
+					//set the defaults
+					skip = skip == null ? 0 : skip;
+					take = take == null ? collection.length : take;
+					//check if this will return any records
+					if (skip >= collection.length ||
+							take == 0) {
+						return [];
+					}
+					//return the results
+					return framework.util.select(collection, action, skip, skip + take);
+				},
+				//grabs a range and format for records
+				select: function (collection, action, start, end) {
+					//grab the records if there is a range
+					start = start == null ? 0 : start;
+					end = end == null ? collection.length : end;
+					//slice the records
+					var results = collection.slice(start, end);
+					//check if this is a mapping method
+					if (jLinq.util.isType(jLinq.type.object, action)) {
+						var map = action;
+						action = function (rec) {
+							//map existing values or defaults
+							// TODO: tests do not cover this method!
+							var create = {};
+							for (var item in map) {
+								if (!map.hasOwnProperty(item))
+									continue;
+								create[item] = rec[item]
+										? rec[item]
+										: map[item];
+							}
+							//return the created record
+							return create;
+						};
+					};
+					//if there is a selection method, use it
+					if (jLinq.util.isType(jLinq.type.method, action)) {
+						for (var i = 0; i < results.length; i++) {
+							var record = results[i];
+							results[i] = action.apply(record, [record]);
+						}
+					}
+					//return the final set of records
+					return results;
 				}
-			});
-			_data=results;
-			return self;
+
+			}
+
 		};
-		this.data=function(){
-			return _data;
-		};
-		this.select=function(f){
-			self._performSort();
-			if(!self._hasData()){ return[]; }
-			self.execute();
-			if($.jgrid.isFunction(f)){
-				var results=[];
-				$.each(_data,function(i,v){
-					results.push(f(v));
+		//default types
+		framework.library.addType(framework.type.nothing, function (value) {
+			return value == null;
+		});
+		framework.library.addType(framework.type.array, function (value) {
+			return value instanceof Array;
+		});
+		framework.library.addType(framework.type.string, function (value) {
+			return value.substr && value.toLowerCase;
+		});
+		framework.library.addType(framework.type.number, function (value) {
+			return value.toFixed && value.toExponential;
+		});
+		framework.library.addType(framework.type.regex, function (value) {
+			return value instanceof RegExp;
+		});
+		framework.library.addType(framework.type.bool, function (value) {
+			return value == true || value == false;
+		});
+		framework.library.addType(framework.type.method, function (value) {
+			return value instanceof Function;
+		});
+		framework.library.addType(framework.type.datetime, function (value) {
+			return value instanceof Date;
+		});
+		//add the default methods
+		framework.library.extend([
+			//sets a query to ignore case
+			{name: "ignoreCase", type: framework.command.action,
+				method: function () {
+					this.ignoreCase = true;
+				}},
+			//reverses the current set of records
+			{name: "reverse", type: framework.command.action,
+				method: function () {
+					this.records.reverse();
+				}},
+			//sets a query to evaluate case
+			{name: "useCase", type: framework.command.action,
+				method: function () {
+					this.ignoreCase = false;
+				}},
+			//performs an action for each record
+			{name: "each", type: framework.command.action,
+				method: function (action) {
+					jLinq.util.each(this.records, function (record) {
+						action(record);
+					});
+				}},
+			//attaches a value or result of a method to each record
+			{name: "attach", type: framework.command.action,
+				method: function (field, action) {
+					this.when(action, {
+						method: function () {
+							jLinq.util.each(this.records, function (record) {
+								record[field] = action(record);
+							});
+						},
+						other: function () {
+							jLinq.util.each(this.records, function (record) {
+								record[field] = action;
+							});
+						}
+					});
+				}},
+			//joins two sets of records by the key information provided
+			{name: "join", type: framework.command.action,
+				method: function (source, alias, pk, fk) {
+					jLinq.util.each(this.records, function (record) {
+						record[alias] = jLinq.from(source).equals(fk, record[pk]).select();
+					});
+				}},
+			//joins a second array but uses only the first matched record. Allows for a default for a fallback value
+			{name: "assign", type: framework.command.action,
+				method: function (source, alias, pk, fk, fallback) {
+					jLinq.util.each(this.records, function (record) {
+						record[alias] = jLinq.from(source).equals(fk, record[pk]).first(fallback);
+					});
+				}},
+			//joins two sets of records by the key information provided
+			{name: "sort", type: framework.command.action,
+				method: function () {
+					var args = jLinq.util.toArray(arguments);
+					this.records = jLinq.util.reorder(this.records, args, this.ignoreCase);
+				}},
+			//joins two sets of records by the key information provided
+			{name: "orderBy", type: framework.command.action,
+				method: function (fields, params) {
+					//var args = jLinq.util.toArray(arguments);
+					fields = $.makeArray(fields);
+					this.records = jLinq.util.orderby(this.records, fields, params, this.ignoreCase);
+				}},
+			//are the two values the same
+			{name: "equals", type: framework.command.query,
+				//method: function (value, prm) {
+				//	return jLinq.util.equals(this.value, value, this.ignoreCase, prm);
+				//}},
+				method: function (value, prm) {
+					return this.compare({
+						string: function () {
+							return framework.util.regexMatch(
+									"^" + framework.util.regexEscape(value) + "$",
+									this.value,
+									this.ignoreCase);
+						},
+						other: function () {
+							return this.value === value;
+						}
+					}, prm);
+				}},
+			//does this start with a value
+			{name: "starts", type: framework.command.query,
+				method: function (value) {
+					return this.compare({
+						array: function () {
+							return jLinq.util.equals(this.value[0], value, this.ignoreCase);
+						},
+						other: function () {
+							return jLinq.util.regexMatch(("^" + jLinq.util.regexEscape(value)), this.value, this.ignoreCase);
+						}
+					});
+				}},
+
+			//does this start with a value
+			{name: "ends", type: framework.command.query,
+				method: function (value) {
+					return this.compare({
+						array: function () {
+							return jLinq.util.equals(this.value[this.value.length - 1], value, this.ignoreCase);
+						},
+						other: function () {
+							return jLinq.util.regexMatch((jLinq.util.regexEscape(value) + "$"), this.value, this.ignoreCase);
+						}
+					});
+				}},
+
+			//does this start with a value
+			{name: "contains", type: framework.command.query,
+				method: function (value) {
+					return this.compare({
+						array: function () {
+							var ignoreCase = this.ignoreCase;
+							return jLinq.util.until(this.value, function (item) {
+								return jLinq.util.equals(item, value, ignoreCase);
+							});
+						},
+						other: function () {
+							return jLinq.util.regexMatch(jLinq.util.regexEscape(value), this.value, this.ignoreCase);
+						}
+					});
+				}},
+			//does this start with a value
+			{name: "match", type: framework.command.query,
+				method: function (value) {
+					return this.compare({
+						array: function () {
+							var ignoreCase = this.ignoreCase;
+							return jLinq.util.until(this.value, function (item) {
+								return jLinq.util.regexMatch(value, item, ignoreCase);
+							});
+						},
+						other: function () {
+							return jLinq.util.regexMatch(value, this.value, this.ignoreCase);
+						}
+					});
+				}},
+			//checks if the value matches the type provided
+			{name: "type", type: framework.command.query,
+				method: function (type) {
+					return jLinq.util.isType(type, this.value);
+				}},
+			//is the value greater than the argument
+			{name: "greater", type: framework.command.query,
+				method: function (value, prm) {
+					return this.compare({
+						array: function () {
+							return this.value.length > value;
+						},
+						string: function () {
+							return this.value > value;
+						},
+						other: function () {
+							return this.value > value;
+						}
+					}, prm);
+				}},
+			//is the value greater than or equal to the argument
+			{name: "greaterEquals", type: framework.command.query,
+				method: function (value, prm) {
+					return this.compare({
+						array: function () {
+							return this.value.length >= value;
+						},
+						string: function () {
+							return this >= value;
+						},
+						other: function () {
+							return this.value >= value;
+						}
+					}, prm);
+				}},
+			//is the value less than the argument
+			{name: "less", type: framework.command.query,
+				method: function (value, prm) {
+					return this.compare({
+						array: function () {
+							return this.value.length < value;
+						},
+						string: function () {
+							return this.value < value;
+						},
+						other: function () {
+							return this.value < value;
+						}
+					}, prm);
+				}},
+			//is the value less than or equal to the argument
+			{name: "lessEquals", type: framework.command.query,
+				method: function (value, prm) {
+					return this.compare({
+						array: function () {
+							return this.value.length <= value;
+						},
+						string: function () {
+							return this.value <= value;
+						},
+						other: function () {
+							return this.value <= value;
+						}
+					}, prm);
+				}},
+			//is the value between the values provided
+			{name: "between", type: framework.command.query,
+				method: function (low, high) {
+					return this.compare({
+						array: function () {
+							return this.value.length > low && this.value.length < high;
+						},
+						string: function () {
+							return this.value.length > low && this.value.length < high;
+						},
+						other: function () {
+							return this.value > low && this.value < high;
+						}
+					});
+				}},
+			//is the value between or equal to the values provided
+			{name: "betweenEquals", type: framework.command.query,
+				method: function (low, high) {
+					return this.compare({
+						array: function () {
+							return this.value.length >= low && this.value.length <= high;
+						},
+						string: function () {
+							return this.value.length >= low && this.value.length <= high;
+						},
+						other: function () {
+							return this.value >= low && this.value <= high;
+						}
+					});
+				}},
+			//returns if a value is null or contains nothing
+			{name: "empty", type: framework.command.query,
+				method: function () {
+					return this.compare({
+						array: function () {
+							return this.value.length == 0;
+						},
+						string: function () {
+							return jLinq.util.trim(this.value).length == 0;
+						},
+						other: function () {
+							return this.value == null;
+						}
+					});
+				}},
+			//returns if a value is null 
+			{name: "isNull", type: framework.command.query,
+				method: function () {
+					return this.compare({
+						array: function () {
+							return false;
+						},
+						string: function () {
+							return jLinq.util.trim(this.value.toLowerCase()) === "null";
+						},
+						other: function () {
+							return this.value === null;
+						}
+					});
+				}},
+			//is the value in set
+			{name: "isIn", type: framework.command.query,
+				method: function (value) {
+					return this.compare({
+						//array:function() { return this.value.length <= value; },
+						string: function () {
+							return value.split(",").indexOf(this.value) > -1;
+						},
+						other: function () {
+							return String(value).split(",").indexOf(this.value) > -1;
+						}
+					});
+				}},
+			{name: "user", type: framework.command.query,
+				method: function (op, field, data, gridId) {
+					return this.compare({
+						//array:function() { return this.value.length <= value; },
+						other: function () {
+							var a = $("#" + gridId)[0];
+							return a.p.customFilterDef[op].action.call(a, {rowItem: this.record, searchName: field, searchValue: data});
+						}
+					});
+				}},
+			//returns if a value is true or exists
+			{name: "is", type: framework.command.query,
+				method: function () {
+					return this.compare({
+						bool: function () {
+							return this.value === true;
+						},
+						other: function () {
+							return this.value != null;
+						}
+					});
+				}},
+
+			//gets the smallest value from the collection
+			{name: "min", type: framework.command.select,
+				method: function (field) {
+					var matches = jLinq.util.reorder(this.records, [field], this.ignoreCase);
+					return jLinq.util.elementAt(matches, 0);
+				}},
+
+			//gets the largest value from the collection
+			{name: "max", type: framework.command.select,
+				method: function (field) {
+					var matches = jLinq.util.reorder(this.records, [field], this.ignoreCase);
+					return jLinq.util.elementAt(matches, matches.length - 1);
+				}},
+			//returns the sum of the values of the field
+			{name: "sum", type: framework.command.select,
+				method: function (field) {
+					var sum;
+					jLinq.util.each(this.records, function (record) {
+						var value = jLinq.util.findValue(record, field);
+						sum = sum == null ? value : (sum + value);
+					});
+					return sum;
+				}},
+			//returns the sum of the values of the field
+			{name: "average", type: framework.command.select,
+				method: function (field) {
+					var sum;
+					jLinq.util.each(this.records, function (record) {
+						var value = jLinq.util.findValue(record, field);
+						sum = sum == null ? value : (sum + value);
+					});
+					return sum / this.records.length;
+				}},
+			//skips the requested number of records
+			{name: "skip", type: framework.command.select,
+				method: function (skip, selection) {
+					this.records = this.when(selection, {
+						method: function () {
+							return jLinq.util.skipTake(this.records, selection, skip, null);
+						},
+						object: function () {
+							return jLinq.util.skipTake(this.records, selection, skip, null);
+						},
+						other: function () {
+							return jLinq.util.skipTake(this.records, null, skip, null);
+						}
+					});
+					return this.query;
+				}},
+			//takes the requested number of records
+			{name: "take", type: framework.command.select,
+				method: function (take, selection) {
+					return this.when(selection, {
+						method: function () {
+							return jLinq.util.skipTake(this.records, selection, null, take);
+						},
+						object: function () {
+							return jLinq.util.skipTake(this.records, selection, null, take);
+						},
+						other: function () {
+							return jLinq.util.skipTake(this.records, null, null, take);
+						}
+					});
+				}},
+			//skips and takes records
+			{name: "skipTake", type: framework.command.select,
+				method: function (skip, take, selection) {
+					return this.when(selection, {
+						method: function () {
+							return jLinq.util.skipTake(this.records, selection, skip, take);
+						},
+						object: function () {
+							return jLinq.util.skipTake(this.records, selection, skip, take);
+						},
+						other: function () {
+							return jLinq.util.skipTake(this.records, null, skip, take);
+						}
+					});
+				}},
+			//selects the remaining records
+			{name: "select", type: framework.command.select,
+				method: function (selection) {
+					return this.when(selection, {
+						method: function () {
+							return jLinq.util.select(this.records, selection);
+						},
+						object: function () {
+							return jLinq.util.select(this.records, selection);
+						},
+						other: function () {
+							return this.records;
+						}
+					});
+				}},
+			//selects all of the distinct values for a field
+			{name: "distinct", type: framework.command.select,
+				method: function (field) {
+					var groups = jLinq.util.group(this.records, field, this.ignoreCase);
+					return jLinq.util.grab(groups, function (record) {
+						return jLinq.util.findValue(record[0], field);
+					});
+				}},
+			//groups the values of a field by unique values
+			{name: "group", type: framework.command.select,
+				method: function (field) {
+					return jLinq.util.group(this.records, field, this.ignoreCase);
+				}},
+			//selects records into a new format
+			{name: "define", type: framework.command.select,
+				method: function (selection) {
+					var results = this.when(selection, {
+						method: function () {
+							return jLinq.util.select(this.records, selection);
+						},
+						object: function () {
+							return jLinq.util.select(this.records, selection);
+						},
+						other: function () {
+							return this.records;
+						}
+					});
+					return jLinq.from(results);
+				}},
+			//returns if a collection contains any records
+			{name: "any", type: framework.command.select,
+				method: function () {
+					return this.records.length > 0;
+				}},
+			//returns if no records matched this query
+			{name: "none", type: framework.command.select,
+				method: function () {
+					return this.records.length == 0;
+				}},
+			//returns if all records matched the query
+			{name: "all", type: framework.command.select,
+				method: function () {
+					return this.removed.length == 0;
+				}},
+			//returns the first record found or the fallback value if nothing was found
+			{name: "first", type: framework.command.select,
+				method: function (fallback) {
+					var record = jLinq.util.elementAt(this.records, 0);
+					return record == null ? fallback : record;
+				}},
+			//returns the last record found or the fallback value if nothing was found
+			{name: "last", type: framework.command.select,
+				method: function (fallback) {
+					var record = jLinq.util.elementAt(this.records, this.records.length - 1);
+					return record == null ? fallback : record;
+				}},
+
+			//returns the record at the provided index or the fallback value if nothing was found
+			{name: "at", type: framework.command.select,
+				method: function (index, fallback) {
+					var record = jLinq.util.elementAt(this.records, index);
+					return record == null ? fallback : record;
+				}},
+			//returns the remaining count of records
+			{name: "count", type: framework.command.select,
+				method: function () {
+					return this.records.length;
+				}},
+			//selects the remaining records
+			{name: "removed", type: framework.command.select,
+				method: function (selection) {
+					return this.when(selection, {
+						method: function () {
+							return jLinq.util.select(this.removed, selection);
+						},
+						object: function () {
+							return jLinq.util.select(this.removed, selection);
+						},
+						other: function () {
+							return this.removed;
+						}
+					});
+				}},
+			//performs a manual comparison of records
+			{name: "where", type: framework.command.select,
+				method: function (compare) {
+
+					//filter the selection
+					var state = this;
+					var matches = [];
+					jLinq.util.each(this.records, function (record) {
+						if (compare.apply(state, [record]) === true) {
+							matches.push(record);
+						}
+					});
+					//create a new query with matching arguments
+					var query = jLinq.from(matches);
+					if (!this.ignoreCase) {
+						query.useCase();
+					}
+					return query;
+				}}
+		]);
+		//set the public object
+		jLinq = {
+			//determines if new queries should always be
+			//cloned to prevent accidental changes to objects
+			alwaysClone: false,
+			//sets the default for jLinq query case checking
+			ignoreCase: true,
+			//command types (select, query, action)
+			command: framework.command,
+			//types of object and values
+			type: framework.type,
+			//allows command to be added to the library
+			extend: function () {
+				framework.library.extend.apply(null, arguments);
+			},
+			//core function to start and entirely new query
+			query: function (collection, params) {
+				return framework.library.query(collection, params);
+			},
+			//starts a new query with the array provided
+			from: function (collection) {
+				return framework.library.query(collection, {clone: false});
+			},
+			//returns a list of commands in the library
+			getCommands: function () {
+				return framework.util.grab(framework.library.commands, function (command) {
+					return {
+						name: command.name,
+						typeId: command.type,
+						type: command.type == framework.command.select ? "select"
+								: command.type == framework.command.query ? "query"
+								: command.type == framework.command.action ? "action"
+								: "unknown"
+					};
 				});
-				return results;
+			},
+			//helper functions for jLinq
+			util: {
+				//removes leading and trailing spaces
+				trim: framework.util.trim,
+				//loops and finds a value in an object from a path
+				findValue: framework.util.findValue,
+				//gets an element at the specified index (if any)
+				elementAt: framework.util.elementAt,
+				//returns a regex safe version of a string
+				regexEscape: framework.util.regexEscape,
+				//compares an expression to another string
+				regexMatch: framework.util.regexMatch,
+				//compares equality of two objects
+				equals: framework.util.equals,
+				//gets groups for a collection
+				group: framework.util.group,
+				//updates the order of a collection
+				reorder: framework.util.reorder,
+				//updates the order of a collection
+				orderby: framework.util.orderby,
+				//performs a function when a value matches a type
+				when: framework.util.when,
+				//converts an object to an array of values
+				toArray: framework.util.toArray,
+				//loops for each record in a set
+				each: framework.util.each,
+				//grabs a collection of items
+				grab: framework.util.grab,
+				//loops records until one returns true or the end is reached
+				until: framework.util.until,
+				//returns if an object is the provided type
+				isType: framework.util.isType,
+				//determines the matching type for a value
+				getType: framework.util.getType,
+				//applies each source property to the target
+				apply: framework.util.apply,
+				//uses the action to select items from a collection
+				select: framework.util.select,
+				//grabs records for a specific range
+				skipTake: framework.util.skipTake
 			}
-			return _data;
 		};
-		this.hasMatch=function(){
-			if(!self._hasData()) { return false; }
-			self.execute();
-			return _data.length>0;
-		};
-		this.andNot=function(f,v,x){
-			_negate=!_negate;
-			return self.and(f,v,x);
-		};
-		this.orNot=function(f,v,x){
-			_negate=!_negate;
-			return self.or(f,v,x);
-		};
-		this.not=function(f,v,x){
-			return self.andNot(f,v,x);
-		};
-		this.and=function(f,v,x){
-			_queuedOperator=" && ";
-			if(f===undefined){
-				return self;
-			}
-			return self._repeatCommand(f,v,x);
-		};
-		this.or=function(f,v,x){
-			_queuedOperator=" || ";
-			if(f===undefined) { return self; }
-			return self._repeatCommand(f,v,x);
-		};
-		this.orBegin=function(){
-			_orDepth++;
-			return self;
-		};
-		this.orEnd=function(){
-			if (_query !== null){
-				_query+=")";
-			}
-			return self;
-		};
-		this.isNot=function(f){
-			_negate=!_negate;
-			return self.is(f);
-		};
-		this.is=function(f){
-			self._append(_this+"."+f);
-			self._resetNegate();
-			return self;
-		};
-		this._compareValues=function(func,f,v,how,t){
-			var fld;
-			if(_useProperties){
-				fld='jQuery.jgrid.getAccessor('+_this+',\''+f+'\')'; 
-			}else{
-				fld=_this; 
-			}
-			if(v===undefined) { v = null; }
-			//var val=v===null?f:v,
-			var val =v,
-			swst = t.stype === undefined ? "text" : t.stype;
-			if(v !== null) {
-			switch(swst) {
-				case 'int':
-				case 'integer':
-					val = (isNaN(Number(val)) || val==="") ? Number.NEGATIVE_INFINITY : val; // To be fixed with more inteligent code
-					fld = 'parseInt('+fld+',10)';
-					val = 'parseInt('+val+',10)';
-					break;
-				case 'float':
-				case 'number':
-				case 'numeric':
-					val = String(val).replace(_stripNum, '');
-					val = (isNaN(Number(val)) || val==="") ? Number.NEGATIVE_INFINITY : Number(val); // To be fixed with more inteligent code
-					fld = 'parseFloat('+fld+')';
-					val = 'parseFloat('+val+')';
-					break;
-				case 'date':
-				case 'datetime':
-					val = String($.jgrid.parseDate.call($t, t.srcfmt || 'Y-m-d',val).getTime());
-					fld = 'jQuery.jgrid.parseDate.call(jQuery("#'+$.jgrid.jqID($t.p.id)+'")[0],"'+t.srcfmt+'",'+fld+').getTime()';
-					break;
-				default :
-					fld=self._getStr(fld);
-					val=self._getStr('"'+self._toStr(val)+'"');
-			}
-			}
-			self._append(fld+' '+how+' '+val);
-			self._setCommand(func,f);
-			self._resetNegate();
-			return self;
-		};
-		this.equals=function(f,v,t){
-			return self._compareValues(self.equals,f,v,"==",t);
-		};
-		this.notEquals=function(f,v,t){
-			return self._compareValues(self.equals,f,v,"!==",t);
-		};
-		this.isNull = function(f,v,t){
-			return self._compareValues(self.equals,f,null,"===",t);
-		};
-		this.greater=function(f,v,t){
-			return self._compareValues(self.greater,f,v,">",t);
-		};
-		this.less=function(f,v,t){
-			return self._compareValues(self.less,f,v,"<",t);
-		};
-		this.greaterOrEquals=function(f,v,t){
-			return self._compareValues(self.greaterOrEquals,f,v,">=",t);
-		};
-		this.lessOrEquals=function(f,v,t){
-			return self._compareValues(self.lessOrEquals,f,v,"<=",t);
-		};
-		this.startsWith=function(f,v){
-			//var val = $.jgrid.isNull(v) ? f: v,
-			//length=_trim ? $.jgrid.trim(val.toString()).length : val.toString().length;
-			if(_useProperties	){ 
-				//self._append(self._getStr('jQuery.jgrid.getAccessor(this,\''+f+'\')')+'.slice(0,'+length+') == '+self._getStr('"'+self._toStr(v)+'"'));
-				self._append(self._getStr('jQuery.jgrid.getAccessor('+_this+',\''+f+'\')')+'.startsWith('+self._getStr('"'+self._toStr(v)+'"')+')');
-			}else{
-				//if ( !$.jgrid.isNull(v) ) { length=_trim?$.jgrid.trim(v.toString()).length:v.toString().length; }
-				self._append(self._getStr(_this)+'.startsWith(' +self._getStr('"'+self._toStr(f)+'"')+')');
-			}
-			self._setCommand(self.startsWith,f);
-			self._resetNegate();
-			return self;
-		};
-		this.endsWith=function(f,v){
-			//var val = $.jgrid.isNull(v) ? f: v,
-			//length=_trim ? $.jgrid.trim(val.toString()).length:val.toString().length;
-			if(_useProperties){
-				//self._append(self._getStr('jQuery.jgrid.getAccessor(this,\''+f+'\')')+'.substr('+self._getStr('jQuery.jgrid.getAccessor(this,\''+f+'\')')+'.length-'+length+','+length+') == "'+self._toStr(v)+'"');
-				self._append(self._getStr('jQuery.jgrid.getAccessor('+_this+',\''+f+'\')')+'.endsWith('+self._getStr('"'+self._toStr(v)+'"')+')');
-			} else {
-				//self._append(self._getStr('this')+'.substr('+self._getStr('this')+'.length-"'+self._toStr(f)+'".length,"'+self._toStr(f)+'".length) == "'+self._toStr(f)+'"');
-				self._append(self._getStr(_this)+'.endsWith(' +self._getStr('"'+self._toStr(f)+'"')+')');
-			}
-			self._setCommand(self.endsWith,f);
-			self._resetNegate();
-			return self;
-		};
-		this.contains=function(f,v){
-			if(_useProperties){
-				self._append(self._getStr('jQuery.jgrid.getAccessor('+_this+',\''+f+'\')')+'.indexOf("'+self._toStr(v)+'",0) > -1');
-			}else{
-				self._append(self._getStr(_this)+'.indexOf("'+self._toStr(f)+'",0) > -1');
-			}
-			self._setCommand(self.contains,f);
-			self._resetNegate();
-			return self;
-		};
-		this.user=function(op, f, v){
-			var _a = '$("#'+$t.p.id+'")[0]';
-			self._append(_a + '.p.customFilterDef.' + op + '.action.call('+_a+' ,{rowItem:'+_this+', searchName:"' + f + '",searchValue:"' + v + '"})');
-			self._setCommand(self.user,f);
-			self._resetNegate();
-			return self;
-		};
-		this.inData = function (f, v, t) {
-			var vl =  v === undefined ? "" : self._getStr("\"" + self._toStr(v) + "\"");
-			if( _useProperties ) {
-				self._append(vl + '.split(\''+',' + '\')' + '.indexOf( jQuery.jgrid.getAccessor('+_this+',\''+f+'\') ) > -1');
-			} else {
-				self._append(vl + '.split(\''+',' + '\')' + '.indexOf('+_this+'.'+f+') > -1');
-			}
-			self._setCommand(self.inData, f);
-			self._resetNegate();
-			return self;
-		};
-		this.groupBy=function(by,dir,type, datefmt){
-			if(!self._hasData()){
-				return null;
-			}
-			return self._getGroup(_data,by,dir,type, datefmt);
-		};
-		this.orderBy=function(by,dir,stype, dfmt, sfunc){
-			dir = $.jgrid.isNull(dir) ? "a" :$.jgrid.trim(dir.toString().toLowerCase());
-			if( $.jgrid.isNull(stype) ) { stype = "text"; }
-			if( $.jgrid.isNull(dfmt) ) { dfmt = "Y-m-d"; }
-			if( $.jgrid.isNull(sfunc) ) { sfunc = false; }
-			if(dir==="desc"||dir==="descending"){dir="d";}
-			if(dir==="asc"||dir==="ascending"){dir="a";}
-			_sorting.push({by:by,dir:dir,type:stype, datefmt: dfmt, sfunc: sfunc});
-			return self;
-		};
-		return self;
-		};
-	return new QueryObject(source,null);
+		return jLinq;
+	},
+	from : function( source ) {
+		return $.jgrid.jLinq().from(source);
+		//return ret.from(source);
 	},
 	getMethod: function (name) {
         return this.getAccessor($.fn.jqGrid, name);
@@ -1027,6 +2056,9 @@ $.extend($.jgrid,{
 		return jQuery._cacheCanvas.measureText( $.jgrid.stripHtml( text ) ).width;
 	},
 	getFont : function (instance) {
+		if(!instance) {
+			return;
+		}
 		var getfont = window.getComputedStyle( instance, null );
 		return getfont.getPropertyValue( 'font-style' ) + " " +
 				getfont.getPropertyValue( 'font-variant' ) + " " +
@@ -1274,19 +2306,16 @@ $.extend($.jgrid,{
 			}
 			var timer;
 
-			if($.inArray(e.key, ['Enter', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) > -1) {
-			var eee =  $.Event('keydown'), $t = this;
+			if($.inArray(e.key, ['Enter', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab']) > -1) {
+			var eee =  $.Event('keydown');//, $t = this;
 
 			switch (e.key) {
 				case 'Enter' :
 					// select the row
-					var srow = $("#"+gID).jqGrid('getRowData',$("#"+gID)[0].p.selrow);
-					if(!$.isEmptyObject(srow)) {
-						$t.value = srow[opt.return_fld];
-						$("#"+dID).hide();
-					}
+					$("#"+gridId).jqGrid('setSelection', $("#"+gID)[0].p.selrow, true);
 					break;
 				case 'Escape' :
+				case 'Tab':
 					$("#"+dID).hide();
 					break;
 				case 'ArrowUp' :
@@ -1302,8 +2331,8 @@ $.extend($.jgrid,{
 			} else {
 				if(timer) { clearTimeout(timer); }
 				timer = setTimeout(function(){ 
-					$("#"+gID).jqGrid('filterInput', self.value, {defaultSearch: opt.defaultSearch || 'bw', selectFirstFound : true});
-				}, 100);
+					$("#"+gID).jqGrid('filterInput', self.value, {defaultSearch: opt.defaultSearch || 'bw', selectFirstFound : true, firstFoundTimeout : 100});
+				}, opt.timeout | 500);
 			}
 		});
 		if(opt.data) {
@@ -2244,6 +3273,12 @@ $.fn.jqGrid = function( pin ) {
 			minColWidth : 33,
 			minGridWidth : 100,
 			maxGridWidth : 3000,
+			
+			vScroll : false,
+			scrollMaxCache : 25,
+			scrollRenderWin : 2,
+			scrollAvgRowHeight : 55,
+			
 			scroll: false,
 			scrollTimeout: 300,
 			scrollPopUp : false,
@@ -2314,7 +3349,8 @@ $.fn.jqGrid = function( pin ) {
 			p.data = localData;
 			pin.data = localData;
 		}
-		var ts= this, grid={
+		var ts= this, 
+		grid = {
 			headers:[],
 			cols:[],
 			footers: [],
@@ -2527,6 +3563,7 @@ $.fn.jqGrid = function( pin ) {
 			hScroll : false,
 			bScroll : false
 		};
+
 		if( this.tagName.toUpperCase() !== 'TABLE' || $.jgrid.isNull(this.id) ) {
 			alert("Element is not a table or has no id!");
 			return;
@@ -2720,6 +3757,21 @@ $.fn.jqGrid = function( pin ) {
 			}
 			return f;
 		},
+		readerHidden = function() {
+			var field, f=[], j=0, i, hidden;
+			for(i = 0; i < ts.p.colModel.length; i++){
+				field = ts.p.colModel[i];
+				hidden = false;
+				if (Object.hasOwn(field, "hidden")) {
+					hidden = field.hidden;
+				}
+				if ( Object.hasOwn(field, "name") && !$.jgrid.isServiceCol(field.name) ) {
+					f[j]= hidden;
+					j++;
+				}
+			}
+			return f;
+		},
 		orderedCols = function (offset) {
 			var order = ts.p.remapColumns;
 			if (!order || !order.length) {
@@ -2745,6 +3797,11 @@ $.fn.jqGrid = function( pin ) {
 					this.grid.bDiv.scrollTop = 0;
 				}
 			}
+			if(scroll && this.p.vScroll) {
+				if (this.grid.bDiv.scrollTop !== 0) {
+					this.grid.bDiv.scrollTop = 0;
+				}				
+			}
 			if(locdata === true ) { //&& this.p.treeGrid && !this.p.loadonce ) {
 				this.p.data = []; 
 				this.p._index = {};
@@ -2756,7 +3813,7 @@ $.fn.jqGrid = function( pin ) {
 			colModel = p.colModel,
 			cellName = localReader.cell,
 			iOffset = (p.multiselect === true ? 1 : 0) + (p.subGrid === true ? 1 : 0) + (p.rownumbers === true ? 1 : 0) + (p.searchCols === true ? 1 : 0),
-			br = p.scroll ? $.jgrid.randId() : 1,
+			br = p.scroll || p.vScroll ? $.jgrid.randId() : 1,
 			arrayReader, objectReader, rowReader;
 
 			if (p.datatype !== "local" || localReader.repeatitems !== true) {
@@ -2842,7 +3899,7 @@ $.fn.jqGrid = function( pin ) {
 					classes += ' ' + rowAttrObj['class'];
 					delete rowAttrObj['class'];
 				}
-				// dot't allow to change role attribute
+				// don't allow to change role attribute
 				try { delete rowAttrObj.role; } catch(ra){}
 				for (attrName in rowAttrObj) {
 					if (rowAttrObj.hasOwnProperty(attrName)) {
@@ -2917,7 +3974,7 @@ $.fn.jqGrid = function( pin ) {
 			}
 			ts.p.reccount = 0;
 			if($.isXMLDoc(xml)) {
-				if(ts.p.treeANode===-1 && !ts.p.scroll) {
+				if(ts.p.treeANode===-1 && (!ts.p.scroll || !ts.p.vScroll) ) {
 					emptyRows.call(ts, false, false);
 					rcnt=1;
 				} else { rcnt = rcnt > 1 ? rcnt :1; }
@@ -2962,7 +4019,7 @@ $.fn.jqGrid = function( pin ) {
 			var gxml = $.jgrid.getXmlData( xml, xmlRd.root, true);
 			gxml = $.jgrid.getXmlData( gxml, xmlRd.row, true);
 			if (!gxml) { gxml = []; }
-			var gl = gxml.length, j=0, grpdata=[], rn = parseInt(ts.p.rowNum,10), br=ts.p.scroll?$.jgrid.randId():1,
+			var gl = gxml.length, j=0, grpdata=[], rn = parseInt(ts.p.rowNum,10), br=(ts.p.scroll || ts.p.vScroll) ?$.jgrid.randId():1,
 				tablebody = $(ts).find("tbody").first(),
 				hiderow=false, groupingPrepare, selr;
 			if(ts.p.grouping)  {
@@ -3134,10 +4191,10 @@ $.fn.jqGrid = function( pin ) {
 				try {self.jqGrid("addSubGrid",gi+ni);} catch (_){}
 			}
 		},
-		addJSONData = function(data, rcnt, more, adjust) {
+		addJSONData = function(data, rcnt, more, adjust, _vJR) {
 			var startReq = new Date();
 			if(data) {
-				if(ts.p.treeANode === -1 && !ts.p.scroll) {
+				if(ts.p.treeANode === -1 && (!ts.p.scroll || !ts.p.vScroll) ) {
 					emptyRows.call(ts, false, false);
 					rcnt=1;
 				} else { rcnt = rcnt > 1 ? rcnt :1; }
@@ -3148,7 +4205,7 @@ $.fn.jqGrid = function( pin ) {
 				dReader =  ts.p.localReader;
 				frd= 'local';
 			} else {
-				dReader =  ts.p.jsonReader;
+				dReader =  _vJR != null ? _vJR : ts.p.jsonReader;
 				frd='json';
 			}
 
@@ -3160,7 +4217,7 @@ $.fn.jqGrid = function( pin ) {
 				si = ts.p.subGrid ===true ? 1 : 0,
 				ni = ts.p.rownumbers ===true ? 1 : 0,
 				sc = ts.p.searchCols ===true ? 1 : 0,
-				br = (ts.p.scroll && ts.p.datatype !== 'local') ? $.jgrid.randId() : 1,
+				br = ((ts.p.scroll || ts.p.vScroll) && ts.p.datatype !== 'local') ? $.jgrid.randId() : 1,
 				rn = parseInt(ts.p.rowNum,10),
 				selected=false, selr,
 				arrayReader=orderedCols(gi+si+ni+sc),
@@ -3564,6 +4621,8 @@ $.fn.jqGrid = function( pin ) {
                 }
 				sorttype = this.sorttype || "text";
 				si = this.index || this.name;
+				srcformat = newformat ="";
+				
 				if(sorttype === "date" || sorttype === "datetime") {
 					if(this.formatter && typeof this.formatter === 'string' && this.formatter === 'date') {
 						if(this.formatoptions && this.formatoptions.srcformat) {
@@ -3579,10 +4638,10 @@ $.fn.jqGrid = function( pin ) {
 					} else {
 						srcformat = newformat = this.datefmt || "Y-m-d";
 					}
-					cmtypes[si] = {"stype": sorttype, "srcfmt": srcformat,"newfmt":newformat, "sfunc": this.sortfunc || null, name : this.name};
-				} else {
-					cmtypes[si] = {"stype": sorttype, "srcfmt":'',"newfmt":'', "sfunc": this.sortfunc || null, name : this.name};
 				}
+				
+					cmtypes[si] = {"stype": sorttype, "srcfmt": srcformat,"newfmt":newformat, "sfunc": this.sortfunc || null, name : this.name};
+				
 				if(ts.p.grouping ) {
 					for(gin =0, lengrp = grpview.groupField.length; gin< lengrp; gin++) {
 						if( this.name === grpview.groupField[gin]) {
@@ -3607,64 +4666,58 @@ $.fn.jqGrid = function( pin ) {
 				return;
 			}
 			var compareFnMap = {
-				'eq':function(queryObj) {return queryObj.equals;},
-				'ne':function(queryObj) {return queryObj.notEquals;},
-				'lt':function(queryObj) {return queryObj.less;},
-				'le':function(queryObj) {return queryObj.lessOrEquals;},
-				'gt':function(queryObj) {return queryObj.greater;},
-				'ge':function(queryObj) {return queryObj.greaterOrEquals;},
-				'cn':function(queryObj) {return queryObj.contains;},
-				'nc':function(queryObj,op) {return op === "OR" ? queryObj.orNot().contains : queryObj.andNot().contains;},
-				'bw':function(queryObj) {return queryObj.startsWith;},
-				'bn':function(queryObj,op) {return op === "OR" ? queryObj.orNot().startsWith : queryObj.andNot().startsWith;},
-				'en':function(queryObj,op) {return op === "OR" ? queryObj.orNot().endsWith : queryObj.andNot().endsWith;},
-				'ew':function(queryObj) {return queryObj.endsWith;},
-				"ni":function (queryObj, op) { return op === "OR" ? queryObj.orNot().inData : queryObj.andNot().inData; },
-				"in":function (queryObj) { return queryObj.inData; },
-				'nu':function(queryObj) {return queryObj.isNull;},
-				'nn':function(queryObj,op) {return op === "OR" ? queryObj.orNot().isNull : queryObj.andNot().isNull;}
+				'eq':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.equals :  queryObj[cop+"Equals"];},
+				'ne':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.notEquals : queryObj[cop+"NotEquals"];},
+				'lt':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.less : queryObj[cop+"Less"];},
+				'le':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.lessEquals : queryObj[cop+"LessEquals"];},
+				'gt':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.greater : queryObj[cop+"Greater"];},
+				'ge':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.greaterEquals : queryObj[cop+"GreaterEquals"];},
+				'cn':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.contains : queryObj[cop+"Contains"];},
+				'nc':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.notContains : queryObj[cop+"NotContains"];},
+				'bw':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.starts : queryObj[cop+"Starts"];},
+				'bn':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.notStarts : queryObj[cop+"NotStarts"];},
+				'en':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.notEnds : queryObj[cop+"NotEnds"];},
+				'ew':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.ends : queryObj[cop+"Ends"];},
+				"ni":function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.notIsIn : queryObj[cop+"NotIsIn"]; },
+				"in":function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.isIn : queryObj[cop+"IsIn"]; },
+				'nu':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.isNull : queryObj[cop+"IsNull"];},
+				'nn':function(queryObj, op,cop) {return $.jgrid.isNull(cop) ? queryObj.notIsNull : queryObj[cop+"NotIsNull"];}
 
-			},
-			query = $.jgrid.from.call(ts, ts.p.data);
-			if (ts.p.ignoreCase) { query = query.ignoreCase(); }
-			function tojLinq ( group ) {
-				var s = 0, index, gor, ror, opr, rule, fld;
+			};
+			try {
+				var query_jlinq = $.jgrid.from(ts.p.data);
+			} catch (exception) {
+				console.error(exception);
+			}
+			if (!ts.p.ignoreCase) { 
+				query_jlinq = query_jlinq.useCase(); 
+			}
+			function tojLinq ( group, tor ) {
+				var s = 0, index, gor, ror, opr, rule, fld, collection=[];
 				if (!$.jgrid.isNull(group.groups)) {
-					gor = group.groups.length && group.groupOp.toString().toUpperCase() === "OR";
-					if (gor) {
-						query.orBegin();
-					}
+					gor = group.groups.length ? group.groupOp.toString().toLowerCase() : "";
 					for (index = 0; index < group.groups.length; index++) {
 						if (s > 0 && gor) {
-							query.or();
+							ror = gor;
+							query_jlinq = $.jgrid.from( query_jlinq.select() );
 						}
 						try {
-							tojLinq(group.groups[index]);
+							tojLinq(group.groups[index], ror);
 						} catch (e) {alert(e);}
 						s++;
 					}
-					if (gor) {
-						query.orEnd();
 					}
-				}
 				if (!$.jgrid.isNull(group.rules)) {
-					//if(s>0) {
-					//	var result = query.select();
-					//	query = $.jgrid.from( result);
-					//	if (ts.p.ignoreCase) { query = query.ignoreCase(); }
-					//}
 					try{
-						ror = group.rules.length && group.groupOp.toString().toUpperCase() === "OR";
-						if (ror) {
-							query.orBegin();
-						}
-						var rulefld;
+						var rulefld, cop=null;
 						for (index = 0; index < group.rules.length; index++) {
 							rule = group.rules[index];
-							opr = group.groupOp.toString().toUpperCase();
+							opr = group.groupOp.toString().toLowerCase();
 							if (compareFnMap[rule.op] && rule.field ) {
-								if(s > 0 && opr && opr === "OR") {
-									query = query.or();
+								if(s > 0 && opr) { 
+									cop = opr;
+								} else if(s===0 && tor) {
+									cop = tor;
 								}
 								rulefld = rule.field;
 								if( ts.p.useNameForSearch) {
@@ -3674,21 +4727,32 @@ $.fn.jqGrid = function( pin ) {
 								}
 								try {
 									fld = cmtypes[rule.field];
-									if(fld.stype === 'date') {
-										if(typeof fld.srcfmt === "string" && typeof fld.newfmt === "string" ) {
-											rule.data = $.jgrid.parseDate.call(ts, fld.newfmt, rule.data, fld.srcfmt);
+									if(['eq','ne','le', 'lt', 'ge','gt'].includes(rule.op)) {
+										switch (fld.stype) {
+											case 'date' :
+												rule.data = $.jgrid.parseDate.call(ts, fld.newfmt || "Y-m-d", rule.data).getTime();
+												break;
+											case 'int':
+											case 'integer':
+												rule.data = parseInt( rule.data, 10);
+												break;
+											case 'float':
+											case 'number':
+											case 'numeric':
+												rule.data = parseFloat( rule.data );
+												break
+											default :
 										}
 									}
-									query = compareFnMap[rule.op](query, opr)(rulefld, rule.data, fld);
+									query_jlinq = compareFnMap[rule.op](query_jlinq, opr, cop)(rulefld, rule.data, fld);
 								} catch (e) {}
 							} else if( ts.p.customFilterDef !== undefined && ts.p.customFilterDef[rule.op] !== undefined  && $.jgrid.isFunction(ts.p.customFilterDef[rule.op].action)) {
-								query = query.user.call(ts, rule.op, rule.field, rule.data);
+								query_jlinq = query_jlinq.user.call(ts, rule.op, rule.field, rule.data, ts.p.id);
 							}
 							s++;
+							cop = null;
 						}
-						if (ror) {
-							query.orEnd();
-						}
+
 					} catch (g) {alert(g);}
 				}
 			}
@@ -3702,20 +4766,23 @@ $.fn.jqGrid = function( pin ) {
 					try {
 						sfld = cmtypes[ts.p.postData.searchField];
 						if(sfld.stype === 'date') {
-							if(sfld.srcfmt && sfld.newfmt && sfld.srcfmt !== sfld.newfmt ) {
-								ts.p.postData.searchString = $.jgrid.parseDate.call(ts, sfld.newfmt, ts.p.postData.searchString, sfld.srcfmt);
+							if(sfld.srcfmt && sfld.newfmt ) {
+								ts.p.postData.searchString = $.jgrid.parseDate.call(ts, sfld.newfmt, ts.p.postData.searchString).getTime();
 							}
 						}
  						if(compareFnMap[ts.p.postData.searchOper]) {
-						query = compareFnMap[ts.p.postData.searchOper](query)(ts.p.postData.searchField, ts.p.postData.searchString,cmtypes[ts.p.postData.searchField]);
+							query_jlinq = compareFnMap[ts.p.postData.searchOper](query_jlinq)(ts.p.postData.searchField, ts.p.postData.searchString, cmtypes[ts.p.postData.searchField]);
 						} else if( ts.p.customFilterDef !== undefined && ts.p.customFilterDef[ts.p.postData.searchOper] !== undefined  && $.jgrid.isFunction(ts.p.customFilterDef[ts.p.postData.searchOper].action)) {
-							query = query.user.call(ts, ts.p.postData.searchOper, ts.p.postData.searchField, ts.p.postData.searchString);
+							query_jlinq = query_jlinq.user.call(ts, ts.p.postData.searchOper, ts.p.postData.searchField, ts.p.postData.searchString, ts.p.id);
 						}
 					} catch (se){}
 				}
 			}
+			var fl=[], pr=[];			
 			if(ts.p.treeGrid && ts.p.treeGridModel === "nested") {
-				query.orderBy(ts.p.treeReader.left_field, 'asc', 'integer', '', null);
+				fl.push(ts.p.treeReader.left_field);
+				pr.push({so:"a", stype:"integer", srcfmt:'Y-m-d', sfunc:null})
+				//query_jlinq.orderBy(ts.p.treeReader.left_field, 'asc', 'integer', '', null);
 			}
 			if(ts.p.treeGrid && ts.p.treeGridModel === "adjacency") {
 				lengrp =0;
@@ -3723,24 +4790,34 @@ $.fn.jqGrid = function( pin ) {
 			}
 			if(ts.p.grouping) {
 				for(gin=0; gin<lengrp;gin++) {
-					query.orderBy(grindexes[gin],grpview.groupOrder[gin],grtypes[gin].stype, grtypes[gin].srcfmt);
+					fl.push(grindexes[gin]);
+					pr.push({so:grpview.groupOrder[gin],stype:grtypes[gin].stype, srcfmt: grtypes[gin].srcfmt, sfunc:null});
+					//query_jlinq.orderBy(grindexes[gin], grpview.groupOrder[gin], grtypes[gin].stype, grtypes[gin].srcfmt);
 				}
+				//query_jlinq.orderBy(fl, pr);
 			}
 			if(ts.p.multiSort) {
+				fl=[]; pr=[];
 				$.each(st,function(i){
-					query.orderBy(this, sto[i], cmtypes[this].stype, cmtypes[this].srcfmt, cmtypes[this].sfunc);
+					fl.push(this);
+					pr.push({so:sto[i],stype:cmtypes[this].stype, srcfmt: cmtypes[this].srcfmt, sfunc:cmtypes[this].sfunc});
+					//query_jlinq.orderBy(this, sto[i], cmtypes[this].stype, cmtypes[this].srcfmt, cmtypes[this].sfunc);
 				});
+				//query_jlinq.orderBy(fl, pr);
 			} else {
 				if (st && ts.p.sortorder && fndsort) {
 					// to be fixed in case sortname has more than one field
-					if(ts.p.sortorder.toUpperCase() === "DESC") {
-						query.orderBy(ts.p.sortname, "d", cmtypes[st].stype, cmtypes[st].srcfmt, cmtypes[st].sfunc);
-					} else {
-						query.orderBy(ts.p.sortname, "a", cmtypes[st].stype, cmtypes[st].srcfmt, cmtypes[st].sfunc);
+					fl.push(ts.p.sortname);
+					pr.push({so: (ts.p.sortorder.toUpperCase() === "DESC" ? "d" : "a"), stype:cmtypes[st].stype, srcfmt: cmtypes[st].srcfmt, sfunc: cmtypes[st].sfunc})
+					//query_jlinq.orderBy([ts.p.sortname], [{so: (ts.p.sortorder.toUpperCase() === "DESC" ? "d" : "a"), stype:cmtypes[st].stype, srcfmt: cmtypes[st].srcfmt, sfunc: cmtypes[st].sfunc}]);
+					//query_jlinq.orderBy(ts.p.sortname, (ts.p.sortorder.toUpperCase() === "DESC" ? "d" : "a"), cmtypes[st].stype, cmtypes[st].srcfmt, cmtypes[st].sfunc);
 					}
 				}
+			if(fl.length) {
+				query_jlinq.orderBy(fl, pr);
 			}
-			var queryResults = query.select(),
+			
+			var queryResults = query_jlinq.select(),
 			recordsperpage = parseInt(ts.p.rowNum,10),
 			total = queryResults.length,
 			page = parseInt(ts.p.page,10),
@@ -3776,7 +4853,7 @@ $.fn.jqGrid = function( pin ) {
 			} else {
 				queryResults = queryResults.slice( (page-1)*recordsperpage , page*recordsperpage );
 			}
-			query = null;
+			query_jlinq = null;
 			cmtypes = null;
 			retresult[ts.p.localReader.total] = totalpages;
 			retresult[ts.p.localReader.page] = page;
@@ -3795,23 +4872,25 @@ $.fn.jqGrid = function( pin ) {
 			if(base < 0) { base = 0; }
 			base = base*parseInt(ts.p.rowNum,10);
 			to = base + ts.p.reccount;
-			if (ts.p.scroll) {
+			if (ts.p.scroll || ts.p.vScroll) {
 				var rows = $("tbody", ts.grid.bDiv).first().find("> tr").slice( 1 );
 				if(to > ts.p.records) {
 					to = ts.p.records;
 				}
 				base = to - rows.length;
 				ts.p.reccount = rows.length;
-				var rh = rows.outerHeight() || ts.grid.prevRowHeight;
-				if (rh) {
-					var top = base * rh;
-					var height = parseInt(ts.p.records,10) * rh;
-					$(ts.grid.bDiv).find(">div").first().css({height : height}).children("div").first().css({height:top,display:top?"":"none"});
-					if (ts.grid.bDiv.scrollTop === 0 && ts.p.page > 1) {
-						ts.grid.bDiv.scrollTop = ts.p.rowNum * (ts.p.page - 1) * rh;
+				if(ts.p.scroll) { // old behaviour
+					var rh = rows.outerHeight() || ts.grid.prevRowHeight;
+					if (rh) {
+						var top = base * rh;
+						var height = parseInt(ts.p.records,10) * rh;
+						$(ts.grid.bDiv).find(">div").first().css({height : height}).children("div").first().css({height:top,display:top?"":"none"});
+						if (ts.grid.bDiv.scrollTop === 0 && ts.p.page > 1) {
+							ts.grid.bDiv.scrollTop = ts.p.rowNum * (ts.p.page - 1) * rh;
+						}
 					}
+					ts.grid.bDiv.scrollLeft = ts.grid.hDiv.scrollLeft;
 				}
-				ts.grid.bDiv.scrollLeft = ts.grid.hDiv.scrollLeft;
 			}
 			pgboxes = ts.p.pager || "";
 			pgboxes += ts.p.toppager ?  (pgboxes ? "," + ts.p.toppager : ts.p.toppager) : "";
@@ -3913,7 +4992,7 @@ $.fn.jqGrid = function( pin ) {
 				prm = {}, dt, dstr, pN=ts.p.prmNames;
 				spsh = 0;
 				if(ts.p.page <=0) { ts.p.page = Math.min(1,ts.p.lastpage); }
-				if( !$.jgrid.isNull(pN.search, true) ) {prm[pN.search] = ts.p.search;}
+				if(!$.jgrid.isNull(pN.search, true) ) {prm[pN.search] = ts.p.search;}
 				if(!$.jgrid.isNull(pN.nd, true) ) {prm[pN.nd] = new Date().getTime();}
 				if(!$.jgrid.isNull(pN.rows, true) ) {prm[pN.rows]= ts.p.rowNum;}
 				if(!$.jgrid.isNull(pN.page, true) ) {prm[pN.page]= ts.p.page;}
@@ -3969,7 +5048,7 @@ $.fn.jqGrid = function( pin ) {
 					*/
 				}
 				$.extend(ts.p.postData,prm);
-				var rcnt = !ts.p.scroll ? 1 : ts.rows.length-1;
+				var rcnt = (!ts.p.scroll || !ts.p.vScroll) ? 1 : ts.rows.length-1;
 				if ($.jgrid.isFunction(ts.p.datatype)) {
 					ts.p.datatype.call(ts,ts.p.postData,"load_"+ts.p.id, rcnt, npage, adjust);
 					return;
@@ -4144,7 +5223,7 @@ $.fn.jqGrid = function( pin ) {
 			.attr("dir", dir); 
 			if(ts.p.rowList.length >0){
 				str = "<td dir=\""+dir+"\">";
-				str +="<select "+getstyle(stylemodule, 'pgSelectBox', false, 'ui-pg-selbox')+" size=\"1\" name=\"pg_sel_box\" role=\"listbox\" title=\""+($.jgrid.getRegional(ts,"defaults.pgrecs",ts.p.pgrecs) || "")+ "\">";
+				str +="<select "+getstyle(stylemodule, 'pgSelectBox', false, 'ui-pg-selbox')+" size=\"1\" name=\"pg_sel_box\" aria-label=\""+($.jgrid.getRegional(ts,"defaults.pgrecs",ts.p.pgrecs) || "Records")+"\" title=\""+($.jgrid.getRegional(ts,"defaults.pgrecs",ts.p.pgrecs) || "")+ "\">";
 				var strnm;
 				for(i=0;i<ts.p.rowList.length;i++){
 					strnm = ts.p.rowList[i].toString().split(":");
@@ -4152,9 +5231,9 @@ $.fn.jqGrid = function( pin ) {
 						strnm[1] = strnm[0];
 					}
 					if (strnm[1].length == 0) {
-						str +="<option role=\"option\" value=\""+strnm[0]+"\""+(( intNum(ts.p.rowNum,0) === intNum(strnm[0],0))?" aria-label=\""+strnm[1]+"\" selected=\"selected\"":"")+">"+strnm[1]+"</option>";
+						str +="<option value=\""+strnm[0]+"\""+(( intNum(ts.p.rowNum,0) === intNum(strnm[0],0))?" aria-label=\""+strnm[1]+"\" selected=\"selected\"":"")+">"+strnm[1]+"</option>";
 					} else {
-						str +="<option role=\"option\" value=\""+strnm[0]+"\""+(( intNum(ts.p.rowNum,0) === intNum(strnm[0],0))?" selected=\"selected\"":"")+">"+strnm[1]+"</option>";
+						str +="<option value=\""+strnm[0]+"\""+(( intNum(ts.p.rowNum,0) === intNum(strnm[0],0))?" selected=\"selected\"":"")+">"+strnm[1]+"</option>";
 					}
 				}
 				str +="</select></td>";
@@ -4164,7 +5243,7 @@ $.fn.jqGrid = function( pin ) {
 				$("#"+rgt).attr("align","left");
 			}
 			if(ts.p.pginput===true) {
-				pginp= "<td id='input"+tp+"' dir='"+dir+"'>"+$.jgrid.template( $.jgrid.getRegional(ts, "defaults.pgtext", ts.p.pgtext) || "","<input "+getstyle(stylemodule, 'pgInput', false, 'ui-pg-input') + " type='text' size='2' maxlength='7' value='0' role='textbox' name='jqgpginput'/>","<span id='sp_1_"+$.jgrid.jqID(pgid)+"'></span>")+"</td>";
+				pginp= "<td id='input"+tp+"' dir='"+dir+"'><label for='pginp_"+$.jgrid.jqID(pgid)+"'>"+$.jgrid.template( $.jgrid.getRegional(ts, "defaults.pgtext", ts.p.pgtext) || ".","&nbsp; </label><input "+getstyle(stylemodule, 'pgInput', false, 'ui-pg-input') + " type='text' size='2' maxlength='7' value='0' role='textbox' name='jqgpginput' id='pginp_"+$.jgrid.jqID(pgid)+"'/>","<span id='sp_1_"+$.jgrid.jqID(pgid)+"'></span>")+"</td>";
 			}
 			var po=["first"+tp,"prev"+tp, "next"+tp,"last"+tp];
 			if(ts.p.pgbuttons===true) {
@@ -4438,7 +5517,7 @@ $.fn.jqGrid = function( pin ) {
 				}
 				ts.p.savedRow =[];
 			}
-			if(ts.p.scroll) {
+			if(ts.p.scroll || ts.p.vScroll) {
 				var sscroll = ts.grid.bDiv.scrollLeft;
 				emptyRows.call(ts, true, false);
 				ts.grid.hDiv.scrollLeft = sscroll;
@@ -4449,7 +5528,12 @@ $.fn.jqGrid = function( pin ) {
 				});
 			}
 			ts.p._sort = true;
-			populate();
+			if(ts.p.vScroll) {
+				vGrid.reset();
+				vGrid.update();
+			} else {
+				populate();
+			}
 			ts.p.lastsort = idxcol;
 			if(ts.p.sortname !== index && idxcol) {ts.p.lastsort = idxcol;}
 		},
@@ -4766,8 +5850,11 @@ $.fn.jqGrid = function( pin ) {
 			if( v1 ) {
 				df = v1;
 			}
-			var soptions = $.extend(cm.searchoptions, {name:cm.index || cm.name, id: "sval1_" + ts.p.idPrefix+cm.name, oper:'search'}),
-			input = $.jgrid.createEl.call(ts, cm.stype, soptions , df, false, $.extend({},$.jgrid.ajaxOptions, ts.p.ajaxSelectOptions || {}));
+			var soptions = $.extend(cm.searchoptions, {name:cm.index || cm.name, id: "sval1_" + ts.p.idPrefix+cm.name, oper:'search'});
+			if(!Object.hasOwn(soptions, "aria-label")) {
+				soptions["aria-label"] = "Enter from value to search";
+			}
+			var input = $.jgrid.createEl.call(ts, cm.stype, soptions , df, false, $.extend({},$.jgrid.ajaxOptions, ts.p.ajaxSelectOptions || {}));
 			$(input).addClass( colmenustyle.filter_input );
 			str1 = $('<div></div>').append(input);
 			elem.append(str1);
@@ -4796,6 +5883,9 @@ $.fn.jqGrid = function( pin ) {
 				df = "";
 			}
 			soptions = $.extend(cm.searchoptions, {name:cm.index || cm.name, id: "sval2_" + ts.p.idPrefix+cm.name, oper:'search'});
+			if(!Object.hasOwn(soptions, "aria-label")) {
+				soptions["aria-label"] = "Enter to value to search";
+			}			
 			input = $.jgrid.createEl.call(ts, cm.stype, soptions , df, false, $.extend({},$.jgrid.ajaxOptions, ts.p.ajaxSelectOptions || {}));
 			$(input).addClass( colmenustyle.filter_input );
 			str1 = $('<div></div>').append(input);
@@ -5177,6 +6267,7 @@ $.fn.jqGrid = function( pin ) {
 		
 		if(ts.p.grouping===true) {
 			ts.p.scroll = false;
+			ts.p.vScroll = false;
 			//ts.p.rownumbers = false;
 			//ts.p.subGrid = false; expiremental
 			ts.p.treeGrid = false;
@@ -5195,18 +6286,18 @@ $.fn.jqGrid = function( pin ) {
 		}
 		if(this.p.searchCols) {
 			this.p.colNames.unshift(ts.p.searchColOptions.colName);
-			this.p.colModel.unshift({name:'sc',width: ts.p.searchColOptions.colWidth,sortable:false,hidedlg:true,search:false,align:'left',fixed:true, frozen: true, colmenu: ts.p.searchColOptions.colmenu, classes : "jqgrid-searchcol", labelClasses: "jqgrid-searchcolumn",
+			this.p.colModel.unshift({name:'sc', tooltip: ($.jgrid.getRegional(ts, "defaults.searchCols") || "Search on columns"), width: ts.p.searchColOptions.colWidth,sortable:false,hidedlg:true,search:false,align:'left',fixed:true, frozen: true, colmenu: ts.p.searchColOptions.colmenu, classes : "jqgrid-searchcol", labelClasses: "jqgrid-searchcolumn",
 					coloptions : {sorting:false, columns: false, filtering: false, seraching:false, grouping:false, freeze : false}});
 		}
 		if(this.p.multiselect) {
-			var allRowsSelectTitle=$.jgrid.getRegional(ts, "defaults.selectAllLines");
-			allRowsSelectTitle=allRowsSelectTitle ? allRowsSelectTitle : $.jgrid.regional['en'].defaults.selectAllLines;
+			var allRowsSelectTitle = $.jgrid.getRegional(ts, "defaults.selectAllLines");
+			allRowsSelectTitle = allRowsSelectTitle ? allRowsSelectTitle : ($.jgrid.regional['en'].defaults.selectAllLines || "Select all rows");
 			this.p.colNames.unshift("<input role='checkbox' id='cb_"+this.p.id+"' class='cbox' type='checkbox' title='"+allRowsSelectTitle+"'/>");
 			this.p.colModel.unshift({name:'cb',width:$.jgrid.cell_width ? ts.p.multiselectWidth+ts.p.cellLayout : ts.p.multiselectWidth,sortable:false,resizable:false,hidedlg:true,search:false,align:'center',fixed:true, frozen: true, classes : "jqgrid-multibox", labelClasses: "jqgrid-multibox" });
 		}
 		if(this.p.rownumbers) {
 			this.p.colNames.unshift("");
-			this.p.colModel.unshift({name:'rn',width:ts.p.rownumWidth,sortable:false,resizable:false,hidedlg:true,search:false,align:'center',fixed:true, frozen : true, labelClasses: "jqgrid-rownumber"});
+			this.p.colModel.unshift({name:'rn', tooltip: ($.jgrid.getRegional(ts, "defaults.rowNumbers") || "Row numbers column"), width:ts.p.rownumWidth,sortable:false,resizable:false,hidedlg:true,search:false,align:'center',fixed:true, frozen : true, labelClasses: "jqgrid-rownumber"});
 		}
 		ts.p.xmlReader = $.extend(true,{
 			root: "rows",
@@ -5242,7 +6333,7 @@ $.fn.jqGrid = function( pin ) {
 			userdata: "userdata",
 			subgrid: {root:"rows", repeatitems: true, cell:"cell"}
 		},ts.p.localReader);
-		if(ts.p.scroll){
+		if(ts.p.scroll || ts.p.vScroll){
 			ts.p.pgbuttons = false; ts.p.pginput=false; ts.p.rowList=[];
 		}
 		if(ts.p.data.length) {
@@ -5271,8 +6362,8 @@ $.fn.jqGrid = function( pin ) {
 		}
 		tdc = isMSIE ?  "class='ui-th-div-ie'" :"";
 		imgs = "<span class='s-ico' style='display:none'>";
-		imgs += "<span sort='asc'  class='ui-grid-ico-sort ui-icon-asc"+iac+" ui-sort-"+dir+" "+disabled+" " + iconbase + " " + getstyle(stylemodule, 'icon_asc', true)+ "'" + sort + " aria-label='empty'><span style='display:none'>empty</span></span>";
-		imgs += "<span sort='desc' class='ui-grid-ico-sort ui-icon-desc"+idc+" ui-sort-"+dir+" "+disabled+" " + iconbase + " " + getstyle(stylemodule, 'icon_desc', true)+"'" + sort + " aria-label='empty'><span style='display:none'>empty</span></span></span>";
+		imgs += "<span sort='asc'  class='ui-grid-ico-sort ui-icon-asc"+iac+" ui-sort-"+dir+" "+disabled+" " + iconbase + " " + getstyle(stylemodule, 'icon_asc', true)+ "'" + sort + " role='img' aria-label='empty' ><span aria-hidden='true' style='display:none'>empty</span></span>";
+		imgs += "<span sort='desc' class='ui-grid-ico-sort ui-icon-desc"+idc+" ui-sort-"+dir+" "+disabled+" " + iconbase + " " + getstyle(stylemodule, 'icon_desc', true)+"'" + sort + " role='img'  aria-label='empty' ><span  aria-hidden='true' style='display:none'>empty</span></span></span>";
 		if(ts.p.multiSort) {
 			if(ts.p.sortname ) {
 			sortarr = ts.p.sortname.split(",");
@@ -5284,12 +6375,21 @@ $.fn.jqGrid = function( pin ) {
 			}
 		}
 		for(i=0;i<this.p.colNames.length;i++){
-			var tooltip = ts.p.headertitles ? (" title=\"" + (ts.p.colModel[i].tooltip ? ts.p.colModel[i].tooltip : $.jgrid.stripHtml(ts.p.colNames[i])) + "\"") : "";
-			tmpcm = ts.p.colModel[i];
+			var tmpcm = ts.p.colModel[i],
+			tooltip = ts.p.headertitles ? (" title=\"" + (tmpcm.tooltip ? tmpcm.tooltip : $.jgrid.stripHtml(ts.p.colNames[i])) + "\"") : "",
+			arialabel = "";
+			// cols without names should have title
+			if($.jgrid.isServiceCol(tmpcm.name) && !ts.p.headertitles || tooltip==="") {
+				tooltip = " title=\""+ (tmpcm.tooltip || "") + "\""; 
+			}
+			
 			if(!tmpcm.hasOwnProperty('colmenu')) {
 				tmpcm.colmenu = (tmpcm.name === "rn" || tmpcm.name === "cb" || tmpcm.name === "subgrid") ? false : true;
 			}
-			thead += "<th id='"+ts.p.id+"_" + tmpcm.name+"' role='columnheader'  scope='col' "+getstyle(stylemodule,'headerBox',false, "ui-th-column ui-th-" + dir + " " + ( tmpcm.labelClasses || "") ) +  tooltip+">";
+			if(tmpcm.hasOwnProperty('arialabel')) {
+				arialabel = " aria-label=\""+tmpcm.arialabel+"\"";
+			}
+			thead += "<th id='"+ts.p.id+"_" + tmpcm.name+"' role='columnheader'  scope='col' "+getstyle(stylemodule,'headerBox',false, "ui-th-column ui-th-" + dir + " " + ( tmpcm.labelClasses || "") ) +  tooltip + arialabel + ">";
 			idn = tmpcm.index || tmpcm.name;
 			thead += "<div class='ui-th-div' id='jqgh_"+ts.p.id+"_"+tmpcm.name+"' "+tdc+">"+ts.p.colNames[i];
 			if(!tmpcm.width)  {
@@ -5395,7 +6495,7 @@ $.fn.jqGrid = function( pin ) {
 			trhead += "<table role='presentation' style='width:"+ts.p.tblwidth+"px' "+getstyle(stylemodule,'headerRowTable', false, 'ui-jqgrid-hrtable ui-common-table')+ "><tbody><tr role='row' "+getstyle(stylemodule,'headerRowBox', false, 'hrheadrow hrheadrow-'+dir)+">"; 
 		}
 		var thr = $(thead).find("tr").first(),
-		firstr = "<tr class='jqgfirstrow "+ (ts.p.direction === "rtl"? "ui-row-rtl'" :"'") +" role='row'>",
+		firstr = "<tr class='jqgfirstrow"+ (ts.p.direction === "rtl"? " ui-row-rtl'" :"'") +" role='row'>",
 		clicks =0,
 		// header font for full autosize
 		hdr_font = $.jgrid.getFont( $("th",thr).first()[0] );
@@ -5424,7 +6524,7 @@ $.fn.jqGrid = function( pin ) {
 			if(tmpcm.labelClasses) {
 				clcol = "class='"+tmpcm.labelClasses+"'";
 			}
-			firstr += "<td "+clcol+" role='gridcell' style='height:0px;width:"+w+"px;"+hdcol+"'></td>";
+			firstr += "<td "+clcol+" role='gridcell' style='height:0px;width:"+w+"px;"+hdcol+"' aria-describedby='"+ts.id+"_"+tmpcm.name+"'></td>";
 			grid.headers[j] = { width: w, el: this };
 			sort = tmpcm.sortable;
 			if( typeof sort !== 'boolean') {
@@ -5757,7 +6857,7 @@ $.fn.jqGrid = function( pin ) {
 					}
 					ts.p.savedRow = [];
 				}
-				if(ts.p.scroll) {
+				if(ts.p.scroll || ts.p.vScroll) {
 					emptyRows.call(ts, true, false);
 				}
 				if (opts.page) {
@@ -5817,11 +6917,20 @@ $.fn.jqGrid = function( pin ) {
 		//---
 		grid.bDiv = document.createElement("div");
 		if(isMSIE) { if(String(ts.p.height).toLowerCase() === "auto") { ts.p.height = "100%"; } }
-		$(grid.bDiv)
+		if(ts.p.vScroll) {
+			$(grid.bDiv)
+				.append('<div class="scroll-canvas"></div>').append($("<div class='visible-wrapper'></div>").append(this) )
+				.addClass("ui-jqgrid-bdiv")
+				.css({ height: ts.p.height+(isNaN(ts.p.height)?"":"px"), width: (grid.width - bstw)+"px"});
+				//.on("scroll", grid.scrollGrid);
+			$('tbody',this).addClass('visible-items');
+		} else {
+			$(grid.bDiv)
 			.append($('<div style="position:relative;"></div>').append('<div></div>').append(this))
 			.addClass("ui-jqgrid-bdiv")
 			.css({ height: ts.p.height+(isNaN(ts.p.height)?"":"px"), width: (grid.width - bstw)+"px"})
 			.on("scroll", grid.scrollGrid);
+		}
 		$(grid.bDiv).find("table").first().css({width:ts.p.tblwidth+"px"});
 		if( !$.support.tbody ) { //IE
 			if( $("tbody",this).length === 2 ) { $("tbody",this).slice( 1 ).remove();}
@@ -6043,28 +7152,1051 @@ $.fn.jqGrid = function( pin ) {
 		ts.formatter = function ( rowId, cellval , colpos, rwdat, act){return formatter(rowId, cellval , colpos, rwdat, act);};
 		$.extend(grid,{populate : populate, emptyRows: emptyRows, beginReq: beginReq, endReq: endReq});
 		this.grid = grid;
-		ts.addXmlData = function(d) {addXmlData( d );};
-		ts.addJSONData = function(d) {addJSONData( d );};
+		ts.addXmlData = function(a,b,c,d) {addXmlData( a,b,c,d );};
+		ts.addJSONData = function(a,b,c,d,e) {addJSONData( a,b,c,d,e );};
 		ts.addLocalData = function(d) { return addLocalData( d );};
 		ts.addIndexedDBData = function(d) { return addIndexedDBData( d );};
 		ts.treeGrid_beforeRequest = function() { treeGrid_beforeRequest(); }; //bvn13
 		ts.treeGrid_afterLoadComplete = function() {treeGrid_afterLoadComplete(); };
 		this.grid.cols = this.rows[0].cells;
 		if ($.jgrid.isFunction( ts.p.onInitGrid )) { ts.p.onInitGrid.call(ts); }
+  
+		/**
+		 * Adaptive Fetch Data Manager
+		 * Intelligently delays requests based on server performance and scroll behavior
+		 */
+		class AdaptiveFetchManager {
+			constructor() {
+				this.lastRequestTime = 0;
+				this.requestHistory = [];
+				this.scrollState = {
+				isFast: false,
+				velocity: 0,
+				lastUpdate: 0
+			};
+
+				// Configuration constants
+				this.HISTORY_SIZE = 10;
+				this.MIN_REQUEST_GAP = 150;
+				this.DELAYS = {
+					FAST: 150, // < 200ms avg response
+					MODERATE: 250 // 200-300ms avg response
+				};
+			}
+
+			/**
+			 * Fetches data with adaptive delay based on server performance
+			 * @param {number} page - Page number to fetch
+			 * @param {number} size - Page size
+			 * @param {Function} mockServerRequest - Server request function
+			 * @returns {Promise<Object>} Server response
+			 */
+			async fetch(page, size, mockServerRequest) {
+				const requestStart = performance.now();
+
+				// Calculate adaptive delay based on recent response times
+				const adaptiveDelay = this._calculateAdaptiveDelay();
+
+				// Enforce minimum gap between requests
+				const gapDelay = this._calculateGapDelay(requestStart);
+
+				// Apply the maximum of adaptive and gap delays
+				const totalDelay = Math.max(adaptiveDelay, gapDelay);
+				if (totalDelay > 0) {
+					await this._sleep(totalDelay);
+					}
+
+				// Make the actual request
+				const response = await mockServerRequest(page, size);
+
+				// Track performance metrics
+				this._recordRequest(page, requestStart, totalDelay);
+
+				this.lastRequestTime = performance.now();
+				return response;
+				}
+
+			/**
+			 * Updates scroll state for future optimizations
+			 * @param {boolean} isFast - Whether scrolling is fast
+			 * @param {number} velocity - Scroll velocity (optional)
+			 */
+			updateScrollState(isFast, velocity = 0) {
+				this.scrollState = {
+					isFast,
+					velocity,
+					lastUpdate: performance.now()
+				};
+			}
+
+			// Private methods
+			_calculateAdaptiveDelay() {
+				if (this.requestHistory.length === 0)
+					return 0;
+
+				const recentRequests = this.requestHistory.slice(-3);
+				const avgResponseTime = recentRequests.reduce((sum, r) => sum + r.duration, 0) / recentRequests.length;
+
+				if (avgResponseTime < 200)
+					return this.DELAYS.FAST;
+				if (avgResponseTime < 300)
+					return this.DELAYS.MODERATE;
+				return 0;
+				}
+
+			_calculateGapDelay(requestStart) {
+				const timeSinceLastRequest = requestStart - this.lastRequestTime;
+				return Math.max(0, this.MIN_REQUEST_GAP - timeSinceLastRequest);
+			}
+
+			_sleep(ms) {
+				return new Promise(resolve => setTimeout(resolve, ms));
+			}
+
+			_recordRequest(page, requestStart, delayUsed) {
+				const totalDuration = performance.now() - requestStart;
+				this.requestHistory.push({
+					page,
+					duration: totalDuration,
+					timestamp: requestStart,
+					delayUsed
+				});
+
+				if (this.requestHistory.length > this.HISTORY_SIZE) {
+					this.requestHistory.shift();
+				}
+			}
+		}
+
+		/**
+		 * Creates an adaptive fetch function with scroll state tracking
+		 * @returns {Function} Fetch function with updateScrollState method
+		 */
+		function createAdaptiveFetchData() {
+			const manager = new AdaptiveFetchManager();
+
+			const fetchImplementation = async (page, size) => {
+				return manager.fetch(page, size, mockServerRequest);
+			};
+
+			fetchImplementation.updateScrollState = (isFast, velocity) => {
+				manager.updateScrollState(isFast, velocity);
+			};
+
+			return fetchImplementation;
+		}
+
+		/**
+		 * JSON Reader utility for parsing grid data
+		 * @param {Object} data - Response data
+		 * @param {Object} ts - Grid instance
+		 * @returns {Object} Parsed data with page, lastpage, records, rows, id, userdata
+		 */
+		function vJsonReader(data, ts) {
+			const dReader = ts.p.datatype === 'json' ? ts.p.jsonReader : ts.p.localReader;
+			const retdata = {};
+
+			if (!$.jgrid.isNull(data)) {
+				retdata.page = intNum($.jgrid.getAccessor(data, dReader.page), ts.p.page);
+				retdata.lastpage = intNum($.jgrid.getAccessor(data, dReader.total), 1);
+				retdata.records = intNum($.jgrid.getAccessor(data, dReader.records));
+				retdata.rows = $.jgrid.getAccessor(data, dReader.root);
+				retdata.id = $.jgrid.getAccessor(data, dReader.id) || "id";
+				retdata.userdata = $.jgrid.getAccessor(data, dReader.userdata) || {};
+			}
+
+			return retdata;
+		}
+
+		/**
+		 * Mock server request function
+		 * @param {number} page - Page number
+		 * @param {number} size - Page size
+		 * @returns {Promise<Object>} Server response
+		 */
+		async function mockServerRequest(page, size) {
+			// Build request parameters
+			const prm = buildRequestParams(page, size);
+
+			// Trigger before request events
+			if (!triggerBeforeRequest(ts, prm)) {
+				return null;
+			}
+
+			// Execute the appropriate request based on datatype
+			const datatype = ts.p.datatype.toLowerCase();
+			let response;
+
+			if (datatype === 'json' || datatype === 'jsonp') {
+				response = await executeAjaxRequest(ts, prm);
+			} else if (datatype === 'local') {
+				ts.p.page = prm[ts.p.prmNames.page];
+				response = addLocalData(false);
+			}
+
+			// Process response
+			if (!beforeprocess(response)) {
+				endReq();
+				return null;
+			}
+
+			return response;
+			}
+
+		/**
+		 * Builds request parameters for the server
+		 */
+		function buildRequestParams(page, size) {
+			const prm = {};
+			const pN = ts.p.prmNames;
+
+			// Validate and set page
+			if (ts.p.page <= 0) {
+				ts.p.page = Math.min(1, ts.p.lastpage);
+			}
+
+			// Add parameters only if they're defined
+			const paramMap = {
+				[pN.search]: ts.p.search,
+				[pN.nd]: new Date().getTime(),
+				[pN.rows]: size,
+				[pN.page]: page + 1,
+				[pN.sort]: ts.p.sortname,
+				[pN.order]: ts.p.sortorder,
+				[pN.totalrows]: ts.p.rowTotal
+			};
+
+			for (const key in paramMap) {
+				if (Object.hasOwn(paramMap, key)) {
+					if(!$.jgrid.isNull(paramMap[key], true)){
+						prm[key] = paramMap[key];
+			}
+			}
+			}
+
+			$.extend(ts.p.postData, prm);
+			return prm;
+		}
+
+		/**
+		 * Triggers before request events and callbacks
+		 */
+		function triggerBeforeRequest(ts, prm) {
+			const bfr = $(ts).triggerHandler("jqGridBeforeRequest");
+			if (bfr === false || bfr === 'stop')
+				return false;
+
+			if ($.jgrid.isFunction(ts.p.beforeRequest)) {
+				const result = ts.p.beforeRequest.call(ts);
+				if (result === false || result === 'stop')
+					return false;
+				}
+
+			return true;
+		}
+
+		/**
+		 * Executes AJAX request
+		 */
+		async function executeAjaxRequest(ts, prm) {
+			const ajaxConfig = {
+				url: ts.p.url,
+				type: ts.p.mtype,
+				dataType: ts.p.datatype.toLowerCase(),
+				data: $.jgrid.isFunction(ts.p.serializeGridData)
+						  ? ts.p.serializeGridData.call(ts, ts.p.postData)
+						  : ts.p.postData,
+				beforeSend: function (xhr, settings) {
+					let gotoreq = $(ts).triggerHandler("jqGridLoadBeforeSend", [xhr, settings]);
+
+					if ($.jgrid.isFunction(ts.p.loadBeforeSend)) {
+						gotoreq = ts.p.loadBeforeSend.call(ts, xhr, settings);
+			}
+
+					if (gotoreq === undefined)
+						gotoreq = true;
+					if (gotoreq === false)
+						return false;
+
+					beginReq();
+				}
+			};
+
+			try {
+				const response = await $.ajax($.extend(ajaxConfig, $.jgrid.ajaxOptions, ts.p.ajaxGridOptions));
+				return response;
+			} catch (error) {
+				console.error("Request failed:", error);
+				throw error;
+			}
+		}
+
+		/**
+		 * Virtual Scroller for jqGrid
+		 * Implements efficient virtual scrolling with dynamic row height calculation
+		 */
+		class jqGridVirtualizer {
+			constructor(options) {
+				// DOM Elements
+				this.jqGridId = options.grid;
+				this.el = this.jqGridId.closest(".ui-jqgrid-bdiv");
+				this.canvas = this.el.querySelector('.scroll-canvas');
+				this.wrapper = this.el.querySelector('.visible-wrapper');
+				this.tbody = this.el.querySelector('.visible-items');
+
+				// Configuration
+				this.config = {
+					renderWindow: options.renderWindow || 3,
+					maxCache: options.maxCache || 25,
+					averageRowHeight: 60,
+					pageSize: options.pageSize || 20
+				};
+
+				// Data fetching
+				this.fetchData = options.fetchData;
+
+				// State management
+				this.state = {
+					rowCount: 0,
+					loading: false,
+					initialized: false,
+					lastStartPage: -1,
+					lastEndPage: -1,
+					fastScrollMode: false,
+					scrollVelocity: 0,
+					lastScrollUpdate: 0,
+					lastScrollTop: 0,
+					scrollDirection: 0 // -1 for up, 1 for down, 0 for stationary
+				};
+
+				// Caches
+				this.pageCache = [];
+				this.dataCache = new Map();
+				this.heightCache = {};
+				this.fetchedPages = new Set();
+
+				// Response data
+				this.restresponse = {};
+				this.jsonReader = {
+					root: "rows",
+					page: "page",
+					total: "total",
+					records: "records",
+					id: "id",
+					userdata: "userdata"				
+				};
+
+				// Animation frame ID
+				this.rafId = null;
+
+				// Flag to prevent update loops during scroll adjustments
+				this._isAdjustingScroll = false;
+
+				this.init();
+			}
+
+			/**
+			 * Initialize the virtualizer
+			 */
+			init() {
+				this._setupMeasurementElements();
+				this._bindEvents();
+				this.update();
+			}
+
+			/**
+			 * Sets up measurement DOM elements
+			 */
+			_setupMeasurementElements() {
+				// Create measurement table
+				this.measureTable = document.createElement('table');
+				this.measureTable.className = this.jqGridId.classList.value;
+
+				this.measureTbody = document.createElement('tbody');
+				this.measureTable.appendChild(this.measureTbody);
+
+				// Create measurement container
+				this.measurediv = document.createElement('div');
+				this.measurediv.id = "virtual-mes";
+				this.measurediv.className = 'ui-jqgrid';
+
+				this.measureEl = document.createElement('div');
+				this.measureEl.id = "measurement-div";
+				this.measureEl.className = 'ui-jqgrid-bdiv';
+
+				this.measurediv.appendChild(this.measureEl);
+				this.measureEl.appendChild(this.measureTable);
+				document.body.appendChild(this.measurediv);
+				// create object reader and hidden fields reader to skip calc on 
+				this.objectReader = reader( this.jqGridId.p.datatype === "local" ? 'local' : 'json' );
+				this.hiddenReader = readerHidden();			
+			}
+
+			/**
+			 * Binds scroll and resize events
+			 */
+			_bindEvents() {
+				// Scroll event
+				this.el.addEventListener('scroll', () => {
+					// Skip if we're programmatically adjusting scroll
+					if (this._isAdjustingScroll) {
+						return;
+					}
+
+					this.scrollGrid();
+
+					// Track scroll direction
+					const currentScrollTop = this.el.scrollTop;
+					if (currentScrollTop > this.state.lastScrollTop) {
+						this.state.scrollDirection = 1; // scrolling down
+					} else if (currentScrollTop < this.state.lastScrollTop) {
+						this.state.scrollDirection = -1; // scrolling up
+					}
+					this.state.lastScrollTop = currentScrollTop;
+
+					if (this.rafId) {
+						cancelAnimationFrame(this.rafId);
+					}
+
+					this.rafId = requestAnimationFrame(() => this.update());
+					this.state.lastScrollUpdate = Date.now();
+				});
+
+				// Resize event
+				window.addEventListener('resize', () => {
+					this._handleResize();
+				});
+			}
+
+			/**
+			 * Handles window resize
+			 */
+			_handleResize() {
+					this.heightCache = {};
+				this.measureEl.style.width = this.el.clientWidth + 'px';
+
+					// Re-measure visible rows
+				if (this.state.lastStartPage >= 0) {
+					const startRow = this.getStartRow(this.state.lastStartPage);
+					const endRow = this.getEndRow(this.state.lastStartPage + this.config.renderWindow - 1);
+
+					this.measure(startRow, endRow);
+					this.render(this.state.lastStartPage, this.state.lastStartPage + this.config.renderWindow);
+					}
+			}
+
+			/**
+			 * Gets the starting row index for a page
+			 * 
+			 * @param {integer} page
+			 * @returns {Number} 
+			 */
+			getStartRow(page) {
+				return page * this.config.pageSize;
+			}
+
+			/**
+			 * Gets the ending row index for a page
+			 * 
+			 * @param {integer} page
+			 * @returns {Number} 
+			 */
+			getEndRow(page) {
+				return Math.min((page + 1) * this.config.pageSize, this.state.rowCount);
+			}
+
+			/**
+			 * Resets the virtualizer state
+			 */
+			reset() {
+				this.pageCache = [];
+				this.dataCache.clear();
+				this.heightCache = {};
+				this.fetchedPages.clear();
+
+				this.wrapper.style.transform = 'translateY(0px)';
+				this.canvas.style.height = '0px';
+
+				this.state.initialized = false;
+				this.state.lastStartPage = -1;
+				this.state.lastEndPage = -1;
+			}
+
+			/**
+			 * Syncs grid horizontal scroll
+			 */
+			scrollGrid() {
+				const grid = this.jqGridId.grid;
+				const p = this.jqGridId.p;
+
+				if (!grid.bScroll) {
+					grid.hScroll = true;
+					grid.hDiv.scrollLeft = grid.bDiv.scrollLeft;
+
+					if (p.footerrow) {
+						grid.sDiv.scrollLeft = grid.bDiv.scrollLeft;
+					}
+
+					if (p.headerrow) {
+						grid.hrDiv.scrollLeft = grid.bDiv.scrollLeft;
+					}
+
+					// Remove column menu if exists
+					try {
+						$("#column_menu").remove();
+					} catch (e) {
+						// Ignore errors
+					}
+				}
+
+				grid.bScroll = false;
+			}
+
+			/**
+			 * Main update loop
+			 */
+			async update() {
+				this.rafId = null;
+
+				// Initial load
+				if (!this.state.initialized) {
+					if (!this.state.loading) {
+						await this.triggerLoad(0);
+					}
+					return;
+				}
+
+				// Calculate visible page range
+				const scrollTop = this.el.scrollTop;
+				const visiblePageId = this.findPageByScrollTop(scrollTop);
+
+				// Special handling for renderWindow = 1
+				if (this.config.renderWindow === 1) {
+					await this._updateSinglePageMode(visiblePageId, scrollTop);
+					return;
+				}
+
+				const startPage = Math.max(0, Math.min(visiblePageId, this.pageCache.length - this.config.renderWindow));
+				const endPage = Math.min(startPage + this.config.renderWindow, this.pageCache.length);
+
+				// Load missing pages in order of priority (visible first, then adjacent)
+				const pagesToLoad = [];
+				for (let page = startPage; page < endPage; page++) {
+					if (!this.fetchedPages.has(page)) {
+						pagesToLoad.push(page);
+					}
+				}
+
+				if (pagesToLoad.length > 0) {
+					if (!this.state.loading) {
+						// Load the first missing page in the visible range
+						await this.triggerLoad(pagesToLoad[0]);
+					}
+						return;
+					}
+
+				// Prefetch adjacent pages if renderWindow is small (helps prevent gaps)
+				if (this.config.renderWindow < 2 && !this.state.loading) {
+					const prefetchPages = [];
+
+					// Prioritize prefetch based on scroll direction
+					if (this.state.scrollDirection >= 0) {
+						// Scrolling down or stationary - prefetch next page first
+						if (endPage < this.pageCache.length && !this.fetchedPages.has(endPage)) {
+							prefetchPages.push(endPage);
+				}
+						if (startPage > 0 && !this.fetchedPages.has(startPage - 1)) {
+							prefetchPages.push(startPage - 1);
+						}
+					} else {
+						// Scrolling up - prefetch previous page first
+						if (startPage > 0 && !this.fetchedPages.has(startPage - 1)) {
+							prefetchPages.push(startPage - 1);
+						}
+						if (endPage < this.pageCache.length && !this.fetchedPages.has(endPage)) {
+							prefetchPages.push(endPage);
+						}
+					}
+
+					if (prefetchPages.length > 0) {
+						// Don't await - let it load in background
+						this.triggerLoad(prefetchPages[0]).catch(err => {
+							console.warn('Prefetch failed:', err);
+						});
+					}
+				}
+
+				// Optimize cache and measure rows
+				this.clearOldCache(startPage);
+				this.measure(this.getStartRow(startPage), this.getEndRow(endPage - 1));
+
+				// Skip re-render if nothing changed
+				if (startPage === this.state.lastStartPage &&
+						  endPage === this.state.lastEndPage &&
+						  this.isFullyMeasured(startPage, endPage)) {
+					return;
+				}
+
+				this.state.lastStartPage = startPage;
+				this.state.lastEndPage = endPage;
+				this.render(startPage, endPage);
+			}
+
+			/**
+			 * Special update logic for renderWindow = 1
+			 * Loads adjacent pages proactively based on scroll position within current page
+			 *
+			 * @param {integer} visiblePageId the visible page
+			 * @param {Number} scrollTop current scroll position
+			 * @returns {Number} 
+			 * 
+			 */
+			async _updateSinglePageMode(visiblePageId, scrollTop) {
+				const currentPage = visiblePageId;
+
+				// Ensure current page is loaded
+				if (!this.fetchedPages.has(currentPage)) {
+					if (!this.state.loading) {
+						await this.triggerLoad(currentPage);
+			}
+					return;
+				}
+
+				// Calculate scroll position within the current page
+				const pageTop = this.pageCache[currentPage].top;
+				const pageHeight = this.pageCache[currentPage].height;
+				const scrollIntoPage = scrollTop - pageTop;
+				const scrollPercentage = scrollIntoPage / pageHeight;
+
+				// Determine which adjacent page to load based on scroll position
+				const LOAD_THRESHOLD = 0.5; // Load next/prev page when 50% through current page
+
+				let pageToLoad = null;
+
+				if (scrollPercentage > LOAD_THRESHOLD && currentPage < this.pageCache.length - 1) {
+					// Past middle scrolling down - load next page
+					pageToLoad = currentPage + 1;
+				} else if (scrollPercentage < (1 - LOAD_THRESHOLD) && currentPage > 0) {
+					// Past middle scrolling up - load previous page
+					pageToLoad = currentPage - 1;
+				}
+
+				// Load the adjacent page if needed
+				if (pageToLoad !== null && !this.fetchedPages.has(pageToLoad)) {
+					if (!this.state.loading) {
+						// Load in background without blocking
+						this.triggerLoad(pageToLoad).catch(err => {
+							console.warn('Adjacent page load failed:', err);
+						});
+					}
+				}
+
+				// Determine which pages to render (always include loaded adjacent pages)
+				let startPage = currentPage;
+				let endPage = currentPage + 1;
+
+				// Expand render window to include adjacent loaded pages
+				if (currentPage > 0 && this.fetchedPages.has(currentPage - 1)) {
+					startPage = currentPage - 1;
+				}
+
+				if (currentPage < this.pageCache.length - 1 && this.fetchedPages.has(currentPage + 1)) {
+					endPage = currentPage + 2;
+				}
+
+				// Clean up cache (keep current and adjacent pages)
+				this.clearOldCache(currentPage);
+
+				// Measure and render
+				this.measure(this.getStartRow(startPage), this.getEndRow(endPage - 1));
+
+				// Render if either start or end page changed, or if not fully measured
+				const pageRangeChanged = startPage !== this.state.lastStartPage ||
+						  endPage !== this.state.lastEndPage;
+				const needsRender = pageRangeChanged || !this.isFullyMeasured(startPage, endPage);
+
+				if (needsRender) {
+					this.state.lastStartPage = startPage;
+					this.state.lastEndPage = endPage;
+					this.render(startPage, endPage);
+				}
+			}
+
+			/**
+			 * Binary search to find page by scroll position
+			 * 
+			 * @param {Number} scrollTop  the current scroll position
+			 * @returns {Number|mid} the related page
+			 */
+			findPageByScrollTop(scrollTop) {
+				let left = 0;
+				let right = this.pageCache.length - 1;
+
+				while (left <= right) {
+					const mid = Math.floor((left + right) / 2);
+
+					if (this.pageCache[mid].top <= scrollTop) {
+						if (mid === this.pageCache.length - 1 || this.pageCache[mid + 1].top > scrollTop) {
+							return mid;
+						}
+						left = mid + 1;
+					} else {
+						right = mid - 1;
+					}
+				}
+
+				return 0;
+			}
+
+			/**
+			 * Loads data for a specific page
+			 * 
+			 * @param {type} pageId
+			 * @returns {void}
+			 */
+			async triggerLoad(pageId) {
+				this.state.loading = true;
+
+				// Update status message
+				const ts = this.jqGridId;
+				const pgboxes = [ts.p.pager, ts.p.toppager].filter(Boolean).join(',');
+				$(`.ui-paging-info`, pgboxes).html(`Fetching Page ${pageId + 1}...`);
+	 
+				// Fetch data
+				this.restresponse = vJsonReader(await this.fetchData(pageId, this.config.pageSize), ts);
+
+				// Initialize if needed
+				if (!this.state.initialized) {
+					this.setup(this.restresponse.records);
+				}
+
+				// Cache the data
+				this.restresponse.rows.forEach((row, i) => {
+					this.dataCache.set(this.getStartRow(pageId) + i, row);
+				});
+
+				this.fetchedPages.add(pageId);
+				this.state.loading = false;
+
+				// Free memory
+				this.restresponse.rows = [];
+
+				// Continue update cycle
+				this.update();
+			}
+
+			/**
+			 * Sets up initial page structure based on total records
+			 *  
+			 * @param {integer} totalRecords
+			 * @returns {void}
+			 */
+			setup(totalRecords) {
+				this.state.rowCount = totalRecords;
+				let top = 0;
+				const pageCount = Math.ceil(totalRecords / this.config.pageSize);
+
+				for (let page = 0; page < pageCount; page++) {
+					const rowCount = this.getEndRow(page) - this.getStartRow(page);
+					const height = rowCount * this.config.averageRowHeight;
+
+					this.pageCache.push({top, height, estimated: true});
+					top += height;
+				}
+
+				this.canvas.style.height = `${top}px`;
+				this.state.initialized = true;
+			}
+
+			/**
+			 * Measures row heights for accurate positioning
+			 * 
+			 * @param {integer} start start row index
+			 * @param {integer} end end row index
+			 * @returns {void}
+			 */
+			measure(start, end) {
+				const toMeasure = [];
+
+				for (let i = start; i < end; i++) {
+					if (this.dataCache.get(i) && !(i in this.heightCache)) {
+						toMeasure.push(i);
+					}
+				}
+
+				if (toMeasure.length === 0)
+					return;
+
+				// Identify the reference row (first visible row at top of viewport)
+				const scrollTop = this.el.scrollTop;
+				const referenceRow = this._findFirstVisibleRow(scrollTop);
+
+				// Calculate offset of reference row from top of viewport BEFORE measurement
+				const offsetBeforeMeasure = this._calculateOffsetFromTop(referenceRow, scrollTop);
+
+				// Sync measurement container width
+				this.measureEl.style.width = this.el.clientWidth + 'px';
+				this.measureTbody.innerHTML = '';
+
+				// Build measurement HTML
+				const html = this._buildMeasurementHTML(toMeasure);
+				this.measureTbody.innerHTML = html;
+
+				// Measure heights
+				const rows = this.measureTable.querySelectorAll('tr');
+				toMeasure.forEach((idx, i) => {
+					this.heightCache[idx] = rows[i].offsetHeight;
+				});
+
+				// Update page cache with new measurements
+				this._updatePageCacheHeights();
+
+				// Restore scroll position to keep the reference row at the same viewport position
+				if (scrollTop > 0 && referenceRow >= 0) {
+					this._preserveScrollPosition(referenceRow, offsetBeforeMeasure);
+				}
+			}
+
+			/**
+			 * Finds the first fully or partially visible row at the top of viewport
+			 *  
+			 * @param {Number} scrollTop - the current scroll position
+			 * @returns {Number}
+			 */
+			_findFirstVisibleRow(scrollTop) {
+				let accumulated = 0;
+
+				for (let i = 0; i < this.state.rowCount; i++) {
+					const rowHeight = this.heightCache[i] || this.config.averageRowHeight;
+
+					// If this row contains or is past the scrollTop, it's our reference
+					if (accumulated + rowHeight > scrollTop) {
+						return i;
+					}
+
+					accumulated += rowHeight;
+				}
+
+				return 0;
+			}
+
+			/**
+			 * Calculates how far into a row the scrollTop is
+			 * 
+			 * @param {integer} rowIndex the row index
+			 * @param {Number} scrollTop the current scroll position
+			 * @returns {Number}
+			 */
+			_calculateOffsetFromTop(rowIndex, scrollTop) {
+				let accumulated = 0;
+
+				for (let i = 0; i < rowIndex; i++) {
+					accumulated += this.heightCache[i] || this.config.averageRowHeight;
+				}
+				
+				// Return how many pixels into the reference row we are
+				return scrollTop - accumulated;
+						}
+
+			/**
+			 * Preserves scroll position by keeping reference row at same viewport offset
+			 * 
+			 * @param {integer} referenceRow
+			 * @param {integer} targetOffset
+			 * @returns {void}
+			 */
+			_preserveScrollPosition(referenceRow, targetOffset) {
+				// Calculate new position of reference row
+				let newPosition = 0;
+
+				for (let i = 0; i < referenceRow; i++) {
+					newPosition += this.heightCache[i] || this.config.averageRowHeight;
+				}
+
+				// Add the offset into the reference row
+				newPosition += targetOffset;
+
+				const currentScroll = this.el.scrollTop;
+				const diff = Math.abs(newPosition - currentScroll);
+
+				// Only adjust if difference is significant
+				if (diff > 1) {
+					this._isAdjustingScroll = true;
+
+					this.el.scrollTop = newPosition;
+
+					// Reset flag after scroll settles
+					requestAnimationFrame(() => {
+						this._isAdjustingScroll = false;
+				});
+				}
+			}
+
+			/**
+			 * Builds HTML for measurement
+			 * 
+			 * @param {integer} indices number of rows
+			 * @returns {string}
+			 */
+			_buildMeasurementHTML(indices) {
+				let html = this.jqGridId.rows[0].outerHTML; 
+				indices.forEach(i => {
+					const row = this.dataCache.get(i);
+					html += "<tr class='jqgrow ui-row-ltr'>";
+
+					this.objectReader.forEach((fieldReader,i)  =>  {
+						if( this.hiddenReader[i] ) { return; }  // skip hidden
+						const value = $.jgrid.getAccessor(row, fieldReader);
+						html += `<td>${value}</td>`;
+				});
+
+					html += "</tr>";
+				});
+
+				return html;
+			}
+
+			/**
+			 * Updates page cache with measured heights
+			 */
+			_updatePageCacheHeights() {
+				let currentTop = 0;
+
+				this.pageCache.forEach((page, p) => {
+					let pageHeight = 0;
+
+					for (let r = this.getStartRow(p); r < this.getEndRow(p); r++) {
+						pageHeight += this.heightCache[r] || this.config.averageRowHeight;
+					}
+
+					page.top = currentTop;
+					page.height = pageHeight;
+					currentTop += pageHeight;
+				});
+
+				this.canvas.style.height = `${currentTop}px`;
+			}
+
+			/**
+			 * Checks if all rows in range are measured
+			 * 
+			 * @param {int} startPage from calculated start page
+			 * @param {int} endPage to the calculated endPage
+			 * @returns {boolean}
+			 */
+			isFullyMeasured(startPage, endPage) {
+				for (let i = this.getStartRow(startPage); i < this.getEndRow(endPage - 1); i++) {
+					if (!(i in this.heightCache)) {
+						return false;
+					}
+				}
+				return true;
+			}
+
+			/**
+			 * Renders visible rows
+			 * 
+			 * @param {int} startPage from calculated start page
+			 * @param {int} endPage to the calculated endPage
+			 * @returns {void}
+			 */
+			render(startPage, endPage) {
+				const ts = this.jqGridId;
+
+				// Set ARIA attributes
+				this.wrapper.setAttribute('aria-rowindex', this.getStartRow(startPage) + 1);
+				this.wrapper.setAttribute('aria-rowcount', this.state.rowCount);
+				
+				// Position wrapper
+				this.wrapper.style.transform = `translateY(${this.pageCache[startPage].top}px)`;
+
+				// Collect visible rows
+				this.restresponse.rows = [];
+				
+				for (let i = this.getStartRow(startPage); i < this.getEndRow(endPage - 1); i++) {
+					const item = this.dataCache.get(i);
+					if (item) {
+					this.restresponse.rows.push(item);
+				}
+				}
+
+				// Don't render if no data (prevents empty grid flashing)
+				if (this.restresponse.rows.length === 0) {
+					return;
+				}
+
+				// Update response metadata
+				this.restresponse.total = Math.ceil(this.state.rowCount / this.config.pageSize);
+				this.restresponse.page = startPage + 1;
+				this.restresponse.records = this.state.rowCount;
+
+				// Add data to grid
+				ts.addJSONData(this.restresponse, 1, false, endPage - startPage, this.jsonReader);
+
+				// Trigger events
+				$(ts).triggerHandler("jqGridLoadComplete", [this.restresponse]);
+				$(ts).triggerHandler("jqGridAfterLoadComplete", [this.restresponse]);
+
+				endReq();
+			}
+
+			/**
+			 * Removes old cached data to save memory
+			 * 
+			 * @param {integer} 
+			 * @returns {void}
+			 */
+			clearOldCache(currentStart) {
+				
+				const maxCacheSize = this.config.maxCache;
+
+				if (this.fetchedPages.size <= maxCacheSize) {
+					return;
+				}
+
+				// Sort pages by distance from current position
+				const sorted = Array.from(this.fetchedPages).sort(
+						  (a, b) => Math.abs(currentStart - a) - Math.abs(currentStart - b)
+				);
+
+				// Remove furthest pages beyond max cache
+				sorted.slice(maxCacheSize).forEach(page => {
+					for (let i = this.getStartRow(page); i < this.getEndRow(page); i++) {
+						this.dataCache.delete(i);
+						delete this.heightCache[i];
+					}
+					this.fetchedPages.delete(page);
+				});
+			}
+		}
+
 		$(ts).triggerHandler("jqGridInitGrid");
+		if (ts.p.vScroll) {
+			var vGrid = new jqGridVirtualizer({
+				grid: document.getElementById($.jgrid.jqID(ts.p.id)),
+				pageSize: ts.p.rowNum,
+				renderWindow: ts.p.scrollRenderWin,
+				maxCache: ts.p.scrollMaxCache,
+				averageRowHeight: ts.p.scrollAvgRowHeight,
+				fetchData: createAdaptiveFetchData()
+			});
+
+		} else {
 		populate();
-		ts.p.hiddengrid=false;
-		if(ts.p.responsive) {
+		}
+		ts.p.hiddengrid = false;
+		if (ts.p.responsive) {
 			var supportsOrientationChange = "onorientationchange" in window,
 			orientationEvent = supportsOrientationChange ? "orientationchange" : "resize";
-			$(window).on( orientationEvent, function(){
-				if($.jgrid.isVisible(ts)) {
-					$(ts).jqGrid('resizeGrid', 500, true, ts.p.resizeHeight,true);
+			$(window).on(orientationEvent, function () {
+				if ($.jgrid.isVisible(ts)) {
+					$(ts).jqGrid('resizeGrid', 500, true, ts.p.resizeHeight, true);
 				}
 			});
 		}
 	});
 };
+
 $.jgrid.extend({
 	getGridParam : function(name, grid_module) {
 		var $t = this[0], ret;
@@ -6418,7 +8550,7 @@ $.jgrid.extend({
 							title = this.title ? {"title":$.jgrid.stripHtml(vl)} : {};
 							
 							if(t.p.treeGrid===true && nm === t.p.ExpandColumn) {
-								$("td[role='gridcell']",ind).eq(i).find("span[class*='cell-wrapper']").html(vl).attr(title);
+								$("td[role='gridcell']",ind).eq(i).attr(title).find("span[class*='cell-wrapper']").html(vl);
 							} else {
 								$("td[role='gridcell']",ind).eq(i).html(vl).attr(title);
 							}
@@ -7652,6 +9784,7 @@ $.jgrid.extend({
 	},
 	setFrozenColumns : function(frzclass='frozen-col-class', callername='') {
 		return this.each(function(){
+			if ( !this.grid ) {return;}
 			//console.trace();
 			if(this.p.direction === "rtl") {
 				frzclass += "-rtl";
@@ -7674,7 +9807,7 @@ $.jgrid.extend({
 			}
 			if( $t.p.frozenColCount >= 0) {
 				$(this).jqGrid('refreshFrozenColumns', true, true, frzclass);
-				$(this).on('jqGridAfterGridComplete.setFrozenColumns',function(){
+				$(this).on('jqGridAfterLoadComplete.setFrozenColumns',function(){
 					var pos =0;
 					for(i=0;i<$t.p.frozenColCount+1;i++){
 					// from left
@@ -7695,10 +9828,11 @@ $.jgrid.extend({
 	},
 	refreshFrozenColumns : function (data= true, addfrzclass=false, frzclass='frozen-col-class') {
 		return this.each(function(){
+			if ( !this.grid ) {return;}
 			if( this.p.direction === "rtl" && frzclass.slice(-4) !== "-rtl") {
 				frzclass += "-rtl";
 			}
-			console.log("called refresh frozen", frzclass);
+			//console.log("called refresh frozen", frzclass);
 			var pos =0, cm = this.p.colModel;
 			var elements =[];
 			for(let i=0;i< this.p.frozenColCount+1; i++){
@@ -7736,12 +9870,13 @@ $.jgrid.extend({
 	},
 	destroyFrozenColumns : function(frzclass='frozen-col-class') {
 		return this.each(function() {
+			if ( !this.grid ) {return;}
 			var cm = this.p.colModel;
 			var elements =[];
 			if( this.p.direction === "rtl" && frzclass.slice(-4) !== "-rtl") {
 				frzclass += "-rtl";
 			}
-			console.log("caled unset",frzclass);
+			//console.log("caled unset",frzclass);
 			for(let i=0;i< this.p.frozenColCount+1; i++){
 				// from left direction only for now
 				var nm = this.p.id+"_"+cm[i].name ;					
@@ -8101,7 +10236,47 @@ $.jgrid.extend({
 		});
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+/**
+ * all events and options here are aded anonynous and not in the base grid
+ * since the array is to big. Here is the order of execution.
+ * From this point we use jQuery isFunction
+ * formatCell
+ * beforeEditCell,
+ * onCellSelect (used only for noneditable cels)
+ * afterEditCell,
+ * beforeSaveCell, (called before validation of values if any)
+ * beforeSubmitCell (if cellsubmit remote (ajax))
+ * onSubmitCell
+ * afterSubmitCell(if cellsubmit remote (ajax)),
+ * afterSaveCell,
+ * errorCell,
+ * validationCell
+ * serializeCellData - new
+ * Options
+ * cellsubmit (remote,clientArray) (added in grid options)
+ * cellurl
+ * ajaxCellOptions
+ * restoreCellonFail
+* */
+"use strict";
 //module begin
 $.jgrid.extend({
 	editCell : function (iRow,iCol, ed, event, excel){
@@ -8171,7 +10346,10 @@ $.jgrid.extend({
 				if (excel) {
 					tmp = event.key;
 				}
-				var elc = $.jgrid.createEl.call($t,cm.edittype,opt,tmp,true,$.extend({},$.jgrid.ajaxOptions,$t.p.ajaxSelectOptions || {}));
+				if(!Object.hasOwn(opt, "aria-label")) {
+					opt["aria-label"] = "Enter cell value";
+				}
+				var elc = $.jgrid.createEl.call($t, cm.edittype, opt,tmp, true, $.extend({},$.jgrid.ajaxOptions,$t.p.ajaxSelectOptions || {}));
 				if( $.inArray(cm.edittype, ['text','textarea','password']) > -1) {
 					$(elc).addClass(inpclass);
 				} else if(cm.edittype === 'select') {
@@ -8801,7 +10979,27 @@ $.jgrid.extend({
 	}
 /// end  cell editing
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base",
+			"./jqModal",
+			"./jqDnR"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.extend($.jgrid,{
 // Modal functions
@@ -8871,7 +11069,7 @@ $.extend($.jgrid,{
 		mh.className = "ui-jqdialog-titlebar " + classes.header;
 		mh.id = aIDs.modalhead;
 		$(mh).append("<span class='ui-jqdialog-title "+classes.title+"'>"+p.caption+"</span>");
-		var ahr= $("<a class='ui-jqdialog-titlebar-close "+common.cornerall+"' aria-label='Close'></a>")
+		var ahr= $("<a class='ui-jqdialog-titlebar-close "+common.cornerall+"' aria-label='Close' role='button'></a>")
 		.hover(function(){ahr.addClass(common.hover);},
 			function(){ahr.removeClass(common.hover);})
 		.append("<span class='" + common.icon_base+" " + classes.icon_close + "'></span>");
@@ -9068,10 +11266,14 @@ $.extend($.jgrid,{
 		}
 		var dh = isNaN(mopt.dataheight) ? mopt.dataheight : mopt.dataheight+"px";
 		//cn = "text-align:"+mopt.align+";";
+		var stylebut ="";
+		if( ["left","center", "right"].includes(mopt.buttonalign) ) {
+			stylebut = "style='text-align:"+ mopt.buttonalign+"'";
+		}
 		var cnt = "<div id='info_id'>";
 		cnt += "<div id='infocnt' class='info_content "+classes.body+"'>"+content+"</div>";
-		cnt += c_b ? "<div class='info_footer " + classes.footer + "'><a id='closedialog' class='fm-button " + common.button + "'>"+c_b+"</a>"+buttstr+"</div>" :
-			buttstr !== ""  ? "<div class='info_footer " + classes.footer + "'>"+buttstr+"</div>" : "";
+		cnt += c_b ? "<div class='info_footer " + classes.footer + "' "+stylebut+"><a id='closedialog' class='fm-button " + common.button + "'>"+c_b+"</a>"+buttstr+"</div>" :
+			buttstr !== ""  ? "<div class='info_footer " + classes.footer + "' "+stylebut+">"+buttstr+"</div>" : "";
 		cnt += "</div>";
 
 		try {
@@ -9153,7 +11355,7 @@ $.extend($.jgrid,{
 		);
 		if($.jgrid.isFunction(mopt.beforeOpen) ) { mopt.beforeOpen(); }
 		if(mopt.type && mopt.type !== "default") {
-			$("#info_dialog").addClass("toast-"+mopt.type)
+			$("#info_dialog").addClass("jqgrid-toast-"+mopt.type)
 		}
 		$.jgrid.viewModal("#info_dialog",{
 			onHide: function(h) {
@@ -9382,6 +11584,9 @@ $.extend($.jgrid,{
 						so = options.value.split(delim);
 						for(i=0; i<so.length;i++){
 							sv = so[i].split(sep);
+							if(sv.length === 1) {
+								sv.unshift("");
+							}
 							if(sv.length > 2 ) {
 								sv[1] = $.map(sv,function(n,ii){if(ii>0) { return n;} }).join(sep);
 							}
@@ -9830,7 +12035,46 @@ $.extend($.jgrid,{
 		form.parentNode.removeChild(form);
 	}	
 });
+//module end
+}));
 
+/*
+ *
+ * The filter uses JSON entities to hold filter rules and groups. Here is an example of a filter:
+
+{ "groupOp": "AND",
+      "groups" : [
+        { "groupOp": "OR",
+            "rules": [
+                { "field": "name", "op": "eq", "data": "England" },
+                { "field": "id", "op": "le", "data": "5"}
+             ]
+        }
+      ],
+      "rules": [
+        { "field": "name", "op": "eq", "data": "Romania" },
+        { "field": "id", "op": "le", "data": "1"}
+      ]
+}
+*/
+/*jshint eqeqeq:false, eqnull:true, devel:true */
+/*global jQuery, define */
+
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base",
+			"./grid.common"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.fn.jqFilter = function( arg ) {
 	if (typeof arg === 'string') {
@@ -10015,7 +12259,7 @@ $.fn.jqFilter = function( arg ) {
 
 			if(this.p.ruleButtons === true) {
 			// dropdown for: choosing group operator type
-			var groupOpSelect = $("<select size='1' name='select_group_op' class='opsel " + classes.srSelect + "'></select>");
+			var groupOpSelect = $("<select size='1' aria-label='Select group operation' name='select_group_op' class='opsel " + classes.srSelect + "'></select>");
 			th.append(groupOpSelect);
 			// populate dropdown with all posible group operators: or, and
 			var str= "", selected;
@@ -10182,7 +12426,7 @@ $.fn.jqFilter = function( arg ) {
 
 
 			// dropdown for: choosing field
-			var ruleFieldSelect = $("<select size='1' name='select_field' class='" + classes.srSelect + "'></select>"), ina, aoprs = [];
+			var ruleFieldSelect = $("<select size='1' aria-label='Select Field' name='select_field' class='" + classes.srSelect + "'></select>"), ina, aoprs = [];
 			ruleFieldTd.append(ruleFieldSelect);
 			ruleFieldSelect.on('change',function() {
 				if( that.p.ruleButtons && that.p.uniqueSearchFields ) {
@@ -10209,6 +12453,7 @@ $.fn.jqFilter = function( arg ) {
 				cm.searchoptions.id = $.jgrid.randId();
 				cm.searchoptions.name = rule.field;
 				cm.searchoptions.oper = 'filter';
+				cm.searchoptions["aria-label"] = "Enter value to search";
 
 				if(isIE && cm.inputtype === "text") {
 					if(!cm.searchoptions.size) {
@@ -10307,13 +12552,14 @@ $.fn.jqFilter = function( arg ) {
 			}
 			cm.searchoptions.name = rule.field;
 			cm.searchoptions.oper = 'filter';
+			cm.searchoptions["aria-label"] = "Enter value to search";
 			var ruleDataInput = $.jgrid.createEl.call($t, cm.inputtype,cm.searchoptions, rule.data, true, that.p.ajaxSelectOptions || {}, true);
 			if(rule.op === 'nu' || rule.op === 'nn' || $.inArray(rule.op, that.p.unaryOperations) >=0 ) {
 				$(ruleDataInput).attr('readonly','true');
 				$(ruleDataInput).attr('disabled','true');
 			} //retain the state of disabled text fields in case of null ops
 			// dropdown for: choosing operator
-			var ruleOperatorSelect = $("<select size='1' name='select_oper' class='selectopts " + classes.srSelect + "'></select>");
+			var ruleOperatorSelect = $("<select size='1' aria-label='Select operation' name='select_oper' class='selectopts " + classes.srSelect + "'></select>");
 			ruleOperatorTd.append(ruleOperatorSelect);
 			ruleOperatorSelect.on('change',function() {
 				rule.op = $(ruleOperatorSelect).val();
@@ -11100,6 +13346,7 @@ $.jgrid.extend({
 					if( p.restoreFromFilters && restores) {
 						df = restores.data;
 					}
+					soptions["aria-label"]="Enter toolbar search value";
 					elem = $.jgrid.createEl.call($t, this.stype, soptions , df, false, $.extend({},$.jgrid.ajaxOptions, $t.p.ajaxSelectOptions || {}));
 					if( this.stype !== 'custom') {
 						if(this.stype==='select') {
@@ -11435,7 +13682,7 @@ $.jgrid.extend({
 				defaultFilters = $t.p.postData[p.sFilter];
 			}
 			if(typeof defaultFilters === "string") {
-				defaultFilters = $.jgrid.parse( defaultFilters );
+				defaultFilters = $.jgrid.parse( defaultFilters || "{}" );
 			}
 			if(p.recreateFilter === true) {
 				$("#"+$.jgrid.jqID(IDs.themodal)).remove();
@@ -11467,8 +13714,8 @@ $.jgrid.extend({
 					fil.attr("dir","rtl");
 				}
 				var columns = $.extend([],$t.p.colModel),
-				bS  ="<a id='"+fid+"_search' class='fm-button " + common.button + " fm-button-icon-right ui-search'><span class='" + common.icon_base + " " +classes.icon_search + "'></span>"+p.Find+"</a>",
-				bC  ="<a id='"+fid+"_reset' class='fm-button " + common.button +" fm-button-icon-left ui-reset'><span class='" + common.icon_base + " " +classes.icon_reset + "'></span>"+p.Reset+"</a>",
+				bS  ="<a id='"+fid+"_search' class='fm-button " + common.button + " fm-button-icon-right ui-search' role='button' tabindex='0' href='#'><span class='" + common.icon_base + " " +classes.icon_search + "'></span>"+p.Find+"</a>",
+				bC  ="<a id='"+fid+"_reset' class='fm-button " + common.button +" fm-button-icon-left ui-reset' role='button' tabindex='0' href='#'><span class='" + common.icon_base + " " +classes.icon_reset + "'></span>"+p.Reset+"</a>",
 				bQ = "", tmpl="", colnm, found = false, bt, cmi=-1, ms = false, ssfield = [];
 				if(p.showQuery) {
 					bQ ="<a id='"+fid+"_query' class='fm-button " + common.button + " fm-button-icon-left'><span class='" + common.icon_base + " " +classes.icon_query + "'></span>Query</a>";
@@ -11833,38 +14080,36 @@ $.jgrid.extend({
 				result, i;
 
 				try {
-					query = $.jgrid.from.call($t, $t.p.data);
-					result = query.groupBy( o.field, o.direction, "text", o.src_date);
-					i = result.length;
+					query = $.jgrid.from($t.p.data);
+					query.orderBy([o.field], [{so:o.direction, stype:'text', srcfmt:'Y-m-d', sfunc:null}]);
+					result = $.jgrid.jLinq().util.group( query.select(), o.field, false);
 				} catch(e) {
 
 				}
-				if(result && result.length) {
-					res =  $("#gsh_"+$t.p.id+"_"+o.field).find("td.ui-search-input > select");
-					i = result.length;
-					if(o.allValues) {
-						sdata = "<option value=''>"+ o.allValues +"</option>";
-						tmp.push(":" + o.allValues);
+				if(o.allValues) {
+					sdata = "<option value=''>"+ o.allValues +"</option>";
+					tmp.push(":" + o.allValues);
+				}
+				for (let key in result) {
+					if( Object.hasOwn(result,key)) {
+						res =  $("#gsh_"+$t.p.id+"_"+o.field).find("td.ui-search-input > select");
+						s_cnt = o.count_item ? " (" +result[key].length+")" : "";
+						sdata += "<option value='"+key+"'>"+ key + s_cnt+"</option>";
+						tmp.push(key+":"+ key + s_cnt);
 					}
-					while(i--) {
-						item = result[i];
-						s_cnt = o.count_item ? " (" +item.items.length+")" : "";
-						sdata += "<option value='"+item.unique+"'>"+ item.unique + s_cnt+"</option>";
-						tmp.push(item.unique+":"+item.unique + s_cnt);
-					}
-					res.append(sdata);
-					res.on('change',function(){
-						$t.triggerToolbar();
-					});
-					if( o.create_value ) {
-						cm = $.jgrid.getElemByAttrVal($t.p.colModel, 'name', o.field, false);
-						if( !$.isEmptyObject( cm ) ) {
-							if( cm.searchoptions ) {
-								$.extend(cm.searchoptions, {value: tmp.join(";")});
-							} else {
-								cm.searchoptions = {};
-								cm.searchoptions.value = tmp.join(";");
-							}
+				}
+				res.append(sdata);
+				res.on('change',function(){
+					$t.triggerToolbar();
+				});
+				if( o.create_value ) {
+					cm = $.jgrid.getElemByAttrVal($t.p.colModel, 'name', o.field, false);
+					if( !$.isEmptyObject( cm ) ) {
+						if( cm.searchoptions ) {
+							$.extend(cm.searchoptions, {value: tmp.join(";")});
+						} else {
+							cm.searchoptions = {};
+							cm.searchoptions.value = tmp.join(";");
 						}
 					}
 				}
@@ -11872,7 +14117,26 @@ $.jgrid.extend({
 		});
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false, eqnull:true, devel:true */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base",
+			"./grid.common"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 var rp_ge = {};
 $.jgrid.extend({
@@ -11979,14 +14243,14 @@ $.jgrid.extend({
 									let cvr = this.editoptions.custom_value.call($t, $("#"+$.jgrid.jqID(nm),frmtb),'get');
 									if( cvr === "#ignoreme#") {
 										
-									} else if (crv === undefined) {
+									} else if (cvr === undefined) {
 										throw "e1";
 									} else {
 										postdata[nm] = cvr;
 									}
 								} catch (e) {
-									if (e==="e1") {$.jgrid.info_dialog(errors.errcap,"function 'custom_value' "+rp_ge[$(this)[0]].p.msg.novalue,rp_ge[$(this)[0]].p.bClose, {styleUI : rp_ge[$(this)[0]].p.styleUI });}
-									else {$.jgrid.info_dialog(errors.errcap,e.message,rp_ge[$(this)[0]].p.bClose, {styleUI : rp_ge[$(this)[0]].p.styleUI });}
+									if (e==="e1") {$.jgrid.info_dialog(errors.errcap,"function 'custom_value' "+rp_ge[$t.p.id].msg.novalue,rp_ge[$t.p.id].bClose, {styleUI : rp_ge[$t.p.id].styleUI });}
+									else {$.jgrid.info_dialog(errors.errcap,e.message,rp_ge[$t.p.id].bClose, {styleUI : rp_ge[$t.p.id].styleUI });}
 								}
 								return true;
 							}
@@ -12052,20 +14316,16 @@ $.jgrid.extend({
 						hc = this.hidden === true ? true : false;
 					}
 					dc = hc ? "style='display:none'" : "";
-					if ( nm !== 'cb' && nm !== 'subgrid' && this.editable===true && nm !== 'rn' && nm!=='sc') {
+					if ( !$.jgrid.isServiceCol() && this.editable===true ) {
 						if(ind === false) {
 							tmp = "";
 						} else {
-							if(nm === obj.p.ExpandColumn && obj.p.treeGrid === true) {
-								tmp = $("td[role='gridcell']",obj.rows[ind]).eq( i ).text();
-							} else {
-								try {
-									tmp =  $.unformat.call(obj, $("td[role='gridcell']",obj.rows[ind]).eq( i ),{rowId:rowid, colModel:this},i);
-								} catch (_) {
-									tmp =  (this.edittype && this.edittype === "textarea") ? $("td[role='gridcell']",obj.rows[ind]).eq( i ).text() : $("td[role='gridcell']",obj.rows[ind]).eq( i ).html();
-								}
-								if(!tmp || tmp === "&nbsp;" || tmp === "&#160;" || (tmp.length===1 && tmp.charCodeAt(0)===160) ) {tmp='';}
+							try {
+								tmp =  $.unformat.call(obj, $("td[role='gridcell']",obj.rows[ind]).eq( i ),{rowId:rowid, colModel:this},i);
+							} catch (_) {
+								tmp =  (this.edittype && this.edittype === "textarea") ? $("td[role='gridcell']",obj.rows[ind]).eq( i ).text() : $("td[role='gridcell']",obj.rows[ind]).eq( i ).html();
 							}
+							if(!tmp || tmp === "&nbsp;" || tmp === "&#160;" || (tmp.length===1 && tmp.charCodeAt(0)===160) ) {tmp='';}
 						}
 						var opt = $.extend({}, this.editoptions || {} ,{id:nm,name:nm, rowId: rowid, oper:frmoper, module : 'form', checkUpdate : rp_ge[$t.p.id].checkOnSubmit || rp_ge[$t.p.id].checkOnUpdate}),
 						frmopt = $.extend({}, {elmprefix:'',elmsuffix:'',rowabove:false,rowcontent:''}, this.formoptions || {}),
@@ -12080,7 +14340,10 @@ $.jgrid.extend({
 						if($t.p.autoencode) {
 							tmp = $.jgrid.htmlDecode(tmp);
 						}
-						elc = $.jgrid.createEl.call($t,this.edittype,opt,tmp,false,$.extend({},$.jgrid.ajaxOptions,obj.p.ajaxSelectOptions || {}));
+						if(!Object.hasOwn(opt, "aria-label")) {
+							opt["aria-label"] = "Edit form value";
+						}
+						elc = $.jgrid.createEl.call($t, this.edittype, opt, tmp, false, $.extend( {}, $.jgrid.ajaxOptions,obj.p.ajaxSelectOptions || {}));
 						//if(tmp === "" && this.edittype == "checkbox") {tmp = $(elc).attr("offval");}
 						//if(tmp === "" && this.edittype == "select") {tmp = $("option:eq(0)",elc).text();}
 						if(this.edittype === "select") {
@@ -12733,10 +14996,10 @@ $.jgrid.extend({
 			var rtlb = $t.p.direction === "rtl" ? true :false,
 			bp = rtlb ? "nData" : "pData",
 			bn = rtlb ? "pData" : "nData";
-			var bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
-			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
-			bS  ="<a id='sData' class='fm-button " + commonstyle.button + "'>"+p.bSubmit+"</a>",
-			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "'>"+p.bCancel+"</a>",
+			var bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.prevRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
+			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.nextRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
+			bS  ="<a id='sData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Submit data'>"+p.bSubmit+"</a>",
+			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Close modal dialog'>"+p.bCancel+"</a>",
 			user_buttons = ( Array.isArray( rp_ge[$t.p.id].buttons ) ? $.jgrid.buildButtons( rp_ge[$t.p.id].buttons, bS + bC, commonstyle ) : bS + bC );
 			var bt = "<table style='height:auto' class='EditTable ui-common-table' id='"+frmtborg+"_2'><tbody><tr><td colspan='2'><hr class='"+commonstyle.content+"' style='margin:1px'/></td></tr><tr id='Act_Buttons'><td class='navButton'>"+(rtlb ? bN+bP : bP+bN)+"</td><td class='EditButton'>"+ user_buttons +"</td></tr>";
 			//bt += "<tr style='display:none' class='binfo'><td class='bottominfo' colspan='2'>"+rp_ge[$t.p.id].bottominfo+"</td></tr>";
@@ -12832,9 +15095,9 @@ $.jgrid.extend({
 				.append("<span class='" + commonstyle.icon_base +" "+p.closeicon[2]+"'></span>");
 			}
 			if(rp_ge[$t.p.id].checkOnSubmit || rp_ge[$t.p.id].checkOnUpdate) {
-				bS  ="<a id='sNew' class='fm-button "+commonstyle.button + "' style='z-index:1002'>"+p.bYes+"</a>";
-				bN  ="<a id='nNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px'>"+p.bNo+"</a>";
-				bC  ="<a id='cNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px;'>"+p.bExit+"</a>";
+				bS  ="<a id='sNew' class='fm-button "+commonstyle.button + "' style='z-index:1002' role='button' tabindex='0' href='#'>"+p.bYes+"</a>";
+				bN  ="<a id='nNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px' role='button' tabindex='0' href='#'>"+p.bNo+"</a>";
+				bC  ="<a id='cNew' class='fm-button "+commonstyle.button + "' style='z-index:1002;margin-left:5px;' role='button' tabindex='0' href='#'>"+p.bExit+"</a>";
 				var zI = p.zIndex  || 999;zI ++;
 				$("#"+IDs.themodal).append("<div class='"+ p.overlayClass+" jqgrid-overlay confirm' style='z-index:"+zI+";display:none;position:absolute;'>&#160;"+"</div><div class='confirm ui-jqconfirm "+commonstyle.content+"' style='z-index:"+(zI+1)+"'>"+p.saveData+"<br/><br/>"+bS+bN+bC+"</div>");
 				$("#sNew","#"+$.jgrid.jqID(IDs.themodal)).click(function(){
@@ -13224,9 +15487,9 @@ $.jgrid.extend({
 			bp = rtlb ? "nData" : "pData",
 			bn = rtlb ? "pData" : "nData",
 				// buttons at footer
-			bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
-			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
-			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "'>"+p.bClose+"</a>",
+			bP = "<a id='"+bp+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.prevRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_prev+ "'></span></a>",
+			bN = "<a id='"+bn+"' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' title='"+p.nextRow+"'><span class='" + commonstyle.icon_base + " " + styles.icon_next+ "'></span></a>",
+			bC  ="<a id='cData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Close the modal dialog'>"+p.bClose+"</a>",
 			user_buttons = ( Array.isArray( rp_ge[$t.p.id].buttons ) ? $.jgrid.buildButtons( rp_ge[$t.p.id].buttons, bC, commonstyle ) : bC );
 			if(maxRows >  0) {
 				var sd=[];
@@ -13336,7 +15599,7 @@ $.jgrid.extend({
 					}
 					updateNav(npos[0]+1,npos);
 				}
-				focusaref();
+				//focusaref();
 				return false;
 			});
 			$("#pData", "#"+frmtb+"_2").click(function(){
@@ -13357,7 +15620,7 @@ $.jgrid.extend({
 					}
 					updateNav(ppos[0]-1,ppos);
 				}
-				focusaref();
+				//focusaref();
 				return false;
 			});
 			var posInit =getCurrPos();
@@ -13460,8 +15723,8 @@ $.jgrid.extend({
 				tbl += "<tr><td class=\"delmsg\" style=\"white-space:pre;\">"+rp_ge[$t.p.id].msg+"</td></tr><tr><td >&#160;</td></tr>";
 				// buttons at footer
 				tbl += "</tbody></table></div>";
-				var bS  = "<a id='dData' class='fm-button " + commonstyle.button + "'>"+p.bSubmit+"</a>",
-				bC  = "<a id='eData' class='fm-button " + commonstyle.button + "'>"+p.bCancel+"</a>",
+				var bS  = "<a id='dData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Delete grid row(s)'>"+p.bSubmit+"</a>",
+				bC  = "<a id='eData' class='fm-button " + commonstyle.button + "' role='button' tabindex='0' href='#' aria-label='Close the modal dialog'>"+p.bCancel+"</a>",
 				user_buttons = ( Array.isArray( rp_ge[$t.p.id].buttons ) ? $.jgrid.buildButtons( rp_ge[$t.p.id].buttons, bS + bC, commonstyle ) : bS + bC ),
 				fs =  $('.ui-jqgrid').css('font-size') || '11px';
 
@@ -13656,9 +15919,9 @@ $.jgrid.extend({
 					rp_ge[$t.p.id].afterShowForm.call($t,$("#"+dtbl));
 				}
 			}
-			if(rp_ge[$t.p.id].closeOnEscape===true) {
+			//if(rp_ge[$t.p.id].closeOnEscape===true) {
 				setTimeout(function(){$(".ui-jqdialog-titlebar-close","#"+$.jgrid.jqID(IDs.modalhead)).attr("tabindex","-1").focus();},0);
-			}
+			//}
 		});
 	},
 	navGrid : function (elem, p, pEdit, pAdd, pDel, pSearch, pView) {
@@ -14332,7 +16595,26 @@ $.jgrid.extend({
 		});
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false, eqnull:true */
+/*global jQuery, define */
+// Grouping module
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid.extend({
 	groupingInit : function () {
@@ -14645,6 +16927,7 @@ $.jgrid.extend({
 								//vv = this.v;
 							}
 							tmpdata= "<td role=\"gridcell\" "+$t.formatCol(k,1,'')+">"+$.jgrid.template(tplfld, vv, fdata.cnt, fdata.dataIndex, fdata.displayValue, fdata.summary)+ "</td>";
+							this.v = this.uv;
 							return false;
 						}
 					});
@@ -15268,7 +17551,26 @@ $.jgrid.extend({
 		});
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false, eqnull:true, devel:true */
+/*global jQuery, define, URL */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.utils",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid = $.jgrid || {};
 $.extend($.jgrid,{
@@ -15363,7 +17665,8 @@ $.extend($.jgrid,{
 			decompression: false,
 			decompressionModule :  'LZString', // object by example gzip, LZString
 			decompressionMethod : 'decompressFromUTF16', // string by example unzip, decompressFromUTF16
-			restoreData : true
+			restoreData : true,
+			nonce : ""
 		}, o || {});
 		if(!jqGridId) { return; }
 		var ret, tmp, $t = $("#"+jqGridId)[0], data, iN, fT;
@@ -15389,7 +17692,7 @@ $.extend($.jgrid,{
 				}
 			}
 		}
-		ret = $.jgrid.parseFunc( gridstring );
+		ret = $.jgrid.parseFunc( gridstring, o );
 		if( ret && $.jgrid.type(ret) === 'object') {
 			if($t.grid) {
 				$.jgrid.gridUnload( jqGridId );
@@ -15631,19 +17934,39 @@ $.extend($.jgrid,{
 				config : "grid",
 				data: "data"
 			},
-			ajaxOptions :{}
+			ajaxOptions :{},
+			nonce : ""
 		}, o || {});
 		var $t = (jqGridId.indexOf("#") === 0 ? "": "#") + $.jgrid.jqID(jqGridId);
 		var xmlConvert = function (xml,o) {
 			var cnfg = $(o.xmlGrid.config,xml)[0];
 			var xmldata = $(o.xmlGrid.data,xml)[0], jstr, jstr1, key;
-			if($.grid.xmlToJSON ) {
-				jstr = $.jgrid.xmlToJSON( cnfg );
-				//jstr = $.jgrid.parse(jstr);
+			if($.jgrid.xmlToJSON ) {
+				var funcreg = {};
+				jstr = $.jgrid.xmlToJSON( cnfg, {}, funcreg );
+				//console.log(testme);
 				for(key in jstr) {
 					if(jstr.hasOwnProperty(key)) {
 						jstr1=jstr[key];
 					}
+				}
+				if(!$.isEmptyObject(funcreg)) {
+					const registryLines = Object.entries(funcreg).map(([id, fnStr]) =>
+					`  "${id}": ${fnStr},`
+					);
+					var rnd = $.jgrid.randId();
+					var functionRegistry = `var functionRegistry_${rnd} = {\n${registryLines.join('\n')}\n};`;
+					//jstr = $.jgrid.parse(jstr);
+					let s = document.createElement("script");
+					// CSP settings to avoid inline script
+					if(o && o.nonce) {
+						s.nonce = o.nonce;
+					}
+					s.text = functionRegistry;
+					document.body.appendChild(s);
+			
+					jstr1 = $.jgrid.resolveFunctions(jstr1, rnd);
+
 				}
 				if(xmldata) {
 				// save the datatype
@@ -15660,7 +17983,7 @@ $.extend($.jgrid,{
 		};
 		var jsonConvert = function (jsonstr,o){
 			if (jsonstr && typeof jsonstr === 'string') {
-				var json = $.jgrid.parseFunc(jsonstr);
+				var json = $.jgrid.parseFunc(jsonstr, o);
 				var gprm = json[o.jsonGrid.config];
 				var jdata = json[o.jsonGrid.data];
 				if(jdata) {
@@ -15836,7 +18159,26 @@ $.extend($.jgrid,{
 			});
 		}
     });
+//module end
+}));
 
+/*jshint eqeqeq:false, eqnull:true, devel:true */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base",
+			"./grid.common"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid.inlineEdit = $.jgrid.inlineEdit || {};
 $.jgrid.extend({
@@ -15921,7 +18263,10 @@ $.jgrid.extend({
 							var opt = $.extend({},cm[i].editoptions || {},{id:rowid+"_"+nm,name:nm,rowId:rowid, oper:'edit', module : 'inline'});
 							if(!cm[i].edittype) { cm[i].edittype = "text"; }
 							if(tmp === "&nbsp;" || tmp === "&#160;" || (tmp !== null && tmp.length===1 && tmp.charCodeAt(0)===160) ) {tmp='';}
-							var elc = $.jgrid.createEl.call($t,cm[i].edittype,opt,tmp,true,$.extend({},$.jgrid.ajaxOptions,$t.p.ajaxSelectOptions || {}));
+							if(!Object.hasOwn(opt, "aria-label")) {
+								opt["aria-label"] = "Enter row value";
+							}
+							var elc = $.jgrid.createEl.call($t, cm[i].edittype, opt, tmp, true, $.extend( {}, $.jgrid.ajaxOptions,$t.p.ajaxSelectOptions || {}));
 							$(elc).addClass("editable inline-edit-cell");
 							if( $.inArray(cm[i].edittype, ['text','textarea','password']) > -1) {
 								$(elc).addClass( inpclass );
@@ -16238,8 +18583,7 @@ $.jgrid.extend({
 					url:o.url,
 					data: $.jgrid.isFunction($t.p.serializeRowData) ? $t.p.serializeRowData.call($t, tmp3) : tmp3,
 					type: o.mtype,
-					async : false, //?!?
-					success: function(resuly,stat,res){
+					success: function(result,stat,res){
 						$($t).jqGrid("progressBar", {method:"hide", loadtype : o.saveui, htmlcontent: o.savetext});
 						if (stat === "success"){
 							var ret = true, sucret, k;
@@ -16289,6 +18633,7 @@ $.jgrid.extend({
 						}
 					},
 					error:function(res,stat,err){
+						$($t).jqGrid("progressBar", {method:"hide", loadtype : o.saveui, htmlcontent: o.savetext});
 						$("#lui_"+$.jgrid.jqID($t.p.id)).hide();
 						$($t).triggerHandler("jqGridInlineErrorSaveRow", [rowid, res, stat, err, o]);
 						if($.jgrid.isFunction(o.errorfunc) ) {
@@ -16621,7 +18966,39 @@ $.jgrid.extend({
 	}
 //end inline edit
 });
+//module end
+}));
 
+/*jshint evil:true, eqeqeq:false, eqnull:true, devel:true */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base",
+			"jquery-ui/dialog",
+			"jquery-ui/draggable",
+			"jquery-ui/droppable",
+			"jquery-ui/resizable",
+			"jquery-ui/sortable",
+			"./addons/ui.multiselect"		
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {/*
+**
+ * jqGrid addons using jQuery UI 
+ * Author: Mark Williams
+ * Dual licensed under the MIT and GPL licenses:
+ * http://www.opensource.org/licenses/mit-license.php
+ * http://www.gnu.org/licenses/gpl-2.0.html
+ * depends on jQuery UI 
+**/
+"use strict";
 //module begin
 if ($.jgrid.msie() && $.jgrid.msiever()===8) {
 	$.expr[":"].hidden = function(elem) {
@@ -17269,7 +19646,29 @@ $.jgrid.extend({
 		});
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base",
+			"./grid.grouping"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
+// To optimize the search we need custom array filter
+// This code is taken from
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
 //module begin
 function _pivotfilter (fn, context) {
 	/*jshint validthis: true */
@@ -17794,16 +20193,21 @@ $.jgrid.extend({
 					//throw "data provides is not an array";
 					data = [];
 				}
+				var fld=[], prm=[];
 				var pivotGrid = jQuery($t).jqGrid('pivotSetup',data, pivotOpt),
 				footerrow = $.assocArraySize(pivotGrid.summary) > 0 ? true : false,
 				query= $.jgrid.from.call($t, pivotGrid.rows), i, so, st, len;
 				if(pivotOpt.ignoreCase) {
 					query = query.ignoreCase();
+				} else {
+					query = query.useCase();
 				}
 				for(i=0; i< pivotGrid.groupOptions.groupingView.groupField.length; i++) {
 					so = pivotOpt.xDimension[i].sortorder ? pivotOpt.xDimension[i].sortorder : 'asc';
 					st = pivotOpt.xDimension[i].sorttype ? pivotOpt.xDimension[i].sorttype : 'text';
-					query.orderBy(pivotGrid.groupOptions.groupingView.groupField[i], so, st, '', st);
+					fld.push(pivotGrid.groupOptions.groupingView.groupField[i]);
+					prm.push({so:so, stype:st, scrfmt:'Y-m-d', sfunc:st})
+					//query.orderBy(pivotGrid.groupOptions.groupingView.groupField[i], so, st, '', st);
 				}
 				len = pivotOpt.xDimension.length;
 				if(gridOpt.sortname) { // should be a part of xDimension
@@ -17815,13 +20219,20 @@ $.jgrid.extend({
 							break;
 						}
 					}
-					query.orderBy(gridOpt.sortname, so, st, '', st);
+					fld.push(gridOpt.sortname);
+					prm.push({so:so, stype:st, srcfmt:'Y-m-d', sfunc:st});
+					//query.orderBy(gridOpt.sortname, so, st, '', st);
 				} else {
 					if(pivotGrid.groupOptions.sortname && len) {
 						so = pivotOpt.xDimension[len-1].sortorder ? pivotOpt.xDimension[len-1].sortorder : 'asc';
 						st = pivotOpt.xDimension[len-1].sorttype ? pivotOpt.xDimension[len-1].sorttype : 'text';
-						query.orderBy(pivotGrid.groupOptions.sortname, so, st, '', st);					
+						fld.push(pivotGrid.groupOptions.sortname);
+						prm.push({so:so, stype:st, srcfmt:'Y-m-d', sfunc:st});
+						//query.orderBy(pivotGrid.groupOptions.sortname, so, st, '', st);					
 					}
+				}
+				if(fld.length) {
+					query.orderBy(fld, prm);
 				}
 				jQuery($t).jqGrid($.extend(true, {
 					data: $.extend(query.select(),footerrow ? {userdata:pivotGrid.summary} : {}),
@@ -17866,7 +20277,25 @@ $.jgrid.extend({
 		});
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid.extend({
 setSubGrid : function () {
@@ -17885,7 +20314,7 @@ setSubGrid : function () {
 		};
 		$t.p.subGridOptions = $.extend(suboptions, $t.p.subGridOptions || {});
 		$t.p.colNames.unshift("");
-		$t.p.colModel.unshift({name:'subgrid',width: $.jgrid.cell_width ?  $t.p.subGridWidth+$t.p.cellLayout : $t.p.subGridWidth,sortable: false,resizable:false,hidedlg:true,search:false,fixed:true});
+		$t.p.colModel.unshift({name:'subgrid', tooltip: ($.jgrid.getRegional($t, "defaults.subGrid") || "Subgrid column"), width: $.jgrid.cell_width ?  $t.p.subGridWidth+$t.p.cellLayout : $t.p.subGridWidth,sortable: false,resizable:false,hidedlg:true,search:false,fixed:true});
 		cm = $t.p.subGridModel;
 		if(cm[0]) {
 			cm[0].align = $.extend([],cm[0].align || []);
@@ -17894,14 +20323,15 @@ setSubGrid : function () {
 	});
 },
 addSubGridCell :function (pos,iRow) {
-	var prp='', ic, sid, icb ;
+	var prp='', ic, sid, icb, title="" ;
 	this.each(function(){
 		prp = this.formatCol(pos,iRow);
 		sid= this.p.id;
 		ic = this.p.subGridOptions.plusicon;
 		icb = $.jgrid.styleUI[(this.p.styleUI || 'jQueryUI')].common;
+		title = $.jgrid.getRegional(this, "defaults.subGridExpand") || "Expand row";
 	});
-	return "<td role=\"gridcell\" aria-describedby=\""+sid+"_subgrid\" class=\"ui-sgcollapsed sgcollapsed\" "+prp+"><a style='cursor:pointer;' class='ui-sghref'><span class='" + icb.icon_base +" "+ic+"'></span></a></td>";
+	return "<td role=\"gridcell\" title=\""+title+"\" aria-describedby=\""+sid+"_subgrid\" class=\"ui-sgcollapsed sgcollapsed\" "+prp+"><a style='cursor:pointer;' class='ui-sghref'><span class='" + icb.icon_base +" "+ic+"'></span></a></td>";
 },
 addSubGrid : function( pos, sind ) {
 	return this.each(function(){
@@ -18063,6 +20493,8 @@ addSubGrid : function( pos, sind ) {
 			i = sind;
 			len = sind+1;
 		}
+		var titleexpand = $.jgrid.getRegional(ts, "defaults.subGridExpand"),
+		titlecollapse = $.jgrid.getRegional(ts, "defaults.subGridCollapse");
 		while(i < len) {
 			if($(ts.rows[i]).hasClass('jqgrow')) {
 				if(ts.p.scroll) {
@@ -18100,7 +20532,7 @@ addSubGrid : function( pos, sind ) {
 							} else {
 								$r.show().removeClass("ui-sg-collapsed").addClass("ui-sg-expanded");
 							}
-							$(this).html("<a style='cursor:pointer;' class='ui-sghref'><span class='" + common.icon_base +" "+ts.p.subGridOptions.minusicon+"'></span></a>").removeClass("sgcollapsed").addClass("sgexpanded");
+							$(this).html("<a style='cursor:pointer;' class='ui-sghref'><span class='" + common.icon_base +" "+ts.p.subGridOptions.minusicon+"'></span></a>").removeClass("sgcollapsed").addClass("sgexpanded").attr("title", titlecollapse);
 							if(ts.p.subGridOptions.selectOnExpand) {
 								$(ts).jqGrid('setSelection',_id);
 							}
@@ -18116,7 +20548,7 @@ addSubGrid : function( pos, sind ) {
 							} else if($r.hasClass('ui-subgrid')) { // incase of dynamic deleting
 								$r.hide().addClass("ui-sg-collapsed").removeClass("ui-sg-expanded");
 							}
-							$(this).html("<a style='cursor:pointer;' class='ui-sghref'><span class='"+common.icon_base +" "+ts.p.subGridOptions.plusicon+"'></span></a>").removeClass("sgexpanded").addClass("sgcollapsed");
+							$(this).html("<a style='cursor:pointer;' class='ui-sghref'><span class='"+common.icon_base +" "+ts.p.subGridOptions.plusicon+"'></span></a>").removeClass("sgexpanded").addClass("sgcollapsed").attr("title", titleexpand);
 							if(ts.p.subGridOptions.selectOnCollapse) {
 								$(ts).jqGrid('setSelection',_id);
 							}
@@ -18190,7 +20622,25 @@ toggleSubGridRow : function(rowid) {
 	});
 }
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid.extend({
 	setTreeNode : function(i, len){
@@ -18337,6 +20787,9 @@ $.jgrid.extend({
 			$t.p.multiselect = false;
 			// $t.p.rowList = [];
 			$t.p.expColInd = 0;
+			if($t.p.ExpandColumn == null) {
+				$t.p.ExpandColumn = $t.p.colModel[$t.p.expColInd].name
+			}
 			pico = classes.icon_plus;
 			if($t.p.styleUI === 'jQueryUI') {
 				pico += ($t.p.direction==="rtl" ? 'w' : 'e');
@@ -18845,16 +21298,23 @@ $.jgrid.extend({
 		return this.each(function(){
 			if(!this.grid || !this.p.treeGrid) {return;}
 			var i, len,
-			rec, records = [], $t = this, query, roots,
+			rec, records = [], $t = this, query, roots, fld=[], prm=[],
 			rt = $(this).jqGrid("getRootNodes", $t.p.search);
 			// Sorting roots
 			query = $.jgrid.from.call(this, rt);
 			// sort tree by node type
 			if( Boolean($t.p.sortTreeByNodeType)) {
 				var ord = ($t.p.sortTreeNodeOrder && $t.p.sortTreeNodeOrder.toLowerCase() === 'desc') ? 'd' : 'a'; 
-				query.orderBy($t.p.treeReader.leaf_field, ord, st, datefmt);
+				fld.push($t.p.treeReader.leaf_field);
+				prm.push({so:ord, stype:st, srcfmt: datefmt, sfunc:null})
+				//query.orderBy($t.p.treeReader.leaf_field, ord, st, datefmt);
 			}
-			query.orderBy(sortname, newDir, st, datefmt);
+			fld.push(sortname);
+			prm.push({so:newDir, stype:st, srcfmt:datefmt, sfunc:null});
+			if(fld.length) {
+				query.orderBy(fld, prm);
+			}
+			//query.orderBy(sortname, newDir, st, datefmt);
 			roots = query.select();
 			// Sorting children
 			for (i = 0, len = roots.length; i < len; i++) {
@@ -18923,7 +21383,8 @@ $.jgrid.extend({
 			child, ch, query, children;
 			ch = $(this).jqGrid("getNodeChildren",rec, this.p.search);
 			query = $.jgrid.from.call(this, ch);
-			query.orderBy(sortname, newDir, st, datefmt);
+			query.orderBy([sortname],[{so:newDir, stype:st, srcfmt: datefmt, sfunc:null}]);
+			//query.orderBy(sortname, newDir, st, datefmt);
 			children = query.select();
 			for (i = 0, len = children.length; i < len; i++) {
 				child = children[i];
@@ -19181,7 +21642,33 @@ $.jgrid.extend({
 		//});
 	}
 });
+//module end
+}));
 
+/*
+ * jqDnR - Minimalistic Drag'n'Resize for jQuery.
+ *
+ * Copyright (c) 2007 Brice Burgess <bhb@iceburg.net>, http://www.iceburg.net
+ * Licensed under the MIT License:
+ * http://www.opensource.org/licenses/mit-license.php
+ * 
+ * $Version: 2007.08.19 +r2
+ */
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+} (function( $ ) {
+"use strict";
 //module begin
 $.fn.jqDrag=function(h){return i(this,h,'d');};
 $.fn.jqResize=function(h,ar){return i(this,h,'r',ar);};
@@ -19264,7 +21751,34 @@ $.fn.tinyDraggable = function(options){
 		});
 	});
 };
-
+//module end
+}));
+/*
+ * jqModal - Minimalist Modaling with jQuery
+ *   (http://dev.iceburg.net/jquery/jqmodal/)
+ *
+ * Copyright (c) 2007,2008 Brice Burgess <bhb@iceburg.net>
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ * 
+ * $Version: 07/06/2008 +r13
+ */
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+} (function( $ ) {
+"use strict";
 //module begin
 $.fn.jqm=function(o){
 var p={
@@ -19322,7 +21836,39 @@ m=function(e){var h=H[A[A.length-1]],r=(!$(e.target).parents('.jqmID'+h.s)[0]);i
 hs=function(w,t,c){return w.each(function(){var s=this._jqm;$(t).each(function() {
  if(!this[c]){this[c]=[];$(this).click(function(){for(var i in {jqmShow:1,jqmHide:1}){for(var s in this[i]){if(H[this[i][s]]){H[this[i][s]].w[i](this);}}}return F;});}
  this[c].push(s);});});};
+//module end
+}));
+/*
+**
+ * formatter for values but most of the values if for jqGrid
+ * Some of this was inspired and based on how YUI does the table datagrid but in jQuery fashion
+ * we are trying to keep it as light as possible
+ * Joshua Burnett josh@9ci.com	
+ * http://www.greenbill.com
+ *
+ * Changes from Tony Tomov tony@trirand.com
+ * Dual licensed under the MIT and GPL licenses:
+ * http://www.opensource.org/licenses/mit-license.php
+ * http://www.gnu.org/licenses/gpl-2.0.html
+ * 
+**/
+/*jshint eqeqeq:false */
+/*global jQuery, define */
 
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 	$.fmatter = {};
 	//opts can be id:row id for the row, rowdata:the data for the row, colmodel:the column model for this column
@@ -19797,7 +22343,34 @@ hs=function(w,t,c){return w.each(function(){var s=this._jqm;$(t).each(function()
 		}
 		return $.fn.fmatter.defaultFormat(cellval, opts);
 	};
+//module end
+}));
 
+/*
+ * 
+ * HTML5 Sortable jQuery Plugin
+ * 
+ * Original code Copyright 2012 Ali Farhadi.
+ *
+ * This version is maintained by Tony Tomov <tony@trirand.com>
+ * 
+ * Released under the MIT license.
+ */
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+} (function( $ ) {
+"use strict";
 //module begin
 var dragging, placeholders = $();
 $.fn.html5sortable = function(options) {
@@ -19878,7 +22451,24 @@ $.fn.html5sortable = function(options) {
 		});
 	});
 };
+//module end
+}));
+/*global jQuery, define, URL */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
 
+	// AMD. Register as an anonymous module.
+		define([
+			"jquery"
+		], factory );
+	} else {
+
+	// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.extend($.jgrid,{
 //window.jqGridUtils = {
@@ -19898,19 +22488,68 @@ $.extend($.jgrid,{
             return (typeof value === 'function' ) ? value.toString() : value;
         });
 	},
-	parseFunc : function(str) {
-		return JSON.parse(str,function(key, value){
-			if(typeof value === "string" && value.indexOf("function") !== -1) {
-				var sv = value.split(" ");
-				sv[0] = $.jgrid.trim( sv[0].toLowerCase() );
-				if( (sv[0].indexOf('function') === 0) && value.trim().slice(-1) === "}") {
-					return  $.jgrid.runCode( value ); //eval('('+value+')');
-				} else {
-					return value;
+	resolveFunctions : function(obj,rnd) {
+		if (typeof obj === 'string' && obj.startsWith('__fn_')) {
+			const a = 'functionRegistry_'+rnd;
+		    return window[a][obj];
+		} else if (Array.isArray(obj)) {
+			return obj.map($.jgrid.resolveFunctions);
+		} else if (obj && typeof obj === 'object') {
+			const result = {};
+			for (const [key, val] of Object.entries(obj)) {
+				result[key] = $.jgrid.resolveFunctions(val, rnd);
 				}
+			return result;
 			}
-			return value;
-		});
+		return obj;
+	},
+	parseFunc : function( str, options ) {
+		if(!options) {
+			options = {};
+		}
+		const functionMap = {};
+		function traverse(obj) {
+			if (typeof obj === 'string' && obj.trim().startsWith('function')) {
+			  const id = `__fn_${$.jgrid.randId()}__`;
+			  functionMap[id] = obj;
+			  return id;
+			} else if (Array.isArray(obj)) {
+			  return obj.map(traverse);
+			} else if (obj && typeof obj === 'object') {
+			  const result = {};
+			  for (const [key, val] of Object.entries(obj)) {
+				result[key] = traverse(val);
+			  }
+			  return result;
+			}
+			return obj;
+		}
+		let parsed;
+		try {
+			parsed = JSON.parse(str);
+		} catch (e) {
+			alert("Invalid JSON.");
+			return;
+		}
+		const transformedJson = traverse(parsed);
+		if(!$.isEmptyObject(functionMap)) {
+			const registryLines = Object.entries(functionMap).map(([id, fnStr]) =>
+			`  "${id}": ${fnStr},`
+			);
+			var rnd = $.jgrid.randId();
+			var functionRegistry = `var functionRegistry_${rnd} = {\n${registryLines.join('\n')}\n};`;
+			
+			let s = document.createElement("script");
+			// CSP settings to avoid inline script
+			if(options && options.nonce) {
+				s.nonce = options.nonce;
+			}
+			s.text = functionRegistry;
+			document.body.appendChild(s);
+			
+			return $.jgrid.resolveFunctions(transformedJson, rnd);
+		}
+		return transformedJson;
 	},
 	encode : function ( text ) { // repeated, but should not depend on grid
 		return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -19991,7 +22630,7 @@ $.extend($.jgrid,{
 		var xml = hashToxml( null, tree );
 		return o.xmlDecl + xml;
 	},
-	xmlToJSON : function ( root, options ) {
+	xmlToJSON : function ( root, options, funcs ) {
 		var o = $.extend ( {
 			force_array : [], //[ "rdf:li", "item", "-xmlns" ];
 			attr_prefix : '-'
@@ -20014,8 +22653,10 @@ $.extend($.jgrid,{
 		}
 		var addNode = function ( hash, key, cnts, val ) {
 			if(typeof val === 'string') {
-				if( val.indexOf('function') !== -1) {
-					val =  $.jgrid.runCode( val ); //eval( '(' + val +')'); // we need this in our implement
+				if( val.trim().startsWith('function')) {
+					const fk = '__fn__'+$.jgrid.randId();
+					funcs[fk] = val;
+					val =  fk;//$.jgrid.runCode( val ); //eval( '(' + val +')'); // we need this in our implement
 				} else {
 					switch(val) {
 						case '__EMPTY_ARRAY_' :
@@ -20213,7 +22854,27 @@ $.extend($.jgrid,{
 		return arr;
 	}
 });
-
+//module end
+//return window.jqGridUtils;
+}));
+/*jshint eqeqeq:false, eqnull:true, devel:true */
+/*global jQuery, JSZip, pdfMake, XMLSerializer, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base",
+			"./jquery.fmatter",
+			"./grid.utils"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 
 $.jgrid = $.jgrid || {};
@@ -21070,16 +23731,16 @@ $.jgrid.extend({
 				hlen = $($t).jqGrid("headerData", "getlength");
 				for(il=0;il<hlen;il++) {
 					hrows = $($t).jqGrid("headerData", "get", null, false, il, false);
-				i=0; tmp=[];
-				while(i < p.collen){
+					i=0; tmp=[];
+					while(i < p.collen){
 						hc = def[i];
-					if(hrows.hasOwnProperty(hc) ) {
-						tmp.push( $.jgrid.formatCellCsv( $.jgrid.stripHtml( hrows[hc] ), p ) );
+						if(hrows.hasOwnProperty(hc) ) {
+							tmp.push( $.jgrid.formatCellCsv( $.jgrid.stripHtml( hrows[hc] ), p ) );
+						}
+						i++;
 					}
-					i++;
+					htr += tmp.join( p.separator ) + p.newLine;
 				}
-				htr += tmp.join( p.separator ) + p.newLine;
-			}
 			}
 			ret = cap + hdr + lbl + htr + str + ftr;
 			if( $.jgrid.isFunction( p.loadIndicator )) {
@@ -21212,17 +23873,17 @@ $.jgrid.extend({
 				
 				i++;
 			}
-			if ( o.includeFooter || $t.p.footerrow) {
+			if ( o.includeFooter && $t.p.footerrow) {
 				var dfl = $($t).jqGrid("footerData", "getlength"), dil, dfooter;
 				for(dil=0; dil<dfl; dil++) {
 					dfooter = $($t).jqGrid("footerData", "get", null, false, dil, false);
 					for( i in dfooter) {
 						if(dfooter.hasOwnProperty(i)) {
 							dfooter[i] = $.jgrid.stripHtml(dfooter[i]);
+						}
 					}
-				}
 					data.footer.push( dfooter);
-			}
+				}
 			}
 			if( $.jgrid.isFunction(o.customizeData) ) {
 				o.customizeData.call($t, data);
@@ -21681,20 +24342,20 @@ $.jgrid.extend({
 					}));
 				}
 			}
-			if ( o.includeHeader || $t.p.headerrow) {
+			if ( o.includeHeader && $t.p.headerrow) {
 				var hlen = $($t).jqGrid("headerData", "getlength"), il, hdata;
 				for(il=0; il < hlen; il++) {
 					hdata = $($t).jqGrid("headerData", "get", null, false, il, false);
-				for( i in hdata) {
-					if(hdata.hasOwnProperty(i)) {
-						hdata[i] = $.jgrid.stripHtml(hdata[i]);
+					for( i in hdata) {
+						if(hdata.hasOwnProperty(i)) {
+							hdata[i] = $.jgrid.stripHtml(hdata[i]);
+						}
+					}
+					if(!$.isEmptyObject(hdata)) {
+						addRow( hdata, true );
+						$('row', rels).last().find('c').attr( 's', '2' ); // bold
 					}
 				}
-				if(!$.isEmptyObject(hdata)) {
-					addRow( hdata, true );
-					$('row', rels).last().find('c').attr( 's', '2' ); // bold
-				}
-			}
 			}
 			if( $t.p.grouping ) {
 				var savlcgr = $t.p.groupingView._locgr ? true : false;
@@ -22071,17 +24732,17 @@ $.jgrid.extend({
 				hlen = $($t).jqGrid("headerData", "getlength");
 				for(il=0; il < hlen; il++) {
 					hdata = $($t).jqGrid("headerData", "get", null, false, il, false);
-				test=[];
-				for( key =0; key< def.length; key++) {
-					obj  =  {
-						text : $.jgrid.stripHtml( $.jgrid.getAccessor(hdata, def[key]) ),
-						style : 'tableFooter',
-						alignment : align[def[key]]
-					};
-					test.push( obj );
+					test=[];
+					for( key =0; key< def.length; key++) {
+						obj  =  {
+							text : $.jgrid.stripHtml( $.jgrid.getAccessor(hdata, def[key]) ),
+							style : 'tableFooter',
+							alignment : align[def[key]]
+						};
+						test.push( obj );
+					}
+					rows.push( test );
 				}
-				rows.push( test );
-			}
 			}
 			if($t.p.grouping) {
 				var savlcgr = $t.p.groupingView._locgr ? true : false;
@@ -22111,17 +24772,17 @@ $.jgrid.extend({
 				hlen = $($t).jqGrid("footerData", "getlength");
 				for(il=0; il < hlen; il++) {				
 					var fdata = $($t).jqGrid("footerData", "get", null, false, il, false);
-				test=[];
-				for( key =0; key< def.length; key++) {
-					obj  =  {
-						text : $.jgrid.stripHtml( $.jgrid.getAccessor(fdata, def[key]) ),
-						style : 'tableFooter',
-						alignment : align[def[key]]
-					};
-					test.push( obj );
+					test=[];
+					for( key =0; key< def.length; key++) {
+						obj  =  {
+							text : $.jgrid.stripHtml( $.jgrid.getAccessor(fdata, def[key]) ),
+							style : 'tableFooter',
+							alignment : align[def[key]]
+						};
+						test.push( obj );
+					}
+					rows.push( test );
 				}
-				rows.push( test );
-			}
 			}
 			var tblcnt = {
 				style : 'tableExample',
@@ -22499,8 +25160,8 @@ $.jgrid.extend({
 				for(il=0; il < hlen; il++) {
 					for(il=0; il < hlen; il++) {				
 						hdata = $($t).jqGrid("headerData", "get", null, false, il, false);
-				html += addBodyRow( hdata, 'td' , false);
-			}
+						html += addBodyRow( hdata, 'td' , false);
+					}
 				}
 			}
 			if( $t.p.grouping ) {
@@ -22519,7 +25180,7 @@ $.jgrid.extend({
 				for(il=0; il < hlen; il++) {				
 					data.footer[il] = $($t).jqGrid("footerData", "get", null, false, il, false);
 					html += addBodyRow( data.footer[il], 'td' , false);
-			}
+				}
 			}
 			html += '</tbody>';
 			html += '</table>';
@@ -22581,7 +25242,25 @@ $.jgrid.extend({
 		return ret;
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.extend($.jgrid,{
 	focusableElementsList : [
@@ -23473,7 +26152,25 @@ $.jgrid.extend({
 	}
 // end aria grid
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid.extend({
 	transposeSetup : function( data, options ){
@@ -23590,7 +26287,25 @@ $.jgrid.extend({
 		});
 	}
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid.extend({
 	setupFrozenRows : function ( options ){
@@ -23599,7 +26314,8 @@ $.jgrid.extend({
 			last : 0,
 			rowids :[],
 			//saveFirstLastId : false,
-			classes : "frozen-row-class"
+			classes : "",
+			baseclass : "frozen-row-class"
 		}, options || {});
 
 		return this.each(function(){
@@ -23641,7 +26357,7 @@ $.jgrid.extend({
 			for(let i = 0; i < len; i++) {
 				row = $t.rows[i+1];
 				if(row.classList.contains("jqgrow")) {
-					$(row).addClass(prm.classes).css("top", pos + "px");
+					$(row).addClass(prm.baseclass + " " + prm.classes).css("top", pos + "px");
 				}
 				pos += $(row).outerHeight();
 			}
@@ -23676,7 +26392,25 @@ $.jgrid.extend({
 		});
 	}
 });
-
+//module end
+}));
+/*jshint eqeqeq:false, eqnull:true */
+/*global jQuery, define */
+// Grouping module
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 $.jgrid.extend({
 	dbInit : function (dbtype) {
@@ -23955,7 +26689,25 @@ $.jgrid.extend({
 		});
 	}	
 });
+//module end
+}));
 
+/*jshint eqeqeq:false */
+/*global jQuery, define */
+(function( factory ) {
+	"use strict";
+	if ( typeof define === "function" && define.amd ) {
+		// AMD. Register as an anonymous module.
+		define([
+			"jquery",
+			"./grid.base"
+		], factory );
+	} else {
+		// Browser globals
+		factory( jQuery );
+	}
+}(function( $ ) {
+"use strict";
 //module begin
 // clipboard
 $.extend($.jgrid,{
@@ -24529,5 +27281,7 @@ $.jgrid.extend({
 // end clipboard grid
 });
 //clipboard
+//module end
+}));
 
 }));

@@ -50,7 +50,12 @@ $.jgrid.regional["en"] = {
 		valT : "checked",
 		valF : "unchecked",
 		selectLine : "Select row",
-		selectAllLines : "Select all rows"
+		selectAllLines : "Select all rows",
+		searchCols : "Search on grid columns",
+		subGrid : "Click on Subgrid cell to expand/collapse row",
+		rowNumbers : "Row number information column",
+		subGridExpand : "Click to expand Subgrid",
+		subGridCollapse : "Click to collapse Subgrid"
 	},
 	search : {
 		caption: "Search...",
@@ -79,6 +84,8 @@ $.jgrid.regional["en"] = {
 		bYes : "Yes",
 		bNo : "No",
 		bExit : "Cancel",
+		nextRow : "Click to edit next row",
+		prevRow : "Click to edit previous row",
 		msg: {
 			required:"Field is required",
 			number:"Please, enter valid number",
@@ -91,13 +98,14 @@ $.jgrid.regional["en"] = {
 			nodefined : " is not defined!",
 			novalue : " return value is required!",
 			customarray : "Custom function should return array!",
-			customfcheck : "Custom function should be present in case of custom checking!"
-			
+			customfcheck : "Custom function should be present in case of custom checking!"		
 		}
 	},
 	view : {
 		caption: "View Record",
-		bClose: "Close"
+		bClose: "Close",
+		nextRow : "Click to view next row",
+		prevRow : "Click to view previous row"
 	},
 	del : {
 		caption: "Delete",
