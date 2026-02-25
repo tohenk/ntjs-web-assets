@@ -14,7 +14,7 @@
     "unpkg": "https://unpkg.com/<PKG>@<VER>/dist/<TYPE>/<NAME>"
   },
   "bignumber.js": {
-    "version": "10.0.1",
+    "version": "10.0.2",
     "jsdelivr-dist": ""
   },
   "bootstrap": {
