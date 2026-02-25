@@ -15,7 +15,7 @@
   },
   "bignumber.js": {
     "version": "10.0.1",
-    "jsdelivr": ""
+    "jsdelivr-dist": ""
   },
   "bootstrap": {
     "version": "5.3.8",
