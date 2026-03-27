@@ -224,7 +224,7 @@
   },
   "pdfjs": {
     "version": "5.5.207",
-    "jsdelivr": ""
+    "jsdelivr": "pdfjs-dist"
   },
   "popper.js": {
     "version": "2.11.8",
