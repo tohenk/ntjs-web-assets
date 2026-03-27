@@ -17,6 +17,29 @@
     "version": "10.0.2",
     "jsdelivr-dist": ""
   },
+  "blueimp-canvas-to-blob": {
+    "version": "3.29.0",
+    "cdnjs": "javascript-canvas-to-blob"
+  },
+  "blueimp-file-upload": {
+    "version": "10.32.0",
+    "cdnjs": ""
+  },
+  "blueimp-gallery": {
+    "version": "3.4.0",
+    "cdnjs": ""
+  },
+  "blueimp-load-image": {
+    "version": "5.16.0",
+    "cdnjs": "",
+    "paths": {
+      "js": ""
+    }
+  },
+  "blueimp-tmpl": {
+    "version": "3.20.0",
+    "cdnjs": "blueimp-JavaScript-Templates"
+  },
   "bootstrap": {
     "version": "5.3.8",
     "jsdelivr-dist": ""
@@ -53,71 +76,71 @@
     "version": "2.1.0",
     "jsdelivr-dist": "cropperjs"
   },
-  "DataTables": {
+  "datatables": {
     "version": "2.3.7",
     "datatables": ""
   },
-  "DataTables-AutoFill": {
+  "datatables-autofill": {
     "version": "2.7.1",
     "datatables-extension": "autofill"
   },
-  "DataTables-Buttons": {
+  "datatables-buttons": {
     "version": "3.2.6",
     "datatables-extension": "buttons"
   },
-  "DataTables-ColReorder": {
+  "datatables-colreorder": {
     "version": "2.1.2",
     "datatables-extension": "colreorder"
   },
-  "DataTables-DateTime": {
+  "datatables-datetime": {
     "version": "1.6.3",
     "datatables-extension": "datetime"
   },
-  "DataTables-FixedColumns": {
+  "datatables-fixedcolumns": {
     "version": "5.0.5",
     "datatables-extension": "fixedcolumns"
   },
-  "DataTables-FixedHeader": {
+  "datatables-fixedheader": {
     "version": "4.0.6",
     "datatables-extension": "fixedheader"
   },
-  "DataTables-I18N": {
+  "datatables-i18n": {
     "version": "2.3.6",
     "datatables-plugin": "i18n"
   },
-  "DataTables-KeyTable": {
+  "datatables-keytable": {
     "version": "2.12.2",
     "datatables-extension": "keytable"
   },
-  "DataTables-Responsive": {
+  "datatables-responsive": {
     "version": "3.0.8",
     "datatables-extension": "responsive"
   },
-  "DataTables-RowGroup": {
+  "datatables-rowgroup": {
     "version": "1.6.0",
     "datatables-extension": "rowgroup"
   },
-  "DataTables-RowReorder": {
+  "datatables-rowreorder": {
     "version": "1.5.1",
     "datatables-extension": "rowreorder"
   },
-  "DataTables-Scroller": {
+  "datatables-scroller": {
     "version": "2.4.3",
     "datatables-extension": "scroller"
   },
-  "DataTables-SearchBuilder": {
+  "datatables-searchbuilder": {
     "version": "1.8.4",
     "datatables-extension": "searchbuilder"
   },
-  "DataTables-SearchPanes": {
+  "datatables-searchpanes": {
     "version": "2.3.5",
     "datatables-extension": "searchpanes"
   },
-  "DataTables-Select": {
+  "datatables-select": {
     "version": "3.1.3",
     "datatables-extension": "select"
   },
-  "DataTables-StateRestore": {
+  "datatables-staterestore": {
     "version": "1.4.3",
     "datatables-extension": "staterestore"
   },
@@ -128,10 +151,6 @@
   "fontawesome": {
     "version": "7.2.0",
     "cdnjs": "font-awesome"
-  },
-  "Gallery": {
-    "version": "3.4.0",
-    "cdnjs": "blueimp-gallery"
   },
   "highcharts": {
     "version": "12.5.0",
@@ -145,22 +164,7 @@
     "version": "1.10.27",
     "jsdelivr-dist": "interactjs"
   },
-  "JavaScript-Canvas-to-Blob": {
-    "version": "3.29.0",
-    "cdnjs": "javascript-canvas-to-blob"
-  },
-  "JavaScript-Load-Image": {
-    "version": "5.16.0",
-    "cdnjs": "blueimp-load-image",
-    "paths": {
-      "js": ""
-    }
-  },
-  "JavaScript-Templates": {
-    "version": "3.20.0",
-    "cdnjs": "blueimp-JavaScript-Templates"
-  },
-  "jqGrid": {
+  "jqgrid": {
     "version": "5.9.0",
     "cdnjs": "jqgrid"
   },
@@ -173,10 +177,6 @@
       "jquery.slim": "jquery-%VER%.slim",
       "jquery.slim.min": "jquery-%VER%.slim.min"
     }
-  },
-  "jQuery-File-Upload": {
-    "version": "10.32.0",
-    "cdnjs": "blueimp-file-upload"
   },
   "jquery-migrate": {
     "version": "4.0.2",
