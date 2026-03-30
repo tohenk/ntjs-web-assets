@@ -45,15 +45,25 @@ export type PDFThumbnailViewerOptions = {
      */
     abortSignal?: AbortSignal | undefined;
     /**
-     * - Enables hardware acceleration for
-     * rendering. The default value is `false`.
+     * - Enables the "new" badge for the split
+     * and merge features.
      */
-    enableHWA?: boolean | undefined;
+    enableNewBadge?: boolean | undefined;
     /**
      * - Enables split and merge features.
      * The default value is `false`.
      */
     enableSplitMerge?: boolean | undefined;
+    /**
+     * - The status bar elements to manage the status
+     * label and action when editing pages.
+     */
+    statusBar?: Object | undefined;
+    /**
+     * - The undo bar elements to manage the undo
+     * action.
+     */
+    undoBar?: Object | undefined;
     /**
      * - The menu elements to manage saving edited
      * PDF.
@@ -86,10 +96,14 @@ export type PDFThumbnailViewerOptions = {
  *   mode.
  * @property {AbortSignal} [abortSignal] - The AbortSignal for the window
  *   events.
- * @property {boolean} [enableHWA] - Enables hardware acceleration for
- *   rendering. The default value is `false`.
+ * @property {boolean} [enableNewBadge] - Enables the "new" badge for the split
+ *   and merge features.
  * @property {boolean} [enableSplitMerge] - Enables split and merge features.
  *   The default value is `false`.
+ * @property {Object} [statusBar] - The status bar elements to manage the status
+ *   label and action when editing pages.
+ * @property {Object} [undoBar] - The undo bar elements to manage the undo
+ *   action.
  * @property {Object} [manageMenu] - The menu elements to manage saving edited
  *   PDF.
  * @property {HTMLButtonElement} addFileButton - The button that opens a dialog
@@ -104,7 +118,7 @@ export class PDFThumbnailViewer {
     /**
      * @param {PDFThumbnailViewerOptions} options
      */
-    constructor({ container, eventBus, linkService, renderingQueue, maxCanvasPixels, maxCanvasDim, pageColors, abortSignal, enableHWA, enableSplitMerge, manageMenu, addFileButton, }: PDFThumbnailViewerOptions);
+    constructor({ container, eventBus, linkService, renderingQueue, maxCanvasPixels, maxCanvasDim, pageColors, abortSignal, enableSplitMerge, enableNewBadge, statusBar, undoBar, manageMenu, addFileButton, }: PDFThumbnailViewerOptions);
     scrollableContainer: HTMLElement | null;
     container: HTMLDivElement;
     eventBus: import("./event_utils").EventBus;
@@ -113,7 +127,6 @@ export class PDFThumbnailViewer {
     maxCanvasPixels: number | undefined;
     maxCanvasDim: number | undefined;
     pageColors: Object | null;
-    enableHWA: boolean;
     _manageMenu: Menu | undefined;
     scroll: {
         right: boolean;
@@ -123,8 +136,8 @@ export class PDFThumbnailViewer {
         _eventHandler: (evt: any) => void;
     };
     getThumbnail(index: any): any;
-    scrollThumbnailIntoView(pageNumber: any): void;
     _currentPageNumber: any;
+    scrollThumbnailIntoView(pageNumber: any): void;
     set pagesRotation(rotation: any);
     get pagesRotation(): any;
     _pagesRotation: any;
@@ -141,6 +154,8 @@ export class PDFThumbnailViewer {
      */
     setPageLabels(labels: any[] | null): void;
     forceRendering(): boolean;
+    hasStructuralChanges(): any;
+    getStructuralChanges(): any;
     #private;
 }
 import { Menu } from "./menu.js";

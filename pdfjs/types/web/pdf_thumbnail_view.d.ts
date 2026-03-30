@@ -78,6 +78,8 @@ export class PDFThumbnailView extends RenderableView {
     pasteButton: HTMLButtonElement | null;
     clone(container: any, id: any): PDFThumbnailView;
     addPasteButton(pasteCallback: any): void;
+    prevPasteButton: Node | null | undefined;
+    removePasteButton(): void;
     toggleSelected(isSelected: any): void;
     updateId(newId: any): void;
     canvasWidth: number | undefined;

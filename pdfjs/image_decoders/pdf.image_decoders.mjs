@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 5.5.207
- * pdfjsBuild = 527964698
+ * pdfjsVersion = 5.6.205
+ * pdfjsBuild = ada343803
  */
 /******/ // The require scope
 /******/ var __webpack_require__ = {};
@@ -941,56 +941,41 @@ const nonSerializable = function nonSerializableClosure() {
   return nonSerializable;
 };
 class Dict {
+  __nonSerializable__ = nonSerializable;
+  #map = new Map();
+  objId = null;
+  suppressEncryption = false;
+  xref;
   constructor(xref = null) {
-    this._map = new Map();
     this.xref = xref;
-    this.objId = null;
-    this.suppressEncryption = false;
-    this.__nonSerializable__ = nonSerializable;
   }
   assignXref(newXref) {
     this.xref = newXref;
   }
   get size() {
-    return this._map.size;
+    return this.#map.size;
+  }
+  #getValue(isAsync, key1, key2, key3) {
+    let value = this.#map.get(key1);
+    if (value === undefined && key2 !== undefined) {
+      value = this.#map.get(key2);
+      if (value === undefined && key3 !== undefined) {
+        value = this.#map.get(key3);
+      }
+    }
+    if (value instanceof Ref && this.xref) {
+      return isAsync ? this.xref.fetchAsync(value, this.suppressEncryption) : this.xref.fetch(value, this.suppressEncryption);
+    }
+    return value;
   }
   get(key1, key2, key3) {
-    let value = this._map.get(key1);
-    if (value === undefined && key2 !== undefined) {
-      value = this._map.get(key2);
-      if (value === undefined && key3 !== undefined) {
-        value = this._map.get(key3);
-      }
-    }
-    if (value instanceof Ref && this.xref) {
-      return this.xref.fetch(value, this.suppressEncryption);
-    }
-    return value;
+    return this.#getValue(false, key1, key2, key3);
   }
   async getAsync(key1, key2, key3) {
-    let value = this._map.get(key1);
-    if (value === undefined && key2 !== undefined) {
-      value = this._map.get(key2);
-      if (value === undefined && key3 !== undefined) {
-        value = this._map.get(key3);
-      }
-    }
-    if (value instanceof Ref && this.xref) {
-      return this.xref.fetchAsync(value, this.suppressEncryption);
-    }
-    return value;
+    return this.#getValue(true, key1, key2, key3);
   }
   getArray(key1, key2, key3) {
-    let value = this._map.get(key1);
-    if (value === undefined && key2 !== undefined) {
-      value = this._map.get(key2);
-      if (value === undefined && key3 !== undefined) {
-        value = this._map.get(key3);
-      }
-    }
-    if (value instanceof Ref && this.xref) {
-      value = this.xref.fetch(value, this.suppressEncryption);
-    }
+    let value = this.#getValue(false, key1, key2, key3);
     if (Array.isArray(value)) {
       value = value.slice();
       for (let i = 0, ii = value.length; i < ii; i++) {
@@ -1002,19 +987,19 @@ class Dict {
     return value;
   }
   getRaw(key) {
-    return this._map.get(key);
+    return this.#map.get(key);
   }
   getKeys() {
-    return [...this._map.keys()];
+    return this.#map.keys();
   }
   getRawValues() {
-    return [...this._map.values()];
+    return this.#map.values();
   }
   getRawEntries() {
-    return this._map.entries();
+    return this.#map.entries();
   }
   set(key, value) {
-    this._map.set(key, value);
+    this.#map.set(key, value);
   }
   setIfNotExists(key, value) {
     if (!this.has(key)) {
@@ -1049,10 +1034,10 @@ class Dict {
     }
   }
   has(key) {
-    return this._map.has(key);
+    return this.#map.has(key);
   }
   *[Symbol.iterator]() {
-    for (const [key, value] of this._map) {
+    for (const [key, value] of this.#map) {
       yield [key, value instanceof Ref && this.xref ? this.xref.fetch(value, this.suppressEncryption) : value];
     }
   }
@@ -1074,7 +1059,7 @@ class Dict {
       if (!(dict instanceof Dict)) {
         continue;
       }
-      for (const [key, value] of dict._map) {
+      for (const [key, value] of dict.getRawEntries()) {
         let property = properties.get(key);
         if (property === undefined) {
           property = [];
@@ -1087,19 +1072,17 @@ class Dict {
     }
     for (const [name, values] of properties) {
       if (values.length === 1 || !(values[0] instanceof Dict)) {
-        mergedDict._map.set(name, values[0]);
+        mergedDict.set(name, values[0]);
         continue;
       }
       const subDict = new Dict(xref);
       for (const dict of values) {
-        for (const [key, value] of dict._map) {
-          if (!subDict._map.has(key)) {
-            subDict._map.set(key, value);
-          }
+        for (const [key, value] of dict.getRawEntries()) {
+          subDict.setIfNotExists(key, value);
         }
       }
       if (subDict.size > 0) {
-        mergedDict._map.set(name, subDict);
+        mergedDict.set(name, subDict);
       }
     }
     properties.clear();
@@ -1107,13 +1090,13 @@ class Dict {
   }
   clone() {
     const dict = new Dict(this.xref);
-    for (const key of this.getKeys()) {
-      dict.set(key, this.getRaw(key));
+    for (const [key, value] of this.#map) {
+      dict.set(key, value);
     }
     return dict;
   }
   delete(key) {
-    this._map.delete(key);
+    this.#map.delete(key);
   }
 }
 class Ref {
@@ -1436,6 +1419,35 @@ function getParentToUpdate(dict, ref, xref) {
   }
   return result;
 }
+function deepCompare(a, b) {
+  if (a === b) {
+    return true;
+  }
+  if (a instanceof core_utils_Dict && b instanceof core_utils_Dict) {
+    if (a.size !== b.size) {
+      return false;
+    }
+    for (const [key, value1] of a.getRawEntries()) {
+      const value2 = b.getRaw(key);
+      if (value2 === undefined || !deepCompare(value1, value2)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0, ii = a.length; i < ii; i++) {
+      if (!deepCompare(a[i], b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
 const ROMAN_NUMBER_MAP = (/* unused pure expression or super */ null && (["", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM", "", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC", "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]));
 function toRomanNumerals(number, lowerCase = false) {
   core_utils_assert(Number.isInteger(number) && number > 0, "The number should be a positive integer.");
@@ -1575,15 +1587,14 @@ function collectActions(xref, dict, eventType) {
       if (!(additionalActions instanceof core_utils_Dict)) {
         continue;
       }
-      for (const key of additionalActions.getKeys()) {
+      for (const [key, rawActionDict] of additionalActions.getRawEntries()) {
         const action = eventType[key];
         if (!action) {
           continue;
         }
-        const actionDict = additionalActions.getRaw(key);
         const parents = new core_utils_RefSet();
         const list = [];
-        _collectJS(actionDict, xref, list, parents);
+        _collectJS(rawActionDict, xref, list, parents);
         if (list.length > 0) {
           actions[action] = list;
         }
@@ -3891,10 +3902,7 @@ class SimpleSegmentVisitor {
       huffmanTables = getSymbolDictionaryHuffmanTables(dictionary, referredSegments, this.customTables);
       huffmanInput = new Reader(data, start, end);
     }
-    let symbols = this.symbols;
-    if (!symbols) {
-      this.symbols = symbols = {};
-    }
+    const symbols = this.symbols ||= {};
     const inputSymbols = [];
     for (const referredSegment of referredSegments) {
       const referredSymbols = symbols[referredSegment];
@@ -3929,10 +3937,7 @@ class SimpleSegmentVisitor {
     this.onImmediateTextRegion(...arguments);
   }
   onPatternDictionary(dictionary, currentSegment, data, start, end) {
-    let patterns = this.patterns;
-    if (!patterns) {
-      this.patterns = patterns = {};
-    }
+    const patterns = this.patterns ||= {};
     const decodingContext = new DecodingContext(data, start, end);
     patterns[currentSegment] = decodePatternDictionary(dictionary.mmr, dictionary.patternWidth, dictionary.patternHeight, dictionary.maxPatternIndex, dictionary.template, decodingContext);
   }
@@ -3947,10 +3952,7 @@ class SimpleSegmentVisitor {
     this.onImmediateHalftoneRegion(...arguments);
   }
   onTables(currentSegment, data, start, end) {
-    let customTables = this.customTables;
-    if (!customTables) {
-      this.customTables = customTables = {};
-    }
+    const customTables = this.customTables ||= {};
     customTables[currentSegment] = decodeTablesSegment(data, start, end);
   }
 }
@@ -3991,10 +3993,7 @@ class HuffmanTreeNode {
     if (shift <= 0) {
       this.children[bit] = new HuffmanTreeNode(line);
     } else {
-      let node = this.children[bit];
-      if (!node) {
-        this.children[bit] = node = new HuffmanTreeNode(null);
-      }
+      const node = this.children[bit] ||= new HuffmanTreeNode(null);
       node.buildTree(line, shift - 1);
     }
   }
@@ -7612,7 +7611,7 @@ class JpxImage {
           this.#buffer = await fetchBinaryData(`${this.#wasmUrl}${filename}`);
         } else {
           this.#buffer = await this.#handler.sendWithPromise("FetchBinaryData", {
-            type: "wasmFactory",
+            kind: "wasmUrl",
             filename
           });
         }

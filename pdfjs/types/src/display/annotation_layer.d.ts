@@ -128,7 +128,7 @@ export class AnnotationLayer {
      * @memberof AnnotationLayer
      */
     update({ viewport }: AnnotationLayerParameters): void;
-    getEditableAnnotations(): any[];
+    getEditableAnnotations(): MapIterator<any>;
     getEditableAnnotation(id: any): any;
     addFakeAnnotation(editor: any): EditorAnnotationElement;
     removeAnnotation(id: any): void;
