@@ -1289,6 +1289,7 @@ export declare class CropperHandle extends CropperElement_5 {
 export declare class CropperImage extends CropperElement_3 {
     static $name: string;
     static $version: string;
+    protected $isReady: boolean;
     protected $matrix: number[];
     protected $onLoad: EventListener | null;
     protected $onCanvasAction: EventListener | null;
@@ -1435,6 +1436,7 @@ export declare class CropperImage extends CropperElement_3 {
 declare class CropperImage_2 extends CropperElement_2_5 {
     static $name: string;
     static $version: string;
+    protected $isReady: boolean;
     protected $matrix: number[];
     protected $onLoad: EventListener | null;
     protected $onCanvasAction: EventListener | null;
@@ -1826,6 +1828,7 @@ declare class CropperSelection_2 extends CropperElement_4_2 {
 export declare class CropperShade extends CropperElement_4 {
     static $name: string;
     static $version: string;
+    protected $onWindowResize: EventListener | null;
     protected $onCanvasActionEnd: EventListener | null;
     protected $onCanvasActionStart: EventListener | null;
     protected $onSelectionChange: EventListener | null;
