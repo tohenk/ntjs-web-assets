@@ -14,7 +14,7 @@
     "unpkg": "https://unpkg.com/<PKG>@<VER>/dist/<TYPE>/<NAME>"
   },
   "bignumber.js": {
-    "version": "10.0.2",
+    "version": "11.0.0",
     "jsdelivr-dist": ""
   },
   "blueimp-canvas-to-blob": {
