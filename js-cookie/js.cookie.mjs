@@ -1,4 +1,4 @@
-/*! js-cookie v3.0.6 | MIT */
+/*! js-cookie v3.0.7 | MIT */
 function assign (target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i];
