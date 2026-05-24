@@ -1313,9 +1313,11 @@ MD.TiffResource.prototype = {
             case MD.TIFF_TYPE_BYTE: 
                 return reader.readGeneric('getUint8', 1, 1, count);
             case MD.TIFF_TYPE_ASCII:
-                MD.check(count > 0, 'Invalid ASCII length');
-                var ascii = reader.readGeneric('getUint8', 1, 1, count - 1);
-                return String.fromCharCode.apply(null, Array.isArray(ascii) ? ascii : [ascii]);
+                if (count > 0) {
+                    var ascii = reader.readGeneric('getUint8', 1, 1, count - 1);
+                    return String.fromCharCode.apply(null, Array.isArray(ascii) ? ascii : [ascii]);
+                }
+                return null;
             case MD.TIFF_TYPE_SBYTE:
                 return reader.readGeneric('getInt8', 1, 1, count);
             case MD.TIFF_TYPE_SHORT:
