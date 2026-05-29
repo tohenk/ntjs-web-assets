@@ -1,4 +1,4 @@
-/*! js-cookie v3.0.7 | MIT */
+/*! js-cookie v3.0.8 | MIT */
 ;
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -100,7 +100,7 @@
           if (name === found) {
             break
           }
-        } catch {
+        } catch (_e) {
           // Do nothing...
         }
       }
@@ -110,8 +110,8 @@
 
     return Object.create(
       {
-        set,
-        get,
+        set: set,
+        get: get,
         remove: function (name, attributes) {
           set(
             name,

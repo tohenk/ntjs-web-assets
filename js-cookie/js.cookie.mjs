@@ -1,4 +1,4 @@
-/*! js-cookie v3.0.7 | MIT */
+/*! js-cookie v3.0.8 | MIT */
 function assign (target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i];
@@ -89,7 +89,7 @@ function init(converter, defaultAttributes) {
         if (name === found) {
           break
         }
-      } catch {
+      } catch (_e) {
         // Do nothing...
       }
     }
@@ -99,8 +99,8 @@ function init(converter, defaultAttributes) {
 
   return Object.create(
     {
-      set,
-      get,
+      set: set,
+      get: get,
       remove: function (name, attributes) {
         set(
           name,
