@@ -133,16 +133,6 @@ export type DocumentInitParameters = {
      * `ImageDecoder` in the worker. Primarily used to improve performance of
      * image conversion/rendering.
      * The default value is `true` in web environments and `false` in Node.js.
-     *
-     * NOTE: Also temporarily disabled in Chromium browsers, until we no longer
-     * support the affected browser versions, because of various bugs:
-     *
-     * - Crashes when using the BMP decoder with huge images, e.g. issue6741.pdf;
-     * see https://issues.chromium.org/issues/374807001
-     *
-     * - Broken images when using the JPEG decoder with images that have custom
-     * colour profiles, e.g. GitHub discussion 19030;
-     * see https://issues.chromium.org/issues/378869810
      */
     isImageDecoderSupported?: boolean | undefined;
     /**
@@ -664,17 +654,6 @@ export const build: string;
  *   `ImageDecoder` in the worker. Primarily used to improve performance of
  *   image conversion/rendering.
  *   The default value is `true` in web environments and `false` in Node.js.
- *
- *   NOTE: Also temporarily disabled in Chromium browsers, until we no longer
- *   support the affected browser versions, because of various bugs:
- *
- *    - Crashes when using the BMP decoder with huge images, e.g. issue6741.pdf;
- *      see https://issues.chromium.org/issues/374807001
- *
- *    - Broken images when using the JPEG decoder with images that have custom
- *      colour profiles, e.g. GitHub discussion 19030;
- *      see https://issues.chromium.org/issues/378869810
- *
  * @property {number} [canvasMaxAreaInBytes] - The integer value is used to
  *   know when an image must be resized (uses `OffscreenCanvas` in the worker).
  *   If it's -1 then a possibly slow algorithm is used to guess the max value.
@@ -730,12 +709,10 @@ export const build: string;
  * XHR as fallback) is used, which means it must follow same origin rules,
  * e.g. no cross-domain requests without CORS.
  *
- * @param {string | URL | TypedArray | ArrayBuffer | DocumentInitParameters}
- *   src - Can be a URL where a PDF file is located, a typed array (Uint8Array)
- *         already populated with data, or a parameter object.
+ * @param {DocumentInitParameters} src - Parameter object.
  * @returns {PDFDocumentLoadingTask}
  */
-export function getDocument(src?: string | URL | TypedArray | ArrayBuffer | DocumentInitParameters): PDFDocumentLoadingTask;
+export function getDocument(src?: DocumentInitParameters): PDFDocumentLoadingTask;
 /**
  * Abstract class to support range requests file loading.
  *
@@ -787,11 +764,18 @@ export class PDFDataRangeTransport {
  * after which individual pages can be rendered.
  */
 export class PDFDocumentLoadingTask {
-    static "__#private@#docId": number;
+    static #docId: number;
     /**
      * @private
      */
     private _capability;
+    /**
+     * Resolves once the load-time setup chain has settled, regardless of
+     * outcome; used by `destroy()` to wait until `_transport` is either set
+     * or definitely never going to be.
+     * @private
+     */
+    private _setupCapability;
     /**
      * @private
      */
@@ -1072,7 +1056,8 @@ export class PDFDocumentProxy {
     saveDocument(): Promise<Uint8Array<ArrayBuffer>>;
     /**
      * @typedef {Object} PageInfo
-     * @property {null|Uint8Array} document
+     * @property {null|Uint8Array} [document]
+     * @property {ImageBitmap} [image] Image to insert as a synthetic page.
      * @property {Array<Array<number>|number>} [includePages]
      *  included ranges or indices.
      * @property {Array<Array<number>|number>} [excludePages]
@@ -1104,7 +1089,11 @@ export class PDFDocumentProxy {
      *   {Uint8Array} containing the full data of the saved document.
      */
     extractPages(pageInfos: Array<{
-        document: null | Uint8Array;
+        document?: Uint8Array<ArrayBufferLike> | null | undefined;
+        /**
+         * Image to insert as a synthetic page.
+         */
+        image?: ImageBitmap | undefined;
         /**
          * included ranges or indices.
          */
@@ -1162,10 +1151,6 @@ export class PDFDocumentProxy {
      * @returns {Promise} A promise that is resolved when clean-up has finished.
      */
     cleanup(keepLoadedFonts?: boolean): Promise<any>;
-    /**
-     * Destroys the current document instance and terminates the worker.
-     */
-    destroy(): Promise<void>;
     /**
      * @param {RefProxy} ref - The page reference.
      * @returns {number | null} The page number, if it's cached.
@@ -1546,9 +1531,9 @@ export class PDFPageProxy {
  * @param {PDFWorkerParameters} params - The worker initialization parameters.
  */
 export class PDFWorker {
-    static "__#private@#fakeWorkerId": number;
-    static "__#private@#isWorkerDisabled": boolean;
-    static "__#private@#workerPorts": WeakMap<object, any>;
+    static #fakeWorkerId: number;
+    static #isWorkerDisabled: boolean;
+    static #workerPorts: WeakMap<object, any>;
     /**
      * @param {PDFWorkerParameters} params - The worker initialization parameters.
      * @returns {PDFWorker}
@@ -1559,7 +1544,7 @@ export class PDFWorker {
      * @type {string}
      */
     static get workerSrc(): string;
-    static get "__#private@#mainThreadWorkerMessageHandler"(): any;
+    static get #mainThreadWorkerMessageHandler(): any;
     static get _setupFakeWorkerGlobal(): any;
     constructor({ name, port, verbosity, }?: {
         name?: null | undefined;
@@ -1634,7 +1619,7 @@ export class RenderTask {
 }
 /** @type {string} */
 export const version: string;
-import { PageViewport } from "./display_utils.js";
+import { PageViewport } from "./page_viewport.js";
 import { OptionalContentConfig } from "./optional_content_config.js";
 import { PrintAnnotationStorage } from "./annotation_storage.js";
 import { PagesMapper } from "./pages_mapper.js";

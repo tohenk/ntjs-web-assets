@@ -81,7 +81,7 @@ export type PDFThumbnailViewerOptions = {
     waitingBar?: Object | undefined;
     /**
      * - The file picker and button used to
-     * add a PDF file to merge with the current one.
+     * add one or more PDF files to merge with the current one.
      */
     addFileComponent?: Object | undefined;
 };
@@ -118,14 +118,22 @@ export type PDFThumbnailViewerOptions = {
  * @property {Object} [waitingBar] - The waiting bar elements shown during
  *   long-running operations.
  * @property {Object} [addFileComponent] - The file picker and button used to
- *   add a PDF file to merge with the current one.
+ *   add one or more PDF files to merge with the current one.
  */
 /**
  * Viewer control to display thumbnails for pages in a PDF document.
  */
 export class PDFThumbnailViewer {
-    static "__#private@#draggingScaleFactor": number;
-    static "__#private@#getScaleFactor"(image: any): number;
+    static #draggingScaleFactor: number;
+    static #getScaleFactor(image: any): number;
+    static #fitImageDimensions(width: any, height: any, { minSide, maxSide }: {
+        minSide?: number | undefined;
+        maxSide: any;
+    }): {
+        width: any;
+        height: any;
+    };
+    static #fileToImageBitmap(file: any): Promise<ImageBitmap>;
     /**
      * @param {PDFThumbnailViewerOptions} options
      */
