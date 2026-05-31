@@ -1,6 +1,6 @@
 (function() {
 /*
- *      bignumber.js v11.1.1
+ *      bignumber.js v11.1.2
  *      A JavaScript library for arbitrary-precision arithmetic.
  *      https://github.com/MikeMcl/bignumber.js
  *      Copyright (c) 2026 Michael Mclaughlin <M8ch88l@gmail.com>
@@ -2711,7 +2711,7 @@ function clone(configObject) {
     * '[BigNumber Error] Argument not an object: {options}'
    */
   P.toFormat = function (dp, rm, options) {
-    var min, max, str,
+    var isNeg, min, max, str,
       x = this;
 
     if (options == null) {
@@ -2753,7 +2753,8 @@ function clone(configObject) {
     }
 
     str = x.toFixed(dp, rm);
-    if (x.s < 0) str = str.slice(1);
+    isNeg = str.charCodeAt(0) === 45;
+    if (isNeg) str = str.slice(1);
 
     if (x.c) {
       var i,
@@ -2793,7 +2794,7 @@ function clone(configObject) {
     }
 
     return (options.prefix || '') +
-      (x.s < 0 ? options.negativeSign || '' : x.s > 0 ? options.positiveSign || '' : '') +
+      (isNeg ? options.negativeSign || '' : x.s > 0 ? options.positiveSign || '' : '') +
       str + (options.suffix || '');
   };
 
