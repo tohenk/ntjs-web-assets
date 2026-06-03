@@ -309,8 +309,9 @@ function utf16to8(str) {
 }
 
 /**
- * @param {ArrayBufferLike} x
- * @param {ArrayBufferLike} y
+ * @param {ArrayBuffer} x
+ * @param {ArrayBuffer} y
+ * @return {ArrayBuffer}
  */
 function xorArrayBuffers(x, y) {
   const xIntArray = new Uint8Array(x);
@@ -323,7 +324,7 @@ function xorArrayBuffers(x, y) {
 }
 
 /**
- * @param {ArrayBufferLike} buffer
+ * @param {ArrayBuffer} buffer
  * @return {string}
  */
 function arrayBufToBase64(buffer) {
@@ -340,7 +341,7 @@ function arrayBufToBase64(buffer) {
 
 /**
  * @param {string} str
- * @return {ArrayBufferLike}
+ * @return {ArrayBuffer}
  */
 function base64ToArrayBuf(str) {
   var _Uint8Array$from;
@@ -349,7 +350,7 @@ function base64ToArrayBuf(str) {
 
 /**
  * @param {string} str
- * @return {ArrayBufferLike}
+ * @return {ArrayBuffer}
  */
 function stringToArrayBuf(str) {
   const bytes = new TextEncoder().encode(str);
@@ -2546,7 +2547,7 @@ class SASLPlain extends SASLMechanism {
 
 /**
  * @param {string} authMessage
- * @param {ArrayBufferLike} clientKey
+ * @param {ArrayBuffer} clientKey
  * @param {string} hashName
  */
 async function scramClientProof(authMessage, clientKey, hashName) {
@@ -2744,7 +2745,7 @@ const scram = {
     const client_first_message_bare = `n=${connection.authcid},r=${cnonce}`;
     connection._sasl_data.cnonce = cnonce;
     connection._sasl_data['client-first-message-bare'] = client_first_message_bare;
-    return `n,,${client_first_message_bare}`;
+    return utils.utf16to8(`n,,${client_first_message_bare}`);
   }
 };
 
