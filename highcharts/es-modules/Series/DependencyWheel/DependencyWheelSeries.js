@@ -5,8 +5,9 @@
  *  (c) 2018-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -21,9 +22,9 @@ import SankeyColumnComposition from '../Sankey/SankeyColumnComposition.js';
 import SeriesRegistry from '../../Core/Series/SeriesRegistry.js';
 const { pie: PieSeries, sankey: SankeySeries } = SeriesRegistry.seriesTypes;
 import SVGElement from '../../Core/Renderer/SVG/SVGElement.js';
-import TextPath from '../../Extensions/TextPath.js';
+import { composeTextPath } from '../../Extensions/TextPath.js';
 import { extend, merge, relativeLength } from '../../Shared/Utilities.js';
-TextPath.compose(SVGElement);
+composeTextPath(SVGElement);
 /* *
  *
  *  Class
@@ -73,11 +74,18 @@ class DependencyWheelSeries extends SankeySeries {
         const node = super.createNode(id);
         /**
          * Return the sum of incoming and outgoing links.
-         * @private
+         * @internal
          */
-        node.getSum = () => (node.linksFrom
-            .concat(node.linksTo)
-            .reduce((acc, link) => (acc + link.weight), 0));
+        node.getSum = () => {
+            let sum = 0;
+            for (const link of node.linksFrom) {
+                sum += link.weight || 0;
+            }
+            for (const link of node.linksTo) {
+                sum += link.weightTo || link.weight || 0;
+            }
+            return sum;
+        };
         /**
          * Get the offset in weight values of a point/link.
          * @private
@@ -104,7 +112,10 @@ class DependencyWheelSeries extends SankeySeries {
                 if (links[i] === point) {
                     return offset;
                 }
-                offset += links[i].weight;
+                const baseWeight = links[i].weight || 0;
+                offset += links[i].to === node.id ?
+                    links[i].weightTo || baseWeight :
+                    baseWeight;
             }
         };
         return node;
@@ -135,7 +146,7 @@ class DependencyWheelSeries extends SankeySeries {
      */
     translate() {
         const series = this, options = series.options, factor = 2 * Math.PI /
-            (series.chart.plotHeight + series.getNodePadding()), center = series.getCenter(), startAngle = (options.startAngle - 90) * deg2rad, brOption = options.borderRadius, borderRadius = typeof brOption === 'object' ?
+            (series.chart.plotHeight + series.getNodePadding()), center = series.getCenter(), startAngle = ((options.startAngle || 0) - 90) * deg2rad, brOption = options.borderRadius, borderRadius = typeof brOption === 'object' ?
             brOption.radius : brOption;
         super.translate();
         for (const node of this.nodeColumns[0]) {
@@ -223,6 +234,28 @@ class DependencyWheelSeries extends SankeySeries {
             }
         }
     }
+    /**
+     * Run translation operations for one link.
+     * @internal
+     */
+    translateLink(point) {
+        const linkToHeight = Math.max((point.weightTo || point.weight || 0) * this.translationFactor, this.options.minLinkWidth || 0);
+        const linkToY = this.getY(point, point.toNode, 'linksTo', linkToHeight);
+        // Translate the link
+        super.translateLink(point, linkToY);
+        // Override the last linkBase value
+        point.linkBase[3] = linkToY + linkToHeight;
+    }
+    /**
+     * Run translation operations for one node.
+     * @internal
+     */
+    translateNode(node, column) {
+        super.translateNode(node, column);
+        // Calculate the sum of incoming links weight and
+        // outgoing links weightTo.
+        node.sumTo = node.getSumTo();
+    }
 }
 /* *
  *
@@ -232,6 +265,7 @@ class DependencyWheelSeries extends SankeySeries {
 DependencyWheelSeries.defaultOptions = merge(SankeySeries.defaultOptions, DependencyWheelSeriesDefaults);
 extend(DependencyWheelSeries.prototype, {
     orderNodes: false,
+    pointArrayMap: ['from', 'to', 'weight', 'weightTo'],
     getCenter: PieSeries.prototype.getCenter
 });
 DependencyWheelSeries.prototype.pointClass = DependencyWheelPoint;

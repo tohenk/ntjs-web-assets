@@ -3,8 +3,9 @@
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -55,6 +56,8 @@ class ColorAxis extends Axis {
     /** @internal */
     constructor(chart, userOptions) {
         super(chart, userOptions);
+        /** @internal */
+        this.clippable = false;
         /** @internal */
         this.coll = 'colorAxis';
         /** @internal */
@@ -169,16 +172,12 @@ class ColorAxis extends Axis {
      * @internal
      */
     getOffset() {
-        const axis = this;
-        const group = axis.legendItem?.group;
-        const sideOffset = axis.chart.axisOffset[axis.side];
+        const axis = this, chart = axis.chart, group = axis.legendItem?.group, sideOffset = chart.axisOffset[axis.side], { clipOffset, legend } = chart;
         if (group) {
-            // Hook for the getOffset method to add groups to this parent
-            // group
+            // Hook for the getOffset method to add groups to this parent group
             axis.axisParent = group;
             // Call the base
             super.getOffset();
-            const legend = this.chart.legend;
             // Adds `maxLabelLength` needed for label padding corrections done
             // by `render()` and `getMargins()` (#15551).
             legend.allItems.forEach(function (item) {
@@ -187,7 +186,7 @@ class ColorAxis extends Axis {
                 }
             });
             legend.render();
-            this.chart.getMargins(true);
+            chart.getMargins(true);
             // First time only
             if (!axis.added) {
                 axis.added = true;
@@ -195,7 +194,8 @@ class ColorAxis extends Axis {
             axis.labelLeft = 0;
             axis.labelRight = axis.width;
             // Reset it to avoid color axis reserving space
-            axis.chart.axisOffset[axis.side] = sideOffset;
+            chart.axisOffset[axis.side] = sideOffset;
+            chart.clipOffset = clipOffset;
         }
     }
     /**
@@ -377,7 +377,7 @@ class ColorAxis extends Axis {
      * @emits Highcharts.ColorAxis#event:drawCrosshair
      */
     drawCrosshair(e, point) {
-        const axis = this, legendItem = axis.legendItem || {}, plotX = point?.plotX, plotY = point?.plotY, axisPos = axis.pos, axisLen = axis.len;
+        const axis = this, legendItem = axis.legendItem || {}, plotX = point?.plotX, plotY = point?.plotY, axisPos = axis.pos, axisLen = axis.len, markerOptions = axis.options.marker || {};
         let crossPos;
         if (point) {
             crossPos = axis.toPixels(point.getNestedProperty(point.series.colorKey));
@@ -402,7 +402,9 @@ class ColorAxis extends Axis {
                 if (!axis.chart.styledMode &&
                     typeof axis.crosshair === 'object') {
                     axis.cross.attr({
-                        fill: axis.crosshair.color
+                        fill: markerOptions.color,
+                        stroke: markerOptions.lineColor,
+                        'stroke-width': markerOptions.lineWidth
                     });
                 }
             }
@@ -410,10 +412,15 @@ class ColorAxis extends Axis {
     }
     /** @internal */
     getPlotLinePath(options) {
-        const axis = this, left = axis.left, pos = options.translatedValue, top = axis.top;
+        const axis = this, left = axis.left, pos = options.translatedValue, { symbol } = this.options.marker || {}, top = axis.top;
         // Crosshairs only
-        return isNumber(pos) ? // `pos` can be 0 (#3969)
-            (axis.horiz ? [
+        if (isNumber(pos)) {
+            const x = left, w = axis.width, y = pos - w / 2, h = w;
+            if (symbol) {
+                return this.chart.renderer.symbols[symbol](x, y, w, h);
+            }
+            // Default to a triangle pointing to the value
+            return (axis.horiz ? [
                 ['M', pos - 4, top - 6],
                 ['L', pos + 4, top - 6],
                 ['L', pos, top],
@@ -423,8 +430,9 @@ class ColorAxis extends Axis {
                 ['L', left - 6, pos + 6],
                 ['L', left - 6, pos - 6],
                 ['Z']
-            ]) :
-            super.getPlotLinePath(options);
+            ]);
+        }
+        return super.getPlotLinePath(options);
     }
     /**
      * Updates a color axis instance with a new set of options. The options are

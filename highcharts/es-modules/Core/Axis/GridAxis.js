@@ -3,8 +3,9 @@
  *  (c) 2016-2026 Highsoft AS
  *  Authors: Lars A. V. Cabrera
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -187,31 +188,31 @@ function onAfterGetTitlePosition(e) {
     const gridOptions = options.grid || {};
     if (gridOptions.enabled === true) {
         // Compute anchor points for each of the title align options
-        const { axisTitle, height: axisHeight, horiz, left: axisLeft, offset, opposite, options, top: axisTop, width: axisWidth } = axis;
-        const tickSize = axis.tickSize();
-        const titleWidth = axisTitle?.getBBox().width;
-        const xOption = options.title.x;
-        const yOption = options.title.y;
-        const titleMargin = pick(options.title.margin, horiz ? 5 : 10);
-        const titleFontSize = axisTitle ? axis.chart.renderer.fontMetrics(axisTitle).f : 0;
-        const crispCorr = tickSize ? tickSize[0] / 2 : 0;
-        // TODO account for alignment
-        // the position in the perpendicular direction of the axis
-        const offAxis = ((horiz ? axisTop + axisHeight : axisLeft) +
+        const { axisTitle, height: axisHeight, horiz, left: axisLeft, offset, opposite, options, top: axisTop, width: axisWidth } = axis, tickSize = axis.tickSize(), titleWidth = axisTitle?.getBBox().width, title = options.title, { x, y } = title, margin = title.margin ?? (horiz ? 5 : 10), titleFontSize = axisTitle ? axis.chart.renderer.fontMetrics(axisTitle).f : 0, crispCorr = tickSize ? tickSize[0] / 2 : 0, offAxis = ((horiz ? axisTop + axisHeight : axisLeft) +
             (horiz ? 1 : -1) * // Horizontal axis reverses the margin
                 (opposite ? -1 : 1) * // So does opposite axes
                 crispCorr +
             (axis.side === GridAxisSide.bottom ? titleFontSize : 0));
         e.titlePosition.x = horiz ?
-            axisLeft - (titleWidth || 0) / 2 - titleMargin + xOption :
-            offAxis + (opposite ? axisWidth : 0) + offset + xOption;
+            axisLeft - (titleWidth || 0) / 2 - margin + x :
+            offAxis + (opposite ? axisWidth : 0) + offset + x;
         e.titlePosition.y = horiz ?
             (offAxis -
                 (opposite ? axisHeight : 0) +
                 (opposite ? titleFontSize : -titleFontSize) / 2 +
                 offset +
-                yOption) :
-            axisTop - titleMargin + yOption;
+                y) :
+            axisTop - margin + y;
+        // In a vertical grid axis, allow text alignment for column titles
+        if (!horiz) {
+            const [slotWidth = 0] = tickSize || [];
+            if (title.textAlign === 'left') {
+                e.titlePosition.x -= slotWidth / 2;
+            }
+            else if (title.textAlign === 'right') {
+                e.titlePosition.x += slotWidth / 2;
+            }
+        }
     }
 }
 /** @internal */
@@ -671,7 +672,7 @@ function onDestroy(e) {
 function onInit(e) {
     const axis = this;
     const userOptions = e.userOptions || {};
-    const gridOptions = userOptions.grid || {};
+    const gridOptions = merge({ borderColor: 'var(--highcharts-neutral-color-20)' }, userOptions.grid || {});
     if (gridOptions.enabled && defined(gridOptions.borderColor)) {
         userOptions.tickColor = userOptions.lineColor = (gridOptions.borderColor);
     }
@@ -680,6 +681,7 @@ function onInit(e) {
     }
     axis.hiddenLabels = [];
     axis.hiddenMarks = [];
+    axis.clippable = false;
 }
 /**
  * Center tick labels in cells.
@@ -766,14 +768,21 @@ function onTickLabelFormat(ctx) {
     const { axis, value } = ctx;
     if (axis.options.grid?.enabled) {
         const tickPos = axis.tickPositions;
-        const series = (axis.linkedParent || axis).series[0];
+        const allSeries = (axis.linkedParent || axis).series;
+        const allSeriesData = allSeries
+            .reduce((acc, series) => {
+            if (series.is('gantt')) {
+                return acc?.concat(series.options?.data ?? []);
+            }
+            return acc;
+        }, []) ?? [];
         const isFirst = value === tickPos[0];
         const isLast = value === tickPos[tickPos.length - 1];
-        const point = series && find(series.options.data, function (p) {
+        const point = allSeries[0] && find(allSeriesData, function (p) {
             return p[axis.isXAxis ? 'x' : 'y'] === value;
         });
         let pointCopy;
-        if (point && series.is('gantt')) {
+        if (point) {
             // For the Gantt set point aliases to the pointCopy
             // to do not change the original point
             pointCopy = merge(point);
@@ -969,27 +978,6 @@ export default GridAxis;
  *
  * */
 /**
- * @productdesc {gantt}
- * For grid axes (like in Gantt charts),
- * it is possible to declare as a list to provide different
- * formats depending on available space.
- *
- * Defaults to:
- * ```js
- * {
- *     hour: { list: ['%H:%M', '%H'] },
- *     day: { list: ['%A, %e. %B', '%a, %e. %b', '%E'] },
- *     week: { list: ['Week %W', 'W%W'] },
- *     month: { list: ['%B', '%b', '%o'] }
- * }
- * ```
- *
- * @sample {gantt} gantt/grid-axis/date-time-label-formats
- *         Gantt chart with custom axis date format.
- *
- * @apioption xAxis.dateTimeLabelFormats
- */
-/**
  * Set grid options for the axis labels. Requires Highcharts Gantt.
  *
  * @since     6.2.0
@@ -1024,7 +1012,7 @@ export default GridAxis;
  * Set border color for the label grid lines.
  *
  * @type      {Highcharts.ColorString}
- * @default   #e6e6e6
+ * @default   #cccccc
  * @apioption xAxis.grid.borderColor
  */
 /**

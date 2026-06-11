@@ -5,8 +5,9 @@
  *
  *  Extensions to the SVGRenderer class to enable 3D shapes
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -803,7 +804,7 @@ var SVGRenderer3D;
         angleEnd = toZeroPIRange(angleEnd);
         angleStart = toZeroPIRange(angleStart);
         angleMid = toZeroPIRange(angleMid);
-        // *1e5 is to compensate pInt in zIndexSetter
+        // Keep angle-derived z-indices well spaced.
         const incPrecision = 1e5, a1 = angleMid * incPrecision, a2 = angleStart * incPrecision, a3 = angleEnd * incPrecision;
         return {
             top: top,

@@ -5,8 +5,9 @@
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi, Lars A. V. Cabrera
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -30,18 +31,21 @@ import { addEvent, clamp, crisp, defined, extend, find, isNumber, isObject, merg
  * @private
  */
 function onAxisAfterGetSeriesExtremes() {
+    const time = this.chart.time;
     let dataMax, modMax;
     if (this.isXAxis) {
         dataMax = pick(this.dataMax, -Number.MAX_VALUE);
         for (const series of this.series) {
             const column = (series.dataTable.getColumn('x2', true) ||
-                series.dataTable.getColumn('end', true));
-            if (column) {
-                for (const val of column) {
-                    if (isNumber(val) && val > dataMax) {
-                        dataMax = val;
-                        modMax = true;
-                    }
+                series.dataTable.getColumn('end', true) ||
+                []);
+            for (let val of column) {
+                if (typeof val === 'string') {
+                    val = time.parse(val);
+                }
+                if (isNumber(val) && val > dataMax) {
+                    dataMax = val;
+                    modMax = true;
                 }
             }
         }
@@ -305,19 +309,21 @@ class XRangeSeries extends ColumnSeries {
             'attr' : verb, pointAttr = this.pointAttribs(point, pointState), animation = pick(this.chart.options.chart.animation, stateOpts.animation);
         let graphic = point.graphic, pfOptions = point.partialFill;
         if (!point.isNull && point.visible !== false) {
+            const className = point.getClassName();
             // Original graphic
             if (graphic) { // Update
                 graphic.rect[verb](shapeArgs);
             }
             else {
                 point.graphic = graphic = renderer.g('point')
-                    .addClass(point.getClassName())
                     .add(point.group || this.group);
                 graphic.rect = renderer[type](merge(shapeArgs))
-                    .addClass(point.getClassName())
-                    .addClass('highcharts-partfill-original')
                     .add(graphic);
             }
+            graphic.addClass(className + (pointState && pointState !== 'select' ?
+                ' highcharts-point-' + pointState :
+                ''), true);
+            graphic.rect.addClass(className + ' highcharts-partfill-original', true);
             // Partial fill graphic
             if (partShapeArgs) {
                 if (graphic.partRect) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Highcharts
 /**
- * @license Highstock JS v12.6.0 (2026-04-13)
+ * @license Highstock JS v13.0.0 (2026-06-11)
  * @module highcharts/modules/stock
  * @requires highcharts
  *
@@ -9,8 +9,8 @@
  * (c) 2010-2026 Highsoft AS
  * Author: Torstein Hønsi
  *
- * A commercial license may be required depending on use.
- * See www.highcharts.com/license
+ * A commercial license may be required depending on use,
+ * see www.highcharts.com/license
  */
 import * as __WEBPACK_EXTERNAL_MODULE__highcharts_src_js_8202131d__ from "../highcharts.src.js";
 import "./broken-axis.src.js";
@@ -61,1376 +61,15 @@ var external_highcharts_src_js_default_Point_default = /*#__PURE__*/__webpack_re
 ;// external ["../highcharts.src.js","default","Series"]
 const external_highcharts_src_js_default_Series_namespaceObject = __WEBPACK_EXTERNAL_MODULE__highcharts_src_js_8202131d__["default"].Series;
 var external_highcharts_src_js_default_Series_default = /*#__PURE__*/__webpack_require__.n(external_highcharts_src_js_default_Series_namespaceObject);
-;// ./code/es-modules/Shared/Utilities.js
-/* *
- *
- *  (c) 2009-2026 Highsoft AS
- *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
- *
- *
- * */
-
-const { doc, win } = (external_highcharts_src_js_default_default());
-/**
- * Add an event listener.
- *
- * @function Highcharts.addEvent<T>
- *
- * @param  {Highcharts.Class<T>|T} el
- *         The element or object to add a listener to. It can be a
- *         {@link HTMLDOMElement}, an {@link SVGElement} or any other object.
- *
- * @param  {string} type
- *         The event type.
- *
- * @param  {Highcharts.EventCallbackFunction<T>|Function} fn
- *         The function callback to execute when the event is fired.
- *
- * @param  {Highcharts.EventOptionsObject} [options]
- *         Options for adding the event.
- *
- * @sample highcharts/members/addevent
- *         Use a general `render` event to draw shapes on a chart
- *
- * @return {Function}
- *         A callback function to remove the added event.
- */
-function addEvent(el, type, fn, options = {}) {
-    // Add hcEvents to either the prototype (in case we're running addEvent on a
-    // class) or the instance. If hasOwnProperty('hcEvents') is false, it is
-    // inherited down the prototype chain, in which case we need to set the
-    // property on this instance (which may itself be a prototype).
-    const owner = typeof el === 'function' && el.prototype || el;
-    if (!Object.hasOwnProperty.call(owner, 'hcEvents')) {
-        owner.hcEvents = {};
-    }
-    const events = owner.hcEvents;
-    // Allow click events added to points, otherwise they will be prevented by
-    // the TouchPointer.pinch function after a pinch zoom operation (#7091).
-    if ((external_highcharts_src_js_default_default()).Point && // Without H a dependency loop occurs
-        el instanceof (external_highcharts_src_js_default_default()).Point &&
-        el.series &&
-        el.series.chart) {
-        el.series.chart.runTrackerClick = true;
-    }
-    // Handle DOM events
-    // If the browser supports passive events, add it to improve performance
-    // on touch events (#11353).
-    const addEventListener = el.addEventListener;
-    if (addEventListener) {
-        addEventListener.call(el, type, fn, (external_highcharts_src_js_default_default()).supportsPassiveEvents ? {
-            passive: options.passive === void 0 ?
-                type.indexOf('touch') !== -1 : options.passive,
-            capture: false
-        } : false);
-    }
-    if (!events[type]) {
-        events[type] = [];
-    }
-    const eventObject = {
-        fn,
-        order: typeof options.order === 'number' ? options.order : Infinity
-    };
-    events[type].push(eventObject);
-    // Order the calls
-    events[type].sort((a, b) => a.order - b.order);
-    // Return a function that can be called to remove this event.
-    return function () {
-        removeEvent(el, type, fn);
-    };
-}
-/**
- * Non-recursive method to find the lowest member of an array. `Math.min` raises
- * a maximum call stack size exceeded error in Chrome when trying to apply more
- * than 150.000 points. This method is slightly slower, but safe.
- *
- * @function Highcharts.arrayMin
- *
- * @param {Array<*>} data
- *        An array of numbers.
- *
- * @return {number}
- *         The lowest number.
- */
-function arrayMin(data) {
-    let i = data.length, min = data[0];
-    while (i--) {
-        if (data[i] < min) {
-            min = data[i];
-        }
-    }
-    return min;
-}
-/**
- * Non-recursive method to find the lowest member of an array. `Math.max` raises
- * a maximum call stack size exceeded error in Chrome when trying to apply more
- * than 150.000 points. This method is slightly slower, but safe.
- *
- * @function Highcharts.arrayMax
- *
- * @param {Array<*>} data
- *        An array of numbers.
- *
- * @return {number}
- *         The highest number.
- */
-function arrayMax(data) {
-    let i = data.length, max = data[0];
-    while (i--) {
-        if (data[i] > max) {
-            max = data[i];
-        }
-    }
-    return max;
-}
-/**
- * Set or get an attribute or an object of attributes.
- *
- * To use as a setter, pass a key and a value, or let the second argument be a
- * collection of keys and values. When using a collection, passing a value of
- * `null` or `undefined` will remove the attribute.
- *
- * To use as a getter, pass only a string as the second argument.
- *
- * @function Highcharts.attr
- *
- * @param {Highcharts.HTMLDOMElement|Highcharts.SVGDOMElement} elem
- *        The DOM element to receive the attribute(s).
- *
- * @param {string|Highcharts.HTMLAttributes|Highcharts.SVGAttributes} [keyOrAttribs]
- *        The property or an object of key-value pairs.
- *
- * @param {number|string} [value]
- *        The value if a single property is set.
- *
- * @return {string|null|undefined}
- *         When used as a getter, return the value.
- */
-function attr(elem, keyOrAttribs, value) {
-    const isGetter = isString(keyOrAttribs) && !defined(value);
-    let ret;
-    const attrSingle = (value, key) => {
-        // Set the value
-        if (defined(value)) {
-            elem.setAttribute(key, value);
-            // Get the value
-        }
-        else if (isGetter) {
-            ret = elem.getAttribute(key);
-            // IE7 and below cannot get class through getAttribute (#7850)
-            if (!ret && key === 'class') {
-                ret = elem.getAttribute(key + 'Name');
-            }
-            // Remove the value
-        }
-        else {
-            elem.removeAttribute(key);
-        }
-    };
-    // If keyOrAttribs is a string
-    if (isString(keyOrAttribs)) {
-        attrSingle(value, keyOrAttribs);
-        // Else if keyOrAttribs is defined, it is a hash of key/value pairs
-    }
-    else {
-        objectEach(keyOrAttribs, attrSingle);
-    }
-    return ret;
-}
-/**
- * Constrain a value to within a lower and upper threshold.
- *
- * @internal
- * @param {number} value The initial value
- * @param {number} min The lower threshold
- * @param {number} max The upper threshold
- * @return {number} Returns a number value within min and max.
- */
-function clamp(value, min, max) {
-    return value > min ? value < max ? value : max : min;
-}
-/**
- * Fix JS round off float errors.
- *
- * @function Highcharts.correctFloat
- *
- * @param {number} num
- *        A float number to fix.
- *
- * @param {number} [prec=14]
- *        The precision.
- *
- * @return {number}
- *         The corrected float number.
- */
-function correctFloat(num, prec) {
-    // When the number is higher than 1e14 use the number (#16275)
-    return num > 1e14 ? num : parseFloat(num.toPrecision(prec || 14));
-}
-/**
- * Utility function to create an HTML element with attributes and styles.
- *
- * @function Highcharts.createElement
- *
- * @param {string} tag
- *        The HTML tag.
- *
- * @param {Highcharts.HTMLAttributes} [attribs]
- *        Attributes as an object of key-value pairs.
- *
- * @param {Highcharts.CSSObject} [styles]
- *        Styles as an object of key-value pairs.
- *
- * @param {Highcharts.HTMLDOMElement} [parent]
- *        The parent HTML object.
- *
- * @param {boolean} [nopad=false]
- *        If true, remove all padding, border and margin.
- *
- * @return {Highcharts.HTMLDOMElement}
- *         The created DOM element.
- */
-function createElement(tag, attribs, styles, parent, nopad) {
-    const el = doc.createElement(tag);
-    if (attribs) {
-        extend(el, attribs);
-    }
-    if (nopad) {
-        css(el, { padding: '0', border: 'none', margin: '0' });
-    }
-    if (styles) {
-        css(el, styles);
-    }
-    if (parent) {
-        parent.appendChild(el);
-    }
-    return el;
-}
-/**
- * Utility for crisping a line position to the nearest full pixel depending on
- * the line width.
- *
- * @internal
- * @param {number} value       The raw pixel position
- * @param {number} lineWidth   The line width
- * @param {boolean} [inverted] Whether the containing group is inverted.
- *                             Crisping round numbers on the y-scale need to go
- *                             to the other side because the coordinate system
- *                             is flipped (scaleY is -1)
- * @return {number}            The pixel position to use for a crisp display
- */
-function crisp(value, lineWidth = 0, inverted) {
-    const mod = lineWidth % 2 / 2, inverter = inverted ? -1 : 1;
-    return (Math.round(value * inverter - mod) + mod) * inverter;
-}
-/**
- * Set CSS on a given element.
- *
- * @function Highcharts.css
- *
- * @param {Highcharts.HTMLDOMElement|Highcharts.SVGDOMElement} el
- *        An HTML DOM element.
- *
- * @param {Highcharts.CSSObject} styles
- *        Style object with camel case property names.
- *
- * @return {void}
- */
-function css(el, styles) {
-    extend(el.style, styles);
-}
-/**
- * Check if an object is null or undefined.
- *
- * @function Highcharts.defined
- *
- * @param {*} obj
- *        The object to check.
- *
- * @return {boolean}
- *         False if the object is null or undefined, otherwise true.
- */
-function defined(obj) {
-    return typeof obj !== 'undefined' && obj !== null;
-}
-/**
- * Utility method that destroys any SVGElement instances that are properties on
- * the given object. It loops all properties and invokes destroy if there is a
- * destroy method. The property is then delete.
- *
- * @function Highcharts.destroyObjectProperties
- *
- * @param {*} obj
- *        The object to destroy properties on.
- *
- * @param {*} [except]
- *        Exception, do not destroy this property, only delete it.
- */
-function destroyObjectProperties(obj, except, destructablesOnly) {
-    objectEach(obj, function (val, n) {
-        // If the object is non-null and destroy is defined
-        if (val !== except && val?.destroy) {
-            // Invoke the destroy
-            val.destroy();
-        }
-        // Delete the property from the object
-        if (val?.destroy || !destructablesOnly) {
-            delete obj[n];
-        }
-    });
-}
-/**
- * Discard a HTML element
- *
- * @function Highcharts.discardElement
- *
- * @param {Highcharts.HTMLDOMElement} element
- *        The HTML node to discard.
- */
-function discardElement(element) {
-    element?.parentElement?.removeChild(element);
-}
-// eslint-disable-next-line valid-jsdoc
-/**
- * Return the deep difference between two objects. It can either return the new
- * properties, or optionally return the old values of new properties.
- * @internal
- */
-function diffObjects(newer, older, keepOlder, collectionsWithUpdate) {
-    const ret = {};
-    /**
-     * Recurse over a set of options and its current values, and store the
-     * current values in the ret object.
-     */
-    function diff(newer, older, ret, depth) {
-        const keeper = keepOlder ? older : newer;
-        objectEach(newer, function (newerVal, key) {
-            if (!depth &&
-                collectionsWithUpdate &&
-                collectionsWithUpdate.indexOf(key) > -1 &&
-                older[key]) {
-                newerVal = splat(newerVal);
-                ret[key] = [];
-                // Iterate over collections like series, xAxis or yAxis and map
-                // the items by index.
-                for (let i = 0; i < Math.max(newerVal.length, older[key].length); i++) {
-                    // Item exists in current data (#6347)
-                    if (older[key][i]) {
-                        // If the item is missing from the new data, we need to
-                        // save the whole config structure. Like when
-                        // responsively updating from a dual axis layout to a
-                        // single axis and back (#13544).
-                        if (newerVal[i] === void 0) {
-                            ret[key][i] = older[key][i];
-                            // Otherwise, proceed
-                        }
-                        else {
-                            ret[key][i] = {};
-                            diff(newerVal[i], older[key][i], ret[key][i], depth + 1);
-                        }
-                    }
-                }
-            }
-            else if (isObject(newerVal, true) &&
-                !newerVal.nodeType // #10044
-            ) {
-                ret[key] = isArray(newerVal) ? [] : {};
-                diff(newerVal, older[key] || {}, ret[key], depth + 1);
-                // Delete empty nested objects
-                if (Object.keys(ret[key]).length === 0 &&
-                    // Except colorAxis which is a special case where the empty
-                    // object means it is enabled. Which is unfortunate and we
-                    // should try to find a better way.
-                    !(key === 'colorAxis' && depth === 0)) {
-                    delete ret[key];
-                }
-            }
-            else if (newer[key] !== older[key] ||
-                // If the newer key is explicitly undefined, keep it (#10525)
-                (key in newer && !(key in older))) {
-                if (key !== '__proto__' && key !== 'constructor') {
-                    ret[key] = keeper[key];
-                }
-            }
-        });
-    }
-    diff(newer, older, ret, 0);
-    return ret;
-}
-/**
- * Remove the last occurrence of an item from an array.
- *
- * @function Highcharts.erase
- *
- * @param {Array<*>} arr
- *        The array.
- *
- * @param {*} item
- *        The item to remove.
- *
- * @return {void}
- */
-function erase(arr, item) {
-    let i = arr.length;
-    while (i--) {
-        if (arr[i] === item) {
-            arr.splice(i, 1);
-            break;
-        }
-    }
-}
-/**
- * Utility function to extend an object with the members of another.
- *
- * @function Highcharts.extend<T>
- *
- * @param {T|undefined} a
- *        The object to be extended.
- *
- * @param {Partial<T>} b
- *        The object to add to the first one.
- *
- * @return {T}
- *         Object a, the original object.
- */
-function extend(a, b) {
-    let n;
-    if (!a) {
-        a = {};
-    }
-    for (n in b) { // eslint-disable-line guard-for-in
-        a[n] = b[n];
-    }
-    return a;
-}
-// eslint-disable-next-line valid-jsdoc
-/**
- * Extend a prototyped class by new members.
- *
- * @deprecated
- * @function Highcharts.extendClass<T>
- *
- * @param {Highcharts.Class<T>} parent
- *        The parent prototype to inherit.
- *
- * @param {Highcharts.Dictionary<*>} members
- *        A collection of prototype members to add or override compared to the
- *        parent prototype.
- *
- * @return {Highcharts.Class<T>}
- *         A new prototype.
- */
-function extendClass(parent, members) {
-    const obj = (function () { });
-    obj.prototype = new parent(); // eslint-disable-line new-cap
-    extend(obj.prototype, members);
-    return obj;
-}
-/**
- * Fire an event that was registered with {@link Highcharts#addEvent}.
- *
- * @function Highcharts.fireEvent<T>
- *
- * @param {T} el
- *        The object to fire the event on. It can be a {@link HTMLDOMElement},
- *        an {@link SVGElement} or any other object.
- *
- * @param {string} type
- *        The type of event.
- *
- * @param {Highcharts.Dictionary<*>|Event} [eventArguments]
- *        Custom event arguments that are passed on as an argument to the event
- *        handler.
- *
- * @param {Highcharts.EventCallbackFunction<T>|Function} [defaultFunction]
- *        The default function to execute if the other listeners haven't
- *        returned false.
- *
- * @return {void}
- */
-function fireEvent(el, type, eventArguments, defaultFunction) {
-    eventArguments = eventArguments || {};
-    if (doc?.createEvent &&
-        (el.dispatchEvent ||
-            (el.fireEvent &&
-                // Enable firing events on Highcharts instance.
-                el !== (external_highcharts_src_js_default_default())))) {
-        const e = doc.createEvent('Events');
-        e.initEvent(type, true, true);
-        eventArguments = extend(e, eventArguments);
-        if (el.dispatchEvent) {
-            el.dispatchEvent(eventArguments);
-        }
-        else {
-            el.fireEvent(type, eventArguments);
-        }
-    }
-    else if (el.hcEvents) {
-        if (!eventArguments.target) {
-            // We're running a custom event
-            extend(eventArguments, {
-                // Attach a simple preventDefault function to skip
-                // default handler if called. The built-in
-                // defaultPrevented property is not overwritable (#5112)
-                preventDefault: function () {
-                    eventArguments.defaultPrevented = true;
-                },
-                // Setting target to native events fails with clicking
-                // the zoom-out button in Chrome.
-                target: el,
-                // If the type is not set, we're running a custom event
-                // (#2297). If it is set, we're running a browser event.
-                type: type
-            });
-        }
-        const events = [];
-        let object = el;
-        let multilevel = false;
-        // Recurse up the inheritance chain and collect hcEvents set as own
-        // objects on the prototypes.
-        while (object.hcEvents) {
-            if (Object.hasOwnProperty.call(object, 'hcEvents') &&
-                object.hcEvents[type]) {
-                if (events.length) {
-                    multilevel = true;
-                }
-                events.unshift.apply(events, object.hcEvents[type]);
-            }
-            object = Object.getPrototypeOf(object);
-        }
-        // For performance reasons, only sort the event handlers in case we are
-        // dealing with multiple levels in the prototype chain. Otherwise, the
-        // events are already sorted in the addEvent function.
-        if (multilevel) {
-            // Order the calls
-            events.sort((a, b) => a.order - b.order);
-        }
-        // Call the collected event handlers
-        events.forEach((obj) => {
-            // If the event handler returns false, prevent the default handler
-            // from executing
-            if (obj.fn.call(el, eventArguments, el) === false) {
-                eventArguments.preventDefault();
-            }
-        });
-    }
-    // Run the default if not prevented
-    if (defaultFunction && !eventArguments.defaultPrevented) {
-        defaultFunction.call(el, eventArguments);
-    }
-}
-/**
- * Convenience function to get the align factor, used several places for
- * computing positions
- * @internal
- */
-const getAlignFactor = (align = '') => ({
-    center: 0.5,
-    right: 1,
-    middle: 0.5,
-    bottom: 1
-}[align] || 0);
-/**
- * Find the closest distance between two values of a two-dimensional array
- * @internal
- * @function Highcharts.getClosestDistance
- *
- * @param {Array<Array<number>>} arrays
- *          An array of arrays of numbers
- *
- * @return {number | undefined}
- *          The closest distance between values
- */
-function getClosestDistance(arrays, onError) {
-    const allowNegative = !onError;
-    let closest, loopLength, distance, i;
-    arrays.forEach((xData) => {
-        if (xData.length > 1) {
-            loopLength = xData.length - 1;
-            for (i = loopLength; i > 0; i--) {
-                distance = xData[i] - xData[i - 1];
-                if (distance < 0 && !allowNegative) {
-                    onError?.();
-                    // Only one call
-                    onError = void 0;
-                }
-                else if (distance && (typeof closest === 'undefined' || distance < closest)) {
-                    closest = distance;
-                }
-            }
-        }
-    });
-    return closest;
-}
-/**
- * Get the magnitude of a number.
- *
- * @function Highcharts.getMagnitude
- *
- * @param {number} num
- *        The number.
- *
- * @return {number}
- *         The magnitude, where 1-9 are magnitude 1, 10-99 magnitude 2 etc.
- */
-function getMagnitude(num) {
-    return Math.pow(10, Math.floor(Math.log(num) / Math.LN10));
-}
-/**
- * Returns the value of a property path on a given object.
- *
- * @internal
- * @function getNestedProperty
- *
- * @param {string} path
- * Path to the property, for example `custom.myValue`.
- *
- * @param {unknown} parent
- * Instance containing the property on the specific path.
- *
- * @return {unknown}
- * The unknown property value.
- */
-function getNestedProperty(path, parent) {
-    const pathElements = path.split('.');
-    while (pathElements.length && defined(parent)) {
-        const pathElement = pathElements.shift();
-        // Filter on the key
-        if (typeof pathElement === 'undefined' ||
-            pathElement === '__proto__') {
-            return; // Undefined
-        }
-        if (pathElement === 'this') {
-            let thisProp;
-            if (isObject(parent)) {
-                thisProp = parent['@this'];
-            }
-            return thisProp ?? parent;
-        }
-        const child = parent[pathElement.replace(/[\\'"]/g, '')];
-        // Filter on the child
-        if (!defined(child) ||
-            typeof child === 'function' ||
-            typeof child.nodeType === 'number' ||
-            child === win) {
-            return; // Undefined
-        }
-        // Else, proceed
-        parent = child;
-    }
-    return parent;
-}
-/**
- * Get the computed CSS value for given element and property, only for numerical
- * properties. For width and height, the dimension of the inner box (excluding
- * padding) is returned. Used for fitting the chart within the container.
- *
- * @function Highcharts.getStyle
- *
- * @param {Highcharts.HTMLDOMElement} el
- * An HTML element.
- *
- * @param {string} prop
- * The property name.
- *
- * @param {boolean} [toInt=true]
- * Parse to integer.
- *
- * @return {number|string|undefined}
- * The style value.
- */
-function getStyle(el, prop, toInt) {
-    let style;
-    // For width and height, return the actual inner pixel size (#4913)
-    if (prop === 'width') {
-        let offsetWidth = Math.min(el.offsetWidth, el.scrollWidth);
-        // In flex boxes, we need to use getBoundingClientRect and floor it,
-        // because scrollWidth doesn't support subpixel precision (#6427) ...
-        const boundingClientRectWidth = el.getBoundingClientRect?.().width;
-        // ...unless if the containing div or its parents are transform-scaled
-        // down, in which case the boundingClientRect can't be used as it is
-        // also scaled down (#9871, #10498).
-        if (boundingClientRectWidth < offsetWidth &&
-            boundingClientRectWidth >= offsetWidth - 1) {
-            offsetWidth = Math.floor(boundingClientRectWidth);
-        }
-        return Math.max(0, // #8377
-        (offsetWidth -
-            (getStyle(el, 'padding-left', true) || 0) -
-            (getStyle(el, 'padding-right', true) || 0)));
-    }
-    if (prop === 'height') {
-        return Math.max(0, // #8377
-        (Math.min(el.offsetHeight, el.scrollHeight) -
-            (getStyle(el, 'padding-top', true) || 0) -
-            (getStyle(el, 'padding-bottom', true) || 0)));
-    }
-    // Otherwise, get the computed style
-    const css = win.getComputedStyle(el, void 0); // eslint-disable-line no-undefined
-    if (css) {
-        style = css.getPropertyValue(prop);
-        if (pick(toInt, prop !== 'opacity')) {
-            style = pInt(style);
-        }
-    }
-    return style;
-}
-/**
- * Return the value of the first element in the array that satisfies the
- * provided testing function.
- *
- * @function Highcharts.find<T>
- *
- * @param {Array<T>} arr
- *        The array to test.
- *
- * @param {Function} callback
- *        The callback function. The function receives the item as the first
- *        argument. Return `true` if this item satisfies the condition.
- *
- * @return {T|undefined}
- *         The value of the element.
- */
-const find = Array.prototype.find ?
-    function (arr, callback) {
-        return arr.find(callback);
-    } :
-    // Legacy implementation. PhantomJS, IE <= 11 etc. #7223.
-    function (arr, callback) {
-        let i;
-        const length = arr.length;
-        for (i = 0; i < length; i++) {
-            if (callback(arr[i], i)) { // eslint-disable-line node/callback-return
-                return arr[i];
-            }
-        }
-    };
-/**
- * Internal clear timeout. The function checks that the `id` was not removed
- * (e.g. by `chart.destroy()`). For the details see
- * [issue #7901](https://github.com/highcharts/highcharts/issues/7901).
- *
- * @internal
- *
- * @function Highcharts.clearTimeout
- *
- * @param {number|undefined} id
- * Id of a timeout.
- */
-function internalClearTimeout(id) {
-    if (defined(id)) {
-        clearTimeout(id);
-    }
-}
-/**
- * Utility function to check if an Object is a HTML Element.
- *
- * @function Highcharts.isDOMElement
- *
- * @param {*} obj
- *        The item to check.
- *
- * @return {boolean}
- *         True if the argument is a HTML Element.
- */
-function isDOMElement(obj) {
-    return isObject(obj) && typeof obj.nodeType === 'number';
-}
-/**
- * Utility function to check if an Object is a class.
- *
- * @function Highcharts.isClass
- *
- * @param {object|undefined} obj
- *        The item to check.
- *
- * @return {boolean}
- *         True if the argument is a class.
- */
-function isClass(obj) {
-    const c = obj?.constructor;
-    return !!(isObject(obj, true) &&
-        !isDOMElement(obj) &&
-        (c?.name && c.name !== 'Object'));
-}
-/**
- * Utility function to check if an item is a number and it is finite (not NaN,
- * Infinity or -Infinity).
- *
- * @function Highcharts.isNumber
- *
- * @param {*} n
- *        The item to check.
- *
- * @return {boolean}
- *         True if the item is a finite number
- */
-function isNumber(n) {
-    return typeof n === 'number' && !isNaN(n) && n < Infinity && n > -Infinity;
-}
-/**
- * Utility function to check for string type.
- *
- * @function Highcharts.isString
- *
- * @param {*} s
- *        The item to check.
- *
- * @return {boolean}
- *         True if the argument is a string.
- */
-function isString(s) {
-    return typeof s === 'string';
-}
-/**
- * Utility function to check if an item is an array.
- *
- * @function Highcharts.isArray
- *
- * @param {*} obj
- *        The item to check.
- *
- * @return {boolean}
- *         True if the argument is an array.
- */
-function isArray(obj) {
-    const str = Object.prototype.toString.call(obj);
-    return str === '[object Array]' || str === '[object Array Iterator]';
-}
-/**
- * Utility function to check if object is a function.
- *
- * @function Highcharts.isFunction
- *
- * @param {*} obj
- *        The item to check.
- *
- * @return {boolean}
- *         True if the argument is a function.
- */
-function isFunction(obj) {
-    return typeof obj === 'function';
-}
-/**
- * Utility function to check if an item is of type object.
- *
- * @function Highcharts.isObject
- *
- * @param {*} obj
- *        The item to check.
- *
- * @param {boolean} [strict=false]
- *        Also checks that the object is not an array.
- *
- * @return {boolean}
- *         True if the argument is an object.
- */
-function isObject(obj, strict) {
-    return (!!obj &&
-        typeof obj === 'object' &&
-        (!strict || !isArray(obj))); // eslint-disable-line @typescript-eslint/no-explicit-any
-}
-/**
- * Utility function to deep merge two or more objects and return a third object.
- * If the first argument is true, the contents of the second object is copied
- * into the first object. The merge function can also be used with a single
- * object argument to create a deep copy of an object.
- *
- * @function Highcharts.merge<T>
- *
- * @param {true | T} extendOrSource
- *        Whether to extend the left-side object,
- *        or the first object to merge as a deep copy.
- *
- * @param {...Array<object|undefined>} [sources]
- *        Object(s) to merge into the previous one.
- *
- * @return {T}
- *         The merged object. If the first argument is true, the return is the
- *         same as the second argument.
- */
-function merge(extendOrSource, ...sources) {
-    let i, args = [extendOrSource, ...sources], ret = {};
-    const doCopy = function (copy, original) {
-        // An object is replacing a primitive
-        if (typeof copy !== 'object') {
-            copy = {};
-        }
-        objectEach(original, function (value, key) {
-            // Prototype pollution (#14883)
-            if (key === '__proto__' || key === 'constructor') {
-                return;
-            }
-            // Copy the contents of objects, but not arrays or DOM nodes
-            if (isObject(value, true) &&
-                !isClass(value) &&
-                !isDOMElement(value)) {
-                copy[key] = doCopy(copy[key] || {}, value);
-                // Primitives and arrays are copied over directly
-            }
-            else {
-                copy[key] = original[key];
-            }
-        });
-        return copy;
-    };
-    // If first argument is true, copy into the existing object. Used in
-    // setOptions.
-    if (extendOrSource === true) {
-        ret = args[1];
-        args = Array.prototype.slice.call(args, 2);
-    }
-    // For each argument, extend the return
-    const len = args.length;
-    for (i = 0; i < len; i++) {
-        ret = doCopy(ret, args[i]);
-    }
-    return ret;
-}
-/**
- * Take an interval and normalize it to multiples of round numbers.
- *
- * @deprecated
- * @function Highcharts.normalizeTickInterval
- *
- * @param {number} interval
- *        The raw, un-rounded interval.
- *
- * @param {Array<*>} [multiples]
- *        Allowed multiples.
- *
- * @param {number} [magnitude]
- *        The magnitude of the number.
- *
- * @param {boolean} [allowDecimals]
- *        Whether to allow decimals.
- *
- * @param {boolean} [hasTickAmount]
- *        If it has tickAmount, avoid landing on tick intervals lower than
- *        original.
- *
- * @return {number}
- *         The normalized interval.
- *
- * @todo
- * Move this function to the Axis prototype. It is here only for historical
- * reasons.
- */
-function normalizeTickInterval(interval, multiples, magnitude, allowDecimals, hasTickAmount) {
-    let i, retInterval = interval;
-    // Round to a tenfold of 1, 2, 2.5 or 5
-    magnitude = pick(magnitude, getMagnitude(interval));
-    const normalized = interval / magnitude;
-    // Multiples for a linear scale
-    if (!multiples) {
-        multiples = hasTickAmount ?
-            // Finer grained ticks when the tick amount is hard set, including
-            // when alignTicks is true on multiple axes (#4580).
-            [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10] :
-            // Else, let ticks fall on rounder numbers
-            [1, 2, 2.5, 5, 10];
-        // The allowDecimals option
-        if (allowDecimals === false) {
-            if (magnitude === 1) {
-                multiples = multiples.filter(function (num) {
-                    return num % 1 === 0;
-                });
-            }
-            else if (magnitude <= 0.1) {
-                multiples = [1 / magnitude];
-            }
-        }
-    }
-    // Normalize the interval to the nearest multiple
-    for (i = 0; i < multiples.length; i++) {
-        retInterval = multiples[i];
-        // Only allow tick amounts smaller than natural
-        if ((hasTickAmount &&
-            retInterval * magnitude >= interval) ||
-            (!hasTickAmount &&
-                (normalized <=
-                    (multiples[i] +
-                        (multiples[i + 1] || multiples[i])) / 2))) {
-            break;
-        }
-    }
-    // Multiply back to the correct magnitude. Correct floats to appropriate
-    // precision (#6085).
-    retInterval = correctFloat(retInterval * magnitude, -Math.round(Math.log(0.001) / Math.LN10));
-    return retInterval;
-}
-/**
- * Iterate over object key pairs in an object.
- *
- * @function Highcharts.objectEach<T>
- *
- * @param {*} obj
- *        The object to iterate over.
- *
- * @param {Highcharts.ObjectEachCallbackFunction<T>} fn
- *        The iterator callback. It passes three arguments:
- *        * value - The property value.
- *        * key - The property key.
- *        * obj - The object that objectEach is being applied to.
- *
- * @param {T} [ctx]
- *        The context.
- */
-function objectEach(obj, fn, ctx) {
-    for (const key in obj) {
-        if (Object.hasOwnProperty.call(obj, key)) {
-            fn.call(ctx || obj[key], obj[key], key, obj);
-        }
-    }
-}
-/**
- * Get the element's offset position, corrected for `overflow: auto`.
- *
- * @function Highcharts.offset
- *
- * @param {global.Element} el
- *        The DOM element.
- *
- * @return {Highcharts.OffsetObject}
- *         An object containing `left` and `top` properties for the position in
- *         the page.
- */
-function offset(el) {
-    const docElem = doc.documentElement, box = (el.parentElement || el.parentNode) ?
-        el.getBoundingClientRect() :
-        { top: 0, left: 0, width: 0, height: 0 };
-    return {
-        top: box.top + (win.pageYOffset || docElem.scrollTop) -
-            (docElem.clientTop || 0),
-        left: box.left + (win.pageXOffset || docElem.scrollLeft) -
-            (docElem.clientLeft || 0),
-        width: box.width,
-        height: box.height
-    };
-}
-/**
- * Left-pad a string to a given length by adding a character repetitively.
- *
- * @function Highcharts.pad
- *
- * @param {number} number
- *        The input string or number.
- *
- * @param {number} [length]
- *        The desired string length.
- *
- * @param {string} [padder=0]
- *        The character to pad with.
- *
- * @return {string}
- *         The padded string.
- */
-function pad(number, length, padder) {
-    return new Array((length || 2) +
-        1 -
-        String(number)
-            .replace('-', '')
-            .length).join(padder || '0') + number;
-}
-/* eslint-disable jsdoc/check-param-names */
-/**
- * Return the first value that is not null or undefined.
- *
- * @function Highcharts.pick<T>
- *
- * @param {...Array<T|null|undefined>} items
- *        Variable number of arguments to inspect.
- *
- * @return {T}
- *         The value of the first argument that is not null or undefined.
- */
-function pick() {
-    const args = arguments;
-    const length = args.length;
-    for (let i = 0; i < length; i++) {
-        const arg = args[i];
-        if (typeof arg !== 'undefined' && arg !== null) {
-            return arg;
-        }
-    }
-}
-/* eslint-enable jsdoc/check-param-names */
-/**
- * Shortcut for parseInt
- *
- * @internal
- * @function Highcharts.pInt
- *
- * @param {*} s
- *        any
- *
- * @param {number} [mag]
- *        Magnitude
- *
- * @return {number}
- *         number
- */
-function pInt(s, mag) {
-    return parseInt(s, mag || 10);
-}
-/**
- * Adds an item to an array, if it is not present in the array.
- *
- * @internal
- *
- * @function Highcharts.pushUnique
- *
- * @param {Array<unknown>} array
- * The array to add the item to.
- *
- * @param {unknown} item
- * The item to add.
- *
- * @return {boolean}
- * Returns true, if the item was not present and has been added.
- */
-function pushUnique(array, item) {
-    return array.indexOf(item) < 0 && !!array.push(item);
-}
-/**
- * Return a length based on either the integer value, or a percentage of a base.
- *
- * @function Highcharts.relativeLength
- *
- * @param {Highcharts.RelativeSize} value
- *        A percentage string or a number.
- *
- * @param {number} base
- *        The full length that represents 100%.
- *
- * @param {number} [offset=0]
- *        A pixel offset to apply for percentage values. Used internally in
- *        axis positioning.
- *
- * @return {number}
- *         The computed length.
- */
-function relativeLength(value, base, offset) {
-    return (/%$/).test(value) ?
-        (base * parseFloat(value) / 100) + (offset || 0) :
-        parseFloat(value);
-}
-/**
- * Replaces text in a string with a given replacement in a loop to catch nested
- * matches after previous replacements.
- *
- * @internal
- *
- * @function Highcharts.replaceNested
- *
- * @param {string} text
- * Text to search and modify.
- *
- * @param {...Array<(RegExp|string)>} replacements
- * One or multiple tuples with search pattern (`[0]: (string|RegExp)`) and
- * replacement (`[1]: string`) for matching text.
- *
- * @return {string}
- * Text with replacements.
- */
-function replaceNested(text, ...replacements) {
-    let previous, replacement;
-    do {
-        previous = text;
-        for (replacement of replacements) {
-            text = text.replace(replacement[0], replacement[1]);
-        }
-    } while (text !== previous);
-    return text;
-}
-/**
- * Remove an event that was added with {@link Highcharts#addEvent}.
- *
- * @function Highcharts.removeEvent<T>
- *
- * @param {Highcharts.Class<T>|T} el
- *        The element to remove events on.
- *
- * @param {string} [type]
- *        The type of events to remove. If undefined, all events are removed
- *        from the element.
- *
- * @param {Highcharts.EventCallbackFunction<T>} [fn]
- *        The specific callback to remove. If undefined, all events that match
- *        the element and optionally the type are removed.
- *
- * @return {void}
- */
-function removeEvent(el, type, fn) {
-    /** @internal */
-    function removeOneEvent(type, fn) {
-        const removeEventListener = el.removeEventListener;
-        if (removeEventListener) {
-            removeEventListener.call(el, type, fn, false);
-        }
-    }
-    /** @internal */
-    function removeAllEvents(eventCollection) {
-        let types, len;
-        if (!el.nodeName) {
-            return; // Break on non-DOM events
-        }
-        if (type) {
-            types = {};
-            types[type] = true;
-        }
-        else {
-            types = eventCollection;
-        }
-        objectEach(types, function (_val, n) {
-            if (eventCollection[n]) {
-                len = eventCollection[n].length;
-                while (len--) {
-                    removeOneEvent(n, eventCollection[n][len].fn);
-                }
-            }
-        });
-    }
-    const owner = typeof el === 'function' && el.prototype || el;
-    if (Object.hasOwnProperty.call(owner, 'hcEvents')) {
-        const events = owner.hcEvents;
-        if (type) {
-            const typeEvents = (events[type] || []);
-            if (fn) {
-                events[type] = typeEvents.filter(function (obj) {
-                    return fn !== obj.fn;
-                });
-                removeOneEvent(type, fn);
-            }
-            else {
-                removeAllEvents(events);
-                events[type] = [];
-            }
-        }
-        else {
-            removeAllEvents(events);
-            delete owner.hcEvents;
-        }
-    }
-}
-/**
- * Check if an element is an array, and if not, make it into an array.
- *
- * @function Highcharts.splat
- *
- * @param {*} obj
- *        The object to splat.
- *
- * @return {Array}
- *         The produced or original array.
- */
-function splat(obj) {
-    return isArray(obj) ? obj : [obj];
-}
-/**
- * Sort an object array and keep the order of equal items. The ECMAScript
- * standard does not specify the behavior when items are equal.
- *
- * @function Highcharts.stableSort
- *
- * @param {Array<*>} arr
- *        The array to sort.
- *
- * @param {Function} sortFunction
- *        The function to sort it with, like with regular Array.prototype.sort.
- */
-function stableSort(arr, sortFunction) {
-    // @todo It seems like Chrome since v70 sorts in a stable way internally,
-    // plus all other browsers do it, so over time we may be able to remove this
-    // function
-    const length = arr.length;
-    let sortValue, i;
-    // Add index to each item
-    for (i = 0; i < length; i++) {
-        arr[i].safeI = i; // Stable sort index
-    }
-    arr.sort(function (a, b) {
-        sortValue = sortFunction(a, b);
-        return sortValue === 0 ? a.safeI - b.safeI : sortValue;
-    });
-    // Remove index from items
-    for (i = 0; i < length; i++) {
-        delete arr[i].safeI; // Stable sort index
-    }
-}
-/**
- * Set a timeout if the delay is given, otherwise perform the function
- * synchronously.
- *
- * @function Highcharts.syncTimeout
- *
- * @param {Function} fn
- *        The function callback.
- *
- * @param {number} delay
- *        Delay in milliseconds.
- *
- * @param {*} [context]
- *        An optional context to send to the function callback.
- *
- * @return {number}
- *         An identifier for the timeout that can later be cleared with
- *         Highcharts.clearTimeout. Returns -1 if there is no timeout.
- */
-function syncTimeout(fn, delay, context) {
-    if (delay > 0) {
-        return setTimeout(fn, delay, context);
-    }
-    fn.call(0, context);
-    return -1;
-}
-/**
- * @internal
- */
-function ucfirst(s) {
-    return ((isString(s) ?
-        s.substring(0, 1).toUpperCase() + s.substring(1) :
-        String(s)));
-}
-/**
- * Wrap a method with extended functionality, preserving the original function.
- *
- * @function Highcharts.wrap
- *
- * @param {*} obj
- *        The context object that the method belongs to. In real cases, this is
- *        often a prototype.
- *
- * @param {string} method
- *        The name of the method to extend.
- *
- * @param {Highcharts.WrapProceedFunction} func
- *        A wrapper function callback. This function is called with the same
- *        arguments as the original function, except that the original function
- *        is unshifted and passed as the first argument.
- */
-function wrap(obj, method, func) {
-    const proceed = obj[method];
-    obj[method] = function () {
-        const outerArgs = arguments, scope = this;
-        return func.apply(this, [
-            function () {
-                return proceed.apply(scope, arguments.length ? arguments : outerArgs);
-            }
-        ].concat([].slice.call(arguments)));
-    };
-}
-
 ;// ./code/es-modules/Series/DataModifyComposition.js
 /* *
  *
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -1467,9 +106,9 @@ var DataModifyComposition;
         if (!seriesProto.setCompare) {
             seriesProto.setCompare = seriesSetCompare;
             seriesProto.setCumulative = seriesSetCumulative;
-            addEvent(SeriesClass, 'afterInit', afterInit);
-            addEvent(SeriesClass, 'afterGetExtremes', afterGetExtremes);
-            addEvent(SeriesClass, 'afterProcessData', afterProcessData);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'afterInit', afterInit);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'afterGetExtremes', afterGetExtremes);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'afterProcessData', afterProcessData);
         }
         if (!axisProto.setCompare) {
             axisProto.setCompare = axisSetCompare;
@@ -1496,11 +135,11 @@ var DataModifyComposition;
                     series.setCompare(modeState, false);
                 }
                 else if (mode === 'cumulative' &&
-                    !isString(modeState)) {
+                    !(0,external_highcharts_src_js_default_namespaceObject.isString)(modeState)) {
                     series.setCumulative(modeState, false);
                 }
             });
-            if (pick(redraw, true)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.pick)(redraw, true)) {
                 this.chart.redraw();
             }
         }
@@ -1517,12 +156,12 @@ var DataModifyComposition;
     function tooltipFormatter(pointFormat) {
         const point = this, { numberFormatter } = point.series.chart, replace = function (value) {
             pointFormat = pointFormat.replace('{point.' + value + '}', (point[value] > 0 && value === 'change' ? '+' : '') +
-                numberFormatter(point[value], pick(point.series.tooltipOptions.changeDecimals, 2)));
+                numberFormatter(point[value], (0,external_highcharts_src_js_default_namespaceObject.pick)(point.series.tooltipOptions.changeDecimals, 2)));
         };
-        if (defined(point.change)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.defined)(point.change)) {
             replace('change');
         }
-        if (defined(point.cumulativeSum)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.defined)(point.cumulativeSum)) {
             replace('cumulativeSum');
         }
         return pointTooltipFormatter.apply(this, [pointFormat]);
@@ -1545,7 +184,7 @@ var DataModifyComposition;
                 chart.series[this.index - 1] :
                 chart.get(linkedTo);
             if (linkedSeries instanceof (external_highcharts_src_js_default_Series_default())) {
-                this.options.compare = pick(this.userOptions.compare, linkedSeries.options.compare);
+                this.options.compare = (0,external_highcharts_src_js_default_namespaceObject.pick)(this.userOptions.compare, linkedSeries.options.compare);
             }
         }
         const compare = this.options.compare;
@@ -1580,15 +219,15 @@ var DataModifyComposition;
                 ];
             }
             else if (this.options.cumulative &&
-                isArray(activeYData) &&
+                (0,external_highcharts_src_js_default_namespaceObject.isArray)(activeYData) &&
                 // If only one y visible, sum doesn't change
                 // so no need to change extremes
                 activeYData.length >= 2) {
                 extremes = Additions.getCumulativeExtremes(activeYData);
             }
             if (extremes) {
-                dataExtremes.dataMin = arrayMin(extremes);
-                dataExtremes.dataMax = arrayMax(extremes);
+                dataExtremes.dataMin = (0,external_highcharts_src_js_default_namespaceObject.arrayMin)(extremes);
+                dataExtremes.dataMax = (0,external_highcharts_src_js_default_namespaceObject.arrayMax)(extremes);
             }
         }
     }
@@ -1619,7 +258,7 @@ var DataModifyComposition;
         // Survive to export, #5485 (and for options generally)
         this.options.compare = this.userOptions.compare = compare;
         // Fire series.init() that will set or delete series.dataModify
-        this.update({}, pick(redraw, true));
+        this.update({}, (0,external_highcharts_src_js_default_namespaceObject.pick)(redraw, true));
         if (this.dataModify && (compare === 'value' || compare === 'percent')) {
             this.dataModify.initCompare(compare);
         }
@@ -1650,7 +289,7 @@ var DataModifyComposition;
             // Find the first value for comparison
             for (let i = 0; i < length - compareStart; i++) {
                 const compareValue = compareColumn[i];
-                if (isNumber(compareValue) &&
+                if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(compareValue) &&
                     compareValue !== 0 &&
                     processedXData[i + compareStart] >= (series.xAxis.min || 0)) {
                     series.dataModify.compareValue = compareValue;
@@ -1706,11 +345,11 @@ var DataModifyComposition;
      */
     function seriesSetCumulative(cumulative, redraw) {
         // Set default value to false
-        cumulative = pick(cumulative, false);
+        cumulative = (0,external_highcharts_src_js_default_namespaceObject.pick)(cumulative, false);
         // Survive to export, #5485 (and for options generally)
         this.options.cumulative = this.userOptions.cumulative = cumulative;
         // Fire series.init() that will set or delete series.dataModify
-        this.update({}, pick(redraw, true));
+        this.update({}, (0,external_highcharts_src_js_default_namespaceObject.pick)(redraw, true));
         // If should, turn on the Cumulative Sum mode
         if (this.dataModify) {
             this.dataModify.initCumulative();
@@ -1847,7 +486,7 @@ var DataModifyComposition;
                         this.series.points[index - 1] : null;
                     // Get the modified value
                     if (prevPoint && prevPoint.cumulativeSum) {
-                        value = correctFloat(prevPoint.cumulativeSum + value);
+                        value = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(prevPoint.cumulativeSum + value);
                     }
                     // Record for tooltip etc.
                     const point = this.series.points[index];
@@ -1984,8 +623,9 @@ var external_highcharts_src_js_default_Axis_default = /*#__PURE__*/__webpack_req
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -2010,25 +650,23 @@ let NavigatorConstructor;
  *  Functions
  *
  * */
-/**
- * @private
- */
+/** @internal */
 function compose(ChartClass, NavigatorClass) {
-    if (pushUnique(composedMembers, ChartClass)) {
+    if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(composedMembers, ChartClass)) {
         const chartProto = ChartClass.prototype;
         NavigatorConstructor = NavigatorClass;
         chartProto.callbacks.push(onChartCallback);
-        addEvent(ChartClass, 'afterAddSeries', onChartAfterAddSeries);
-        addEvent(ChartClass, 'afterSetChartSize', onChartAfterSetChartSize);
-        addEvent(ChartClass, 'afterUpdate', onChartAfterUpdate);
-        addEvent(ChartClass, 'beforeRender', onChartBeforeRender);
-        addEvent(ChartClass, 'beforeShowResetZoom', onChartBeforeShowResetZoom);
-        addEvent(ChartClass, 'update', onChartUpdate);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'afterAddSeries', onChartAfterAddSeries);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'afterSetChartSize', onChartAfterSetChartSize);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'afterUpdate', onChartAfterUpdate);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'beforeRender', onChartBeforeRender);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'beforeShowResetZoom', onChartBeforeShowResetZoom);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'update', onChartUpdate);
     }
 }
 /**
  * Handle adding new series.
- * @private
+ * @internal
  */
 function onChartAfterAddSeries() {
     if (this.navigator) {
@@ -2041,7 +679,7 @@ function onChartAfterAddSeries() {
  * final top position of the navigator once the height of the chart, including
  * the legend, is determined. #367. We can't use Chart.getMargins, because
  * labels offsets are not calculated yet.
- * @private
+ * @internal
  */
 function onChartAfterSetChartSize() {
     const legend = this.legend, navigator = this.navigator;
@@ -2060,7 +698,7 @@ function onChartAfterSetChartSize() {
             navigator.top = this.plotTop + scrollButtonSize;
         }
         else {
-            navigator.left = pick(xAxis.left, this.plotLeft + scrollButtonSize);
+            navigator.left = (0,external_highcharts_src_js_default_namespaceObject.pick)(xAxis.left, this.plotLeft + scrollButtonSize);
             navigator.top = navigator.navigatorOptions.top ||
                 this.chartHeight -
                     navigator.height -
@@ -2076,7 +714,7 @@ function onChartAfterSetChartSize() {
                         legendOptions.enabled &&
                         !legendOptions.floating) ?
                         legend.legendHeight +
-                            pick(legendOptions.margin, 10) :
+                            (0,external_highcharts_src_js_default_namespaceObject.pick)(legendOptions.margin, 10) :
                         0) -
                     (this.titleOffset ? this.titleOffset[2] : 0);
         }
@@ -2094,21 +732,21 @@ function onChartAfterSetChartSize() {
 }
 /**
  * Initialize navigator, if no scrolling exists yet.
- * @private
+ * @internal
  */
 function onChartAfterUpdate(event) {
     if (!this.navigator && !this.scroller &&
         (this.options.navigator.enabled ||
             this.options.scrollbar.enabled)) {
         this.scroller = this.navigator = new NavigatorConstructor(this);
-        if (pick(event.redraw, true)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.pick)(event.redraw, true)) {
             this.redraw(event.animation); // #7067
         }
     }
 }
 /**
  * Initialize navigator for stock charts
- * @private
+ * @internal
  */
 function onChartBeforeRender() {
     const options = this.options;
@@ -2121,7 +759,7 @@ function onChartBeforeRender() {
  * For Stock charts. For x only zooming, do not to create the zoom button
  * because X axis zooming is already allowed by the Navigator and Range
  * selector. (#9285)
- * @private
+ * @internal
  */
 function onChartBeforeShowResetZoom() {
     const chartOptions = this.options, navigator = chartOptions.navigator, rangeSelector = chartOptions.rangeSelector;
@@ -2133,9 +771,7 @@ function onChartBeforeShowResetZoom() {
         return false;
     }
 }
-/**
- * @private
- */
+/** @internal */
 function onChartCallback(chart) {
     const navigator = chart.navigator;
     // Initialize the navigator
@@ -2146,14 +782,14 @@ function onChartCallback(chart) {
 }
 /**
  * Merge options, if no scrolling exists yet
- * @private
+ * @internal
  */
 function onChartUpdate(e) {
     const navigatorOptions = (e.options.navigator || {}), scrollbarOptions = (e.options.scrollbar || {});
     if (!this.navigator && !this.scroller &&
         (navigatorOptions.enabled || scrollbarOptions.enabled)) {
-        merge(true, this.options.navigator, navigatorOptions);
-        merge(true, this.options.scrollbar, scrollbarOptions);
+        (0,external_highcharts_src_js_default_namespaceObject.merge)(true, this.options.navigator, navigatorOptions);
+        (0,external_highcharts_src_js_default_namespaceObject.merge)(true, this.options.scrollbar, scrollbarOptions);
         delete e.options.navigator;
         delete e.options.scrollbar;
     }
@@ -2163,9 +799,11 @@ function onChartUpdate(e) {
  *  Default Export
  *
  * */
+/** @internal */
 const ChartNavigatorComposition = {
     compose
 };
+/** @internal */
 /* harmony default export */ const Navigator_ChartNavigatorComposition = (ChartNavigatorComposition);
 
 ;// ./code/es-modules/Core/Axis/NavigatorAxisComposition.js
@@ -2174,8 +812,9 @@ const ChartNavigatorComposition = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -2219,7 +858,7 @@ function onAxisSetExtremes(e) {
             axis.options.range) {
             const previousZoom = navigatorAxis.previousZoom;
             // Minimum defined, zooming in
-            if (defined(e.min)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(e.min)) {
                 navigatorAxis.previousZoom = [axis.min, axis.max];
                 // Minimum undefined, resetting zoom
             }
@@ -2249,8 +888,8 @@ class NavigatorAxisAdditions {
     static compose(AxisClass) {
         if (!AxisClass.keepProps.includes('navigatorAxis')) {
             AxisClass.keepProps.push('navigatorAxis');
-            addEvent(AxisClass, 'init', onAxisInit);
-            addEvent(AxisClass, 'setExtremes', onAxisSetExtremes);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'init', onAxisInit);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'setExtremes', onAxisSetExtremes);
         }
     }
     /* *
@@ -2278,15 +917,15 @@ class NavigatorAxisAdditions {
      */
     toFixedRange(pxMin, pxMax, fixedMin, fixedMax) {
         const axis = this.axis, halfPointRange = (axis.pointRange || 0) / 2;
-        let newMin = pick(fixedMin, axis.translate(pxMin, true, !axis.horiz)), newMax = pick(fixedMax, axis.translate(pxMax, true, !axis.horiz));
+        let newMin = (0,external_highcharts_src_js_default_namespaceObject.pick)(fixedMin, axis.translate(pxMin, true, !axis.horiz)), newMax = (0,external_highcharts_src_js_default_namespaceObject.pick)(fixedMax, axis.translate(pxMax, true, !axis.horiz));
         // Add/remove half point range to/from the extremes (#1172)
-        if (!defined(fixedMin)) {
-            newMin = correctFloat(newMin + halfPointRange);
+        if (!(0,external_highcharts_src_js_default_namespaceObject.defined)(fixedMin)) {
+            newMin = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(newMin + halfPointRange);
         }
-        if (!defined(fixedMax)) {
-            newMax = correctFloat(newMax - halfPointRange);
+        if (!(0,external_highcharts_src_js_default_namespaceObject.defined)(fixedMax)) {
+            newMax = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(newMax - halfPointRange);
         }
-        if (!isNumber(newMin) || !isNumber(newMax)) { // #1195, #7411
+        if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(newMin) || !(0,external_highcharts_src_js_default_namespaceObject.isNumber)(newMax)) { // #1195, #7411
             newMin = newMax = void 0;
         }
         return {
@@ -2303,9 +942,6 @@ class NavigatorAxisAdditions {
 /** @internal */
 /* harmony default export */ const NavigatorAxisComposition = (NavigatorAxisAdditions);
 
-;// external ["../highcharts.src.js","default","Color"]
-const external_highcharts_src_js_default_Color_namespaceObject = __WEBPACK_EXTERNAL_MODULE__highcharts_src_js_8202131d__["default"].Color;
-var external_highcharts_src_js_default_Color_default = /*#__PURE__*/__webpack_require__.n(external_highcharts_src_js_default_Color_namespaceObject);
 ;// external ["../highcharts.src.js","default","SeriesRegistry"]
 const external_highcharts_src_js_default_SeriesRegistry_namespaceObject = __WEBPACK_EXTERNAL_MODULE__highcharts_src_js_8202131d__["default"].SeriesRegistry;
 var external_highcharts_src_js_default_SeriesRegistry_default = /*#__PURE__*/__webpack_require__.n(external_highcharts_src_js_default_SeriesRegistry_namespaceObject);
@@ -2315,14 +951,13 @@ var external_highcharts_src_js_default_SeriesRegistry_default = /*#__PURE__*/__w
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
 
-
-const { parse: color } = (external_highcharts_src_js_default_Color_default());
 
 const { seriesTypes } = (external_highcharts_src_js_default_SeriesRegistry_default());
 /* *
@@ -2363,7 +998,7 @@ const NavigatorDefaults = {
      *
      * @see [series.showInNavigator](#plotOptions.series.showInNavigator)
      *
-     * @deprecated
+     * @deprecated 5.0.0
      * @type      {number|string}
      * @default   0
      * @apioption navigator.baseSeries
@@ -2485,15 +1120,15 @@ const NavigatorDefaults = {
         /**
          * The fill for the handle.
          *
-         * @type    {Highcharts.ColorType}
+         * @type {Highcharts.ColorType}
          */
-        backgroundColor: "#f2f2f2" /* Palette.neutralColor5 */,
+        backgroundColor: 'var(--highcharts-neutral-color-5)',
         /**
          * The stroke for the handle border and the stripes inside.
          *
-         * @type    {Highcharts.ColorType}
+         * @type {Highcharts.ColorType}
          */
-        borderColor: "#999999" /* Palette.neutralColor40 */
+        borderColor: 'var(--highcharts-neutral-color-40)'
     },
     /**
      * The color of the mask covering the areas of the navigator series
@@ -2508,9 +1143,8 @@ const NavigatorDefaults = {
      *         Blue, semi transparent mask
      *
      * @type    {Highcharts.ColorType}
-     * @default rgba(102,133,194,0.3)
      */
-    maskFill: color("#667aff" /* Palette.highlightColor60 */).setOpacity(0.3).get(),
+    maskFill: 'color-mix(var(--highcharts-highlight-color-60) 30%, transparent)',
     /**
      * The color of the line marking the currently zoomed area in the
      * navigator.
@@ -2518,10 +1152,9 @@ const NavigatorDefaults = {
      * @sample {highstock} stock/navigator/outline/
      *         2px blue outline
      *
-     * @type    {Highcharts.ColorType}
-     * @default #cccccc
+     * @type {Highcharts.ColorType}
      */
-    outlineColor: "#999999" /* Palette.neutralColor40 */,
+    outlineColor: 'var(--highcharts-neutral-color-40)',
     /**
      * The width of the line marking the currently zoomed area in the
      * navigator.
@@ -2745,7 +1378,7 @@ const NavigatorDefaults = {
         className: 'highcharts-navigator-xaxis',
         tickLength: 0,
         lineWidth: 0,
-        gridLineColor: "#e6e6e6" /* Palette.neutralColor10 */,
+        gridLineColor: 'var(--highcharts-neutral-color-10)',
         id: 'navigator-x-axis',
         gridLineWidth: 1,
         tickPixelInterval: 200,
@@ -2756,7 +1389,7 @@ const NavigatorDefaults = {
              */
             style: {
                 /** @ignore */
-                color: "#000000" /* Palette.neutralColor100 */,
+                color: 'var(--highcharts-neutral-color-100)',
                 /** @ignore */
                 fontSize: '0.7em',
                 /** @ignore */
@@ -2818,6 +1451,7 @@ const NavigatorDefaults = {
  *  Default Export
  *
  * */
+/** @internal */
 /* harmony default export */ const Navigator_NavigatorDefaults = (NavigatorDefaults);
 /* *
  *
@@ -2844,8 +1478,9 @@ const NavigatorDefaults = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -2877,7 +1512,7 @@ function arc(cx, cy, w, h, options) {
     const arc = [];
     if (options) {
         let start = options.start || 0, end = options.end || 0;
-        const rx = pick(options.r, w), ry = pick(options.r, h || w), 
+        const rx = (0,external_highcharts_src_js_default_namespaceObject.pick)(options.r, w), ry = (0,external_highcharts_src_js_default_namespaceObject.pick)(options.r, h || w), 
         // Subtract a small number to prevent cos and sin of start and end
         // from becoming equal on 360 arcs (#1561). See "Arc proximity"
         // tests at samples/unit-tests/svgrenderer/symbol/demo.js
@@ -2887,16 +1522,16 @@ function arc(cx, cy, w, h, options) {
             start = Math.PI / 2;
             end = Math.PI * 2.5 - proximity;
         }
-        const innerRadius = options.innerR, open = pick(options.open, fullCircle), cosStart = fullCircle ? 0 : Math.cos(start), sinStart = fullCircle ? 1 : Math.sin(start), cosEnd = fullCircle ? 0 : Math.cos(end), sinEnd = fullCircle ? 1 : Math.sin(end), 
+        const innerRadius = options.innerR, open = (0,external_highcharts_src_js_default_namespaceObject.pick)(options.open, fullCircle), cosStart = fullCircle ? 0 : Math.cos(start), sinStart = fullCircle ? 1 : Math.sin(start), cosEnd = fullCircle ? 0 : Math.cos(end), sinEnd = fullCircle ? 1 : Math.sin(end), 
         // Proximity takes care of rounding errors around PI (#6971)
-        longArc = pick(options.longArc, end - start - Math.PI < proximity ? 0 : 1);
+        longArc = (0,external_highcharts_src_js_default_namespaceObject.pick)(options.longArc, end - start - Math.PI < proximity ? 0 : 1);
         let arcSegment = [
             'A', // ArcTo
             rx, // X radius
             ry, // Y radius
             0, // Slanting
             longArc, // Long or short arc
-            pick(options.clockwise, 1), // Clockwise
+            (0,external_highcharts_src_js_default_namespaceObject.pick)(options.clockwise, 1), // Clockwise
             // Use a static pixel offset for full circle (#21701)
             cx + (fullCircle ? 0.001 : rx * cosEnd),
             cy + ry * sinEnd
@@ -2907,7 +1542,7 @@ function arc(cx, cy, w, h, options) {
             cx + rx * cosStart,
             cy + ry * sinStart
         ], arcSegment);
-        if (defined(innerRadius)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.defined)(innerRadius)) {
             arcSegment = [
                 'A', // ArcTo
                 innerRadius, // X radius
@@ -2915,7 +1550,7 @@ function arc(cx, cy, w, h, options) {
                 0, // Slanting
                 longArc, // Long or short arc
                 // Clockwise - opposite to the outer arc clockwise
-                defined(options.clockwise) ? 1 - options.clockwise : 0,
+                (0,external_highcharts_src_js_default_namespaceObject.defined)(options.clockwise) ? 1 - options.clockwise : 0,
                 cx + (fullCircle ? -0.001 : innerRadius * cosStart),
                 cy + innerRadius * sinStart
             ];
@@ -2962,7 +1597,7 @@ function arc(cx, cy, w, h, options) {
 function callout(x, y, w, h, options) {
     const arrowLength = 6, halfDistance = 6, r = Math.min((options?.r) || 0, w, h), safeDistance = r + halfDistance, anchorX = options?.anchorX, anchorY = options?.anchorY || 0;
     const path = roundedRect(x, y, w, h, { r });
-    if (!isNumber(anchorX)) {
+    if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(anchorX)) {
         return path;
     }
     // Do not render a connector, if anchor starts inside the label
@@ -3380,8 +2015,9 @@ const Symbols = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -3395,10 +2031,10 @@ const Symbols = {
  * */
 /**
  * Draw one of the handles on the side of the zoomed range in the navigator.
- * @private
+ * @internal
  */
 function navigatorHandle(_x, _y, width, height, options = {}) {
-    const halfWidth = options.width ? options.width / 2 : width, markerPosition = 1.5, r = relativeLength(options.borderRadius || 0, Math.min(halfWidth * 2, height));
+    const halfWidth = options.width ? options.width / 2 : width, markerPosition = 1.5, r = (0,external_highcharts_src_js_default_namespaceObject.relativeLength)(options.borderRadius || 0, Math.min(halfWidth * 2, height));
     height = options.height || height;
     return [
         ['M', -markerPosition, height / 2 - 3.5],
@@ -3413,22 +2049,25 @@ function navigatorHandle(_x, _y, width, height, options = {}) {
  *  Default Export
  *
  * */
+/** @internal */
 const NavigatorSymbols = {
     'navigator-handle': navigatorHandle
 };
+/** @internal */
 /* harmony default export */ const Navigator_NavigatorSymbols = (NavigatorSymbols);
 
-;// external ["../highcharts.src.js","default","RendererRegistry"]
-const external_highcharts_src_js_default_RendererRegistry_namespaceObject = __WEBPACK_EXTERNAL_MODULE__highcharts_src_js_8202131d__["default"].RendererRegistry;
-var external_highcharts_src_js_default_RendererRegistry_default = /*#__PURE__*/__webpack_require__.n(external_highcharts_src_js_default_RendererRegistry_namespaceObject);
+;// external ["../highcharts.src.js","default","SVGRenderer"]
+const external_highcharts_src_js_default_SVGRenderer_namespaceObject = __WEBPACK_EXTERNAL_MODULE__highcharts_src_js_8202131d__["default"].SVGRenderer;
+var external_highcharts_src_js_default_SVGRenderer_default = /*#__PURE__*/__webpack_require__.n(external_highcharts_src_js_default_SVGRenderer_namespaceObject);
 ;// ./code/es-modules/Stock/Utilities/StockUtilities.js
 /* *
  *
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -3443,15 +2082,15 @@ var external_highcharts_src_js_default_RendererRegistry_default = /*#__PURE__*/_
  * Sets the chart.fixedRange to the specified value. If the value is larger
  * than actual range, sets it to the maximum possible range. (#20327)
  *
- * @private
+ * @internal
  * @function Highcharts.StockChart#setFixedRange
  * @param {number|undefined} range
  *        Range to set in axis units.
  */
 function setFixedRange(range) {
     const xAxis = this.xAxis[0];
-    if (defined(xAxis.dataMax) &&
-        defined(xAxis.dataMin) &&
+    if ((0,external_highcharts_src_js_default_namespaceObject.defined)(xAxis.dataMax) &&
+        (0,external_highcharts_src_js_default_namespaceObject.defined)(xAxis.dataMin) &&
         range) {
         this.fixedRange = Math.min(range, xAxis.dataMax - xAxis.dataMin);
     }
@@ -3459,9 +2098,11 @@ function setFixedRange(range) {
         this.fixedRange = range;
     }
 }
+/** @internal */
 const StockUtilities = {
     setFixedRange
 };
+/** @internal */
 /* harmony default export */ const Utilities_StockUtilities = (StockUtilities);
 
 ;// ./code/es-modules/Stock/Navigator/NavigatorComposition.js
@@ -3470,8 +2111,9 @@ const StockUtilities = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -3484,7 +2126,6 @@ const { composed } = (external_highcharts_src_js_default_default());
 
 
 
-const { getRendererType } = (external_highcharts_src_js_default_RendererRegistry_default());
 
 const { setFixedRange: NavigatorComposition_setFixedRange } = Utilities_StockUtilities;
 
@@ -3498,21 +2139,19 @@ const { setFixedRange: NavigatorComposition_setFixedRange } = Utilities_StockUti
  *  Functions
  *
  * */
-/**
- * @private
- */
+/** @internal */
 function NavigatorComposition_compose(ChartClass, AxisClass, SeriesClass) {
     NavigatorAxisComposition.compose(AxisClass);
-    if (pushUnique(composed, 'Navigator')) {
+    if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(composed, 'Navigator')) {
         ChartClass.prototype.setFixedRange = NavigatorComposition_setFixedRange;
-        extend(getRendererType().prototype.symbols, Navigator_NavigatorSymbols);
-        extend(defaultOptions, { navigator: Navigator_NavigatorDefaults });
-        addEvent(SeriesClass, 'afterUpdate', onSeriesAfterUpdate);
+        (0,external_highcharts_src_js_default_namespaceObject.extend)((external_highcharts_src_js_default_SVGRenderer_default()).prototype.symbols, Navigator_NavigatorSymbols);
+        (0,external_highcharts_src_js_default_namespaceObject.extend)(defaultOptions, { navigator: Navigator_NavigatorDefaults });
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'afterUpdate', onSeriesAfterUpdate);
     }
 }
 /**
  * Handle updating series
- * @private
+ * @internal
  */
 function onSeriesAfterUpdate() {
     if (this.chart.navigator && !this.options.isInternal) {
@@ -3524,9 +2163,11 @@ function onSeriesAfterUpdate() {
  *  Default Export
  *
  * */
+/** @internal */
 const NavigatorComposition = {
     compose: NavigatorComposition_compose
 };
+/** @internal */
 /* harmony default export */ const Navigator_NavigatorComposition = (NavigatorComposition);
 
 ;// ./code/es-modules/Core/Axis/ScrollbarAxis.js
@@ -3535,8 +2176,9 @@ const NavigatorComposition = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -3575,24 +2217,24 @@ var ScrollbarAxis;
      * Scrollbar class to use.
      */
     function compose(AxisClass, ScrollbarClass) {
-        if (pushUnique(ScrollbarAxis_composed, 'Axis.Scrollbar')) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(ScrollbarAxis_composed, 'Axis.Scrollbar')) {
             Scrollbar = ScrollbarClass;
-            addEvent(AxisClass, 'afterGetOffset', onAxisAfterGetOffset);
-            addEvent(AxisClass, 'afterInit', onAxisAfterInit);
-            addEvent(AxisClass, 'afterRender', onAxisAfterRender);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'afterGetOffset', onAxisAfterGetOffset);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'afterInit', onAxisAfterInit);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'afterRender', onAxisAfterRender);
         }
     }
     ScrollbarAxis.compose = compose;
     /** @internal */
     function getExtremes(axis) {
-        const axisMin = pick(axis.options?.min, axis.min);
-        const axisMax = pick(axis.options?.max, axis.max);
+        const axisMin = (0,external_highcharts_src_js_default_namespaceObject.pick)(axis.options?.min, axis.min);
+        const axisMax = (0,external_highcharts_src_js_default_namespaceObject.pick)(axis.options?.max, axis.max);
         return {
             axisMin,
             axisMax,
-            scrollMin: defined(axis.dataMin) ?
+            scrollMin: (0,external_highcharts_src_js_default_namespaceObject.defined)(axis.dataMin) ?
                 Math.min(axisMin, axis.min ?? Infinity, axis.dataMin, axis.threshold ?? Infinity) : axisMin,
-            scrollMax: axis.treeGrid?.adjustedMax ?? (defined(axis.dataMax) ?
+            scrollMax: axis.treeGrid?.adjustedMax ?? ((0,external_highcharts_src_js_default_namespaceObject.defined)(axis.dataMax) ?
                 Math.max(axisMax, axis.max ?? -Infinity, axis.dataMax, axis.threshold ?? -Infinity) :
                 axisMax)
         };
@@ -3621,11 +2263,11 @@ var ScrollbarAxis;
             axis.options.scrollbar.vertical = !axis.horiz;
             axis.options.startOnTick = axis.options.endOnTick = false;
             axis.scrollbar = new Scrollbar(axis.chart.renderer, axis.options.scrollbar, axis.chart);
-            addEvent(axis.scrollbar, 'changed', function (e) {
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(axis.scrollbar, 'changed', function (e) {
                 const { axisMin, axisMax, scrollMin: unitedMin, scrollMax: unitedMax } = getExtremes(axis), minPX = axis.toPixels(unitedMin), maxPX = axis.toPixels(unitedMax), rangePX = maxPX - minPX;
                 let to, from;
                 // #12834, scroll when show/hide series, wrong extremes
-                if (!defined(axisMin) || !defined(axisMax)) {
+                if (!(0,external_highcharts_src_js_default_namespaceObject.defined)(axisMin) || !(0,external_highcharts_src_js_default_namespaceObject.defined)(axisMax)) {
                     return;
                 }
                 if ((axis.horiz && !axis.reversed) ||
@@ -3643,7 +2285,7 @@ var ScrollbarAxis;
                     // #17977, set animation to undefined instead of true
                     const animate = e.DOMType === 'mousemove' ||
                         e.DOMType === 'touchmove' ? false : void 0;
-                    axis.setExtremes(correctFloat(from), correctFloat(to), true, animate, e);
+                    axis.setExtremes((0,external_highcharts_src_js_default_namespaceObject.correctFloat)(from), (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(to), true, animate, e);
                 }
                 else {
                     // When live redraw is disabled, don't change extremes
@@ -3704,9 +2346,9 @@ var ScrollbarAxis;
                 (scrollbar.options.margin || 0);
             if (isNaN(scrollMin) ||
                 isNaN(scrollMax) ||
-                !defined(axis.min) ||
-                !defined(axis.max) ||
-                (defined(axis.dataMin) && // #23335
+                !(0,external_highcharts_src_js_default_namespaceObject.defined)(axis.min) ||
+                !(0,external_highcharts_src_js_default_namespaceObject.defined)(axis.max) ||
+                ((0,external_highcharts_src_js_default_namespaceObject.defined)(axis.dataMin) && // #23335
                     axis.dataMin === axis.dataMax // #10733
                 )) {
                 // Default action: when data extremes are the same or there is
@@ -3755,8 +2397,9 @@ var ScrollbarAxis;
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -3785,8 +2428,6 @@ var ScrollbarAxis;
  *
  * @product highstock gantt
  * @optionparent scrollbar
- *
- * @private
  */
 const ScrollbarDefaults = {
     /**
@@ -3880,7 +2521,7 @@ const ScrollbarDefaults = {
      *
      * @type {Highcharts.ColorType}
      */
-    barBackgroundColor: "#cccccc" /* Palette.neutralColor20 */,
+    barBackgroundColor: 'var(--highcharts-neutral-color-20)',
     /**
      * The width of the bar's border.
      *
@@ -3893,7 +2534,7 @@ const ScrollbarDefaults = {
      *
      * @type {Highcharts.ColorType}
      */
-    barBorderColor: "#cccccc" /* Palette.neutralColor20 */,
+    barBorderColor: 'var(--highcharts-neutral-color-20)',
     /**
      * The color of the small arrow inside the scrollbar buttons.
      *
@@ -3902,7 +2543,7 @@ const ScrollbarDefaults = {
      *
      * @type {Highcharts.ColorType}
      */
-    buttonArrowColor: "#333333" /* Palette.neutralColor80 */,
+    buttonArrowColor: 'var(--highcharts-neutral-color-80)',
     /**
      * The color of scrollbar buttons.
      *
@@ -3911,7 +2552,7 @@ const ScrollbarDefaults = {
      *
      * @type {Highcharts.ColorType}
      */
-    buttonBackgroundColor: "#e6e6e6" /* Palette.neutralColor10 */,
+    buttonBackgroundColor: 'var(--highcharts-neutral-color-10)',
     /**
      * The color of the border of the scrollbar buttons.
      *
@@ -3920,7 +2561,7 @@ const ScrollbarDefaults = {
      *
      * @type {Highcharts.ColorType}
      */
-    buttonBorderColor: "#cccccc" /* Palette.neutralColor20 */,
+    buttonBorderColor: 'var(--highcharts-neutral-color-20)',
     /**
      * The border width of the scrollbar buttons.
      *
@@ -3951,7 +2592,7 @@ const ScrollbarDefaults = {
      *
      * @type {Highcharts.ColorType}
      */
-    trackBorderColor: "#cccccc" /* Palette.neutralColor20 */,
+    trackBorderColor: 'var(--highcharts-neutral-color-20)',
     /**
      * The corner radius of the border of the scrollbar track.
      *
@@ -3972,6 +2613,7 @@ const ScrollbarDefaults = {
  *  Default Export
  *
  * */
+/** @internal */
 /* harmony default export */ const Scrollbar_ScrollbarDefaults = (ScrollbarDefaults);
 
 ;// ./code/es-modules/Stock/Scrollbar/Scrollbar.js
@@ -3980,8 +2622,9 @@ const ScrollbarDefaults = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -4003,7 +2646,7 @@ const { composed: Scrollbar_composed } = (external_highcharts_src_js_default_def
  * A reusable scrollbar, internally used in Highcharts Stock's
  * navigator and optionally on individual axes.
  *
- * @private
+ * @internal
  * @class
  * @name Highcharts.Scrollbar
  * @param {Highcharts.SVGRenderer} renderer
@@ -4018,8 +2661,8 @@ class Scrollbar {
      * */
     static compose(AxisClass) {
         Axis_ScrollbarAxis.compose(AxisClass, Scrollbar);
-        if (pushUnique(Scrollbar_composed, 'Scrollbar')) {
-            extend(Scrollbar_defaultOptions, { scrollbar: Scrollbar_ScrollbarDefaults });
+        if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(Scrollbar_composed, 'Scrollbar')) {
+            (0,external_highcharts_src_js_default_namespaceObject.extend)(Scrollbar_defaultOptions, { scrollbar: Scrollbar_ScrollbarDefaults });
         }
     }
     /**
@@ -4089,7 +2732,7 @@ class Scrollbar {
     /**
      * Set up the mouse and touch events for the Scrollbar
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#addEvents
      */
     addEvents() {
@@ -4117,16 +2760,16 @@ class Scrollbar {
         ];
         // Add them all
         _events.forEach(function (args) {
-            addEvent.apply(null, args);
+            external_highcharts_src_js_default_namespaceObject.addEvent.apply(null, args);
         });
         this._events = _events;
     }
     buttonToMaxClick(e) {
         const scroller = this;
         const range = ((scroller.to - scroller.from) *
-            pick(scroller.options.step, 0.2));
+            (0,external_highcharts_src_js_default_namespaceObject.pick)(scroller.options.step, 0.2));
         scroller.updatePosition(scroller.from + range, scroller.to + range);
-        fireEvent(scroller, 'changed', {
+        (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(scroller, 'changed', {
             from: scroller.from,
             to: scroller.to,
             trigger: 'scrollbar',
@@ -4135,10 +2778,10 @@ class Scrollbar {
     }
     buttonToMinClick(e) {
         const scroller = this;
-        const range = correctFloat(scroller.to - scroller.from) *
-            pick(scroller.options.step, 0.2);
-        scroller.updatePosition(correctFloat(scroller.from - range), correctFloat(scroller.to - range));
-        fireEvent(scroller, 'changed', {
+        const range = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(scroller.to - scroller.from) *
+            (0,external_highcharts_src_js_default_namespaceObject.pick)(scroller.options.step, 0.2);
+        scroller.updatePosition((0,external_highcharts_src_js_default_namespaceObject.correctFloat)(scroller.from - range), (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(scroller.to - range));
+        (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(scroller, 'changed', {
             from: scroller.from,
             to: scroller.to,
             trigger: 'scrollbar',
@@ -4148,7 +2791,7 @@ class Scrollbar {
     /**
      * Get normalized (0-1) cursor position over the scrollbar
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#cursorToScrollbarPosition
      *
      * @param  {*} normalizedEvent
@@ -4173,7 +2816,7 @@ class Scrollbar {
     /**
      * Destroys allocated elements.
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#destroy
      */
     destroy() {
@@ -4196,13 +2839,13 @@ class Scrollbar {
         if (navigator && scroller === navigator.scrollbar) {
             navigator.scrollbar = null;
             // Destroy elements in collection
-            destroyObjectProperties(navigator.scrollbarButtons);
+            (0,external_highcharts_src_js_default_namespaceObject.destroyObjectProperties)(navigator.scrollbarButtons);
         }
     }
     /**
      * Draw the scrollbar buttons with arrows
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#drawScrollbarButton
      * @param {number} index
      *        0 is left, 1 is right
@@ -4256,7 +2899,7 @@ class Scrollbar {
         }
     }
     /**
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#init
      * @param {Highcharts.SVGRenderer} renderer
      * @param {Highcharts.ScrollbarOptions} options
@@ -4267,11 +2910,11 @@ class Scrollbar {
         scroller.scrollbarButtons = [];
         scroller.renderer = renderer;
         scroller.userOptions = options;
-        scroller.options = merge(Scrollbar_ScrollbarDefaults, Scrollbar_defaultOptions.scrollbar, options);
-        scroller.options.margin = pick(scroller.options.margin, 10);
+        scroller.options = (0,external_highcharts_src_js_default_namespaceObject.merge)(Scrollbar_ScrollbarDefaults, Scrollbar_defaultOptions.scrollbar, options);
+        scroller.options.margin = (0,external_highcharts_src_js_default_namespaceObject.pick)(scroller.options.margin, 10);
         scroller.chart = chart;
         // Backward compatibility
-        scroller.size = pick(scroller.options.size, scroller.options.height);
+        scroller.size = (0,external_highcharts_src_js_default_namespaceObject.pick)(scroller.options.size, scroller.options.height);
         // Init
         if (options.enabled) {
             scroller.render();
@@ -4287,7 +2930,7 @@ class Scrollbar {
     }
     /**
      * Event handler for the mouse move event.
-     * @private
+     * @internal
      */
     mouseMoveHandler(e) {
         const scroller = this, normalizedEvent = scroller.chart.pointer?.normalize(e) || e, options = scroller.options, direction = options.vertical ?
@@ -4305,7 +2948,7 @@ class Scrollbar {
             scroller.hasDragged = true;
             scroller.updatePosition(initPositions[0] + change, initPositions[1] + change);
             if (scroller.hasDragged) {
-                fireEvent(scroller, 'changed', {
+                (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(scroller, 'changed', {
                     from: scroller.from,
                     to: scroller.to,
                     trigger: 'scrollbar',
@@ -4317,12 +2960,12 @@ class Scrollbar {
     }
     /**
      * Event handler for the mouse up event.
-     * @private
+     * @internal
      */
     mouseUpHandler(e) {
         const scroller = this;
         if (scroller.hasDragged) {
-            fireEvent(scroller, 'changed', {
+            (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(scroller, 'changed', {
                 from: scroller.from,
                 to: scroller.to,
                 trigger: 'scrollbar',
@@ -4339,7 +2982,7 @@ class Scrollbar {
      * Position the scrollbar, method called from a parent with defined
      * dimensions.
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#position
      * @param {number} x
      *        x-position on the chart
@@ -4396,19 +3039,19 @@ class Scrollbar {
     /**
      * Removes the event handlers attached previously with addEvents.
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#removeEvents
      */
     removeEvents() {
         this._events.forEach(function (args) {
-            removeEvent.apply(null, args);
+            external_highcharts_src_js_default_namespaceObject.removeEvent.apply(null, args);
         });
         this._events.length = 0;
     }
     /**
      * Render scrollbar with all required items.
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#render
      */
     render() {
@@ -4438,8 +3081,8 @@ class Scrollbar {
         const trackBorderWidth = scroller.trackBorderWidth =
             scroller.track.strokeWidth();
         scroller.track.attr({
-            x: -crisp(0, trackBorderWidth),
-            y: -crisp(0, trackBorderWidth)
+            x: -(0,external_highcharts_src_js_default_namespaceObject.crisp)(0, trackBorderWidth),
+            y: -(0,external_highcharts_src_js_default_namespaceObject.crisp)(0, trackBorderWidth)
         });
         // Draw the scrollbar itself
         scroller.scrollbarGroup = renderer.g().add(group);
@@ -4473,7 +3116,7 @@ class Scrollbar {
             });
         }
         scroller.scrollbarStrokeWidth = scroller.scrollbar.strokeWidth();
-        scroller.scrollbarGroup.translate(-crisp(0, scroller.scrollbarStrokeWidth), -crisp(0, scroller.scrollbarStrokeWidth));
+        scroller.scrollbarGroup.translate(-(0,external_highcharts_src_js_default_namespaceObject.crisp)(0, scroller.scrollbarStrokeWidth), -(0,external_highcharts_src_js_default_namespaceObject.crisp)(0, scroller.scrollbarStrokeWidth));
         // Draw the buttons:
         scroller.drawScrollbarButton(0);
         scroller.drawScrollbarButton(1);
@@ -4481,7 +3124,7 @@ class Scrollbar {
     /**
      * Set scrollbar size, with a given scale.
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#setRange
      * @param {number} from
      *        scale (0-1) where bar should start
@@ -4492,14 +3135,14 @@ class Scrollbar {
         const scroller = this, options = scroller.options, vertical = options.vertical, minWidth = options.minWidth, fullWidth = scroller.barWidth, method = (this.rendered &&
             !this.hasDragged &&
             !(this.chart.navigator && this.chart.navigator.hasDragged)) ? 'animate' : 'attr';
-        if (!defined(fullWidth)) {
+        if (!(0,external_highcharts_src_js_default_namespaceObject.defined)(fullWidth)) {
             return;
         }
         const toPX = fullWidth * Math.min(to, 1);
         let fromPX, newSize;
         from = Math.max(from, 0);
         fromPX = Math.ceil(fullWidth * from);
-        scroller.calculatedWidth = newSize = correctFloat(toPX - fromPX);
+        scroller.calculatedWidth = newSize = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(toPX - fromPX);
         // We need to recalculate position, if minWidth is used
         if (newSize < minWidth) {
             fromPX = (fullWidth - minWidth + newSize) * from;
@@ -4557,18 +3200,18 @@ class Scrollbar {
      * Checks if the extremes should be updated in response to a scrollbar
      * change event.
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#shouldUpdateExtremes
      */
     shouldUpdateExtremes(eventType) {
-        return (pick(this.options.liveRedraw, (external_highcharts_src_js_default_default()).svg &&
+        return ((0,external_highcharts_src_js_default_namespaceObject.pick)(this.options.liveRedraw, (external_highcharts_src_js_default_default()).svg &&
             !(external_highcharts_src_js_default_default()).isTouchDevice &&
             !this.chart.boosted) ||
             // Mouseup always should change extremes
             eventType === 'mouseup' ||
             eventType === 'touchend' ||
             // Internal events
-            !defined(eventType));
+            !(0,external_highcharts_src_js_default_namespaceObject.defined)(eventType));
     }
     trackClick(e) {
         const scroller = this;
@@ -4582,7 +3225,7 @@ class Scrollbar {
             // On the bottom or the right side of the track:
             scroller.updatePosition(scroller.from - range, scroller.to - range);
         }
-        fireEvent(scroller, 'changed', {
+        (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(scroller, 'changed', {
             from: scroller.from,
             to: scroller.to,
             trigger: 'scrollbar',
@@ -4592,29 +3235,29 @@ class Scrollbar {
     /**
      * Update the scrollbar with new options
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#update
      * @param  {Highcharts.ScrollbarOptions} options
      */
     update(options) {
         this.destroy();
-        this.init(this.chart.renderer, merge(true, this.options, options), this.chart);
+        this.init(this.chart.renderer, (0,external_highcharts_src_js_default_namespaceObject.merge)(true, this.options, options), this.chart);
     }
     /**
      * Update position option in the Scrollbar, with normalized 0-1 scale
      *
-     * @private
+     * @internal
      * @function Highcharts.Scrollbar#updatePosition
      * @param  {number} from
      * @param  {number} to
      */
     updatePosition(from, to) {
         if (to > 1) {
-            from = correctFloat(1 - correctFloat(to - from));
+            from = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(1 - (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(to - from));
             to = 1;
         }
         if (from < 0) {
-            to = correctFloat(to - from);
+            to = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(to - from);
             from = 0;
         }
         this.from = from;
@@ -4632,6 +3275,7 @@ Scrollbar.defaultOptions = Scrollbar_ScrollbarDefaults;
  *  Default Export
  *
  * */
+/** @internal */
 /* harmony default export */ const Scrollbar_Scrollbar = (Scrollbar);
 
 ;// ./code/es-modules/Stock/Navigator/Navigator.js
@@ -4640,9 +3284,9 @@ Scrollbar.defaultOptions = Scrollbar_ScrollbarDefaults;
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
- *
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  * */
 
@@ -4665,10 +3309,10 @@ const { isTouchDevice: Navigator_isTouchDevice } = (external_highcharts_src_js_d
  * Finding the min or max of a set of variables where we don't know if they are
  * defined, is a pattern that is repeated several places in Highcharts. Consider
  * making this a global utility method.
- * @private
+ * @internal
  */
 function numExt(extreme, ...args) {
-    const numbers = [].filter.call(args, isNumber);
+    const numbers = [].filter.call(args, external_highcharts_src_js_default_namespaceObject.isNumber);
     if (numbers.length) {
         return Math[extreme].apply(0, numbers);
     }
@@ -4681,7 +3325,7 @@ function numExt(extreme, ...args) {
 /**
  * The Navigator class
  *
- * @private
+ * @internal
  * @class
  * @name Highcharts.Navigator
  *
@@ -4716,7 +3360,7 @@ class Navigator {
     /**
      * Draw one of the handles on the side of the zoomed range in the navigator.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#drawHandle
      *
      * @param {number} x
@@ -4745,7 +3389,7 @@ class Navigator {
     /**
      * Render outline around the zoomed range
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#drawOutline
      *
      * @param {number} zoomedMin
@@ -4833,7 +3477,7 @@ class Navigator {
     /**
      * Render outline around the zoomed range
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#drawMasks
      *
      * @param {number} zoomedMin
@@ -4893,7 +3537,7 @@ class Navigator {
      *
      * - handles
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#renderElements
      */
     renderElements() {
@@ -4995,7 +3639,7 @@ class Navigator {
     /**
      * Update navigator
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#update
      *
      * @param {Highcharts.NavigatorOptions} options
@@ -5004,11 +3648,11 @@ class Navigator {
     update(options, redraw = false) {
         const chart = this.chart, invertedUpdate = chart.options.chart.inverted !==
             chart.scrollbar?.options.vertical;
-        merge(true, chart.options.navigator, options);
+        (0,external_highcharts_src_js_default_namespaceObject.merge)(true, chart.options.navigator, options);
         this.navigatorOptions = chart.options.navigator || {};
         this.setOpposite();
         // Revert to destroy/init for navigator/scrollbar enabled toggle
-        if (defined(options.enabled) || invertedUpdate) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.defined)(options.enabled) || invertedUpdate) {
             this.destroy();
             this.navigatorEnabled = options.enabled || this.navigatorEnabled;
             return this.init(chart);
@@ -5017,12 +3661,12 @@ class Navigator {
             this.isDirty = true;
             if (options.adaptToUpdatedData === false) {
                 this.baseSeries.forEach((series) => {
-                    removeEvent(series, 'updatedData', this.updatedDataHandler);
+                    (0,external_highcharts_src_js_default_namespaceObject.removeEvent)(series, 'updatedData', this.updatedDataHandler);
                 }, this);
             }
             if (options.adaptToUpdatedData) {
                 this.baseSeries.forEach((series) => {
-                    series.eventsToUnbind.push(addEvent(series, 'updatedData', this.updatedDataHandler));
+                    series.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(series, 'updatedData', this.updatedDataHandler));
                 }, this);
             }
             // Update navigator series
@@ -5052,7 +3696,7 @@ class Navigator {
     /**
      * Render the navigator
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#render
      * @param {number} min
      *        X axis value minimum
@@ -5067,32 +3711,32 @@ class Navigator {
         const navigator = this, chart = navigator.chart, xAxis = navigator.xAxis, pointRange = xAxis.pointRange || 0, scrollbarXAxis = xAxis.navigatorAxis.fake ? chart.xAxis[0] : xAxis, navigatorEnabled = navigator.navigatorEnabled, rendered = navigator.rendered, inverted = chart.inverted, minRange = chart.xAxis[0].minRange, maxRange = chart.xAxis[0].options.maxRange, scrollButtonSize = navigator.scrollButtonSize;
         let navigatorWidth, scrollbarLeft, scrollbarTop, scrollbarHeight = navigator.scrollbarHeight, navigatorSize, verb;
         // Don't redraw while moving the handles (#4703).
-        if (this.hasDragged && !defined(pxMin)) {
+        if (this.hasDragged && !(0,external_highcharts_src_js_default_namespaceObject.defined)(pxMin)) {
             return;
         }
         if (this.isDirty) {
             // Update DOM navigator elements
             this.renderElements();
         }
-        min = correctFloat(min - pointRange / 2);
-        max = correctFloat(max + pointRange / 2);
+        min = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(min - pointRange / 2);
+        max = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(max + pointRange / 2);
         // Don't render the navigator until we have data (#486, #4202, #5172).
-        if (!isNumber(min) || !isNumber(max)) {
+        if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(min) || !(0,external_highcharts_src_js_default_namespaceObject.isNumber)(max)) {
             // However, if navigator was already rendered, we may need to resize
             // it. For example hidden series, but visible navigator (#6022).
             if (rendered) {
                 pxMin = 0;
-                pxMax = pick(xAxis.width, scrollbarXAxis.width);
+                pxMax = (0,external_highcharts_src_js_default_namespaceObject.pick)(xAxis.width, scrollbarXAxis.width);
             }
             else {
                 return;
             }
         }
-        navigator.left = pick(xAxis.left, 
+        navigator.left = (0,external_highcharts_src_js_default_namespaceObject.pick)(xAxis.left, 
         // In case of scrollbar only, without navigator
         chart.plotLeft + scrollButtonSize +
             (inverted ? chart.plotWidth : 0));
-        let zoomedMax = navigator.size = navigatorSize = pick(xAxis.len, (inverted ? chart.plotHeight : chart.plotWidth) -
+        let zoomedMax = navigator.size = navigatorSize = (0,external_highcharts_src_js_default_namespaceObject.pick)(xAxis.len, (inverted ? chart.plotHeight : chart.plotWidth) -
             2 * scrollButtonSize);
         if (inverted) {
             navigatorWidth = scrollbarHeight;
@@ -5101,16 +3745,16 @@ class Navigator {
             navigatorWidth = navigatorSize + 2 * scrollButtonSize;
         }
         // Get the pixel position of the handles
-        pxMin = pick(pxMin, xAxis.toPixels(min, true));
-        pxMax = pick(pxMax, xAxis.toPixels(max, true));
+        pxMin = (0,external_highcharts_src_js_default_namespaceObject.pick)(pxMin, xAxis.toPixels(min, true));
+        pxMax = (0,external_highcharts_src_js_default_namespaceObject.pick)(pxMax, xAxis.toPixels(max, true));
         // Verify (#1851, #2238)
-        if (!isNumber(pxMin) || Math.abs(pxMin) === Infinity) {
+        if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(pxMin) || Math.abs(pxMin) === Infinity) {
             pxMin = 0;
             pxMax = navigatorWidth;
         }
         // Are we below the minRange? (#2618, #6191)
-        const newMin = xAxis.toValue(pxMin, true), newMax = xAxis.toValue(pxMax, true), currentRange = Math.abs(correctFloat(newMax - newMin));
-        if (defined(minRange) && currentRange < minRange) {
+        const newMin = xAxis.toValue(pxMin, true), newMax = xAxis.toValue(pxMax, true), currentRange = Math.abs((0,external_highcharts_src_js_default_namespaceObject.correctFloat)(newMax - newMin));
+        if ((0,external_highcharts_src_js_default_namespaceObject.defined)(minRange) && currentRange < minRange) {
             if (this.grabbedLeft) {
                 pxMin = xAxis.toPixels(newMax - minRange - pointRange, true);
             }
@@ -5118,8 +3762,8 @@ class Navigator {
                 pxMax = xAxis.toPixels(newMin + minRange + pointRange, true);
             }
         }
-        else if (defined(maxRange) &&
-            correctFloat(currentRange - pointRange) > maxRange) {
+        else if ((0,external_highcharts_src_js_default_namespaceObject.defined)(maxRange) &&
+            (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(currentRange - pointRange) > maxRange) {
             if (this.grabbedLeft) {
                 pxMin = xAxis.toPixels(newMax - maxRange - pointRange, true);
             }
@@ -5128,8 +3772,8 @@ class Navigator {
             }
         }
         // Handles are allowed to cross, but never exceed the plot area
-        navigator.zoomedMax = clamp(Math.max(pxMin, pxMax), 0, zoomedMax);
-        navigator.zoomedMin = clamp(navigator.fixedWidth ?
+        navigator.zoomedMax = (0,external_highcharts_src_js_default_namespaceObject.clamp)(Math.max(pxMin, pxMax), 0, zoomedMax);
+        navigator.zoomedMin = (0,external_highcharts_src_js_default_namespaceObject.clamp)(navigator.fixedWidth ?
             navigator.zoomedMax - navigator.fixedWidth :
             Math.min(pxMin, pxMax), 0, zoomedMax);
         navigator.range = navigator.zoomedMax - navigator.zoomedMin;
@@ -5175,14 +3819,14 @@ class Navigator {
         }
         navigator.rendered = true;
         this.isDirty = false;
-        fireEvent(this, 'afterRender');
+        (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this, 'afterRender');
     }
     /**
      * Set up the mouse and touch events for the navigator. Shades and handles
      * events are added inside the `renderElements` method by calling the
      * `getPartsEvents` method.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#addMouseEvents
      */
     addMouseEvents() {
@@ -5203,13 +3847,13 @@ class Navigator {
         // Add mouse move and mouseup events. These are bind to doc/div,
         // because Navigator.grabbedSomething flags are stored in mousedown
         // events
-        addEvent(chart.renderTo, 'mousemove', mouseMoveHandler), addEvent(container.ownerDocument, 'mouseup', mouseUpHandler), 
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart.renderTo, 'mousemove', mouseMoveHandler), (0,external_highcharts_src_js_default_namespaceObject.addEvent)(container.ownerDocument, 'mouseup', mouseUpHandler), 
         // Touch events
-        addEvent(chart.renderTo, 'touchmove', mouseMoveHandler), addEvent(container.ownerDocument, 'touchend', mouseUpHandler));
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart.renderTo, 'touchmove', mouseMoveHandler), (0,external_highcharts_src_js_default_namespaceObject.addEvent)(container.ownerDocument, 'touchend', mouseUpHandler));
         navigator.eventsToUnbind = eventsToUnbind;
         // Data events
         if (navigator.series && navigator.series[0]) {
-            eventsToUnbind.push(addEvent(navigator.series[0].xAxis, 'foundExtremes', function () {
+            eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(navigator.series[0].xAxis, 'foundExtremes', function () {
                 chart.navigator?.modifyNavigatorAxisExtremes();
             }));
         }
@@ -5217,7 +3861,7 @@ class Navigator {
     /**
      * Generate events for handles and masks
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#getPartsEvents
      *
      * @param {string} eventName
@@ -5231,7 +3875,7 @@ class Navigator {
         const navigator = this, events = [];
         ['shades', 'handles'].forEach((name) => {
             navigator[name].forEach(function (navigatorItem, index) {
-                events.push(addEvent(navigatorItem.element, eventName, function (e) {
+                events.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(navigatorItem.element, eventName, function (e) {
                     navigator[`${name}Mousedown`](e, index);
                 }));
             });
@@ -5245,7 +3889,7 @@ class Navigator {
      *
      * - will directly shift to a new range
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#shadesMousedown
      *
      * @param {Highcharts.PointerEventObject} e
@@ -5290,8 +3934,8 @@ class Navigator {
             if (left !== zoomedMin) { // It has actually moved
                 navigator.fixedWidth = range; // #1370
                 ext = xAxis.navigatorAxis.toFixedRange(left, left + range, fixedMin, fixedMax);
-                if (defined(ext.min)) { // #7411
-                    fireEvent(this, 'setRange', {
+                if ((0,external_highcharts_src_js_default_namespaceObject.defined)(ext.min)) { // #7411
+                    (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this, 'setRange', {
                         min: Math.min(ext.min, ext.max),
                         max: Math.max(ext.min, ext.max),
                         redraw: true,
@@ -5307,7 +3951,7 @@ class Navigator {
      * Mousedown on a handle mask.
      * Will store necessary information for drag&drop.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#handlesMousedown
      * @param {Highcharts.PointerEventObject} e
      *        Mouse event
@@ -5337,7 +3981,7 @@ class Navigator {
     /**
      * Mouse move event based on x/y mouse position.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#onMouseMove
      *
      * @param {Highcharts.PointerEventObject} e
@@ -5381,7 +4025,7 @@ class Navigator {
                 navigator.render(0, 0, chartX - dragOffset, chartX - dragOffset + range);
             }
             if (navigator.hasDragged &&
-                pick(navigator.scrollbarOptions?.liveRedraw, 
+                (0,external_highcharts_src_js_default_namespaceObject.pick)(navigator.scrollbarOptions?.liveRedraw, 
                 // By default, don't run live redraw on touch
                 // devices or if the chart is in boost.
                 !Navigator_isTouchDevice &&
@@ -5396,7 +4040,7 @@ class Navigator {
     /**
      * Mouse up event based on x/y mouse position.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#onMouseUp
      * @param {Highcharts.PointerEventObject} e
      *        Mouse event
@@ -5432,8 +4076,8 @@ class Navigator {
                     unionExtremes.dataMin;
             }
             ext = xAxis.navigatorAxis.toFixedRange(navigator.zoomedMin, navigator.zoomedMax, fixedMin, fixedMax);
-            if (defined(ext.min)) {
-                fireEvent(this, 'setRange', {
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(ext.min)) {
+                (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this, 'setRange', {
                     min: Math.min(ext.min, ext.max),
                     max: Math.max(ext.min, ext.max),
                     redraw: true,
@@ -5455,8 +4099,8 @@ class Navigator {
         }
         // Update position of navigator shades, outline and handles (#12573)
         if (navigator.navigatorEnabled &&
-            isNumber(navigator.zoomedMin) &&
-            isNumber(navigator.zoomedMax)) {
+            (0,external_highcharts_src_js_default_namespaceObject.isNumber)(navigator.zoomedMin) &&
+            (0,external_highcharts_src_js_default_namespaceObject.isNumber)(navigator.zoomedMax)) {
             zoomedMin = Math.round(navigator.zoomedMin);
             zoomedMax = Math.round(navigator.zoomedMax);
             if (navigator.shades) {
@@ -5476,7 +4120,7 @@ class Navigator {
     /**
      * Removes the event handlers attached previously with addEvents.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#removeEvents
      */
     removeEvents() {
@@ -5489,7 +4133,7 @@ class Navigator {
     /**
      * Remove data events.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#removeBaseSeriesEvents
      */
     removeBaseSeriesEvents() {
@@ -5497,19 +4141,19 @@ class Navigator {
         if (this.navigatorEnabled && baseSeries[0]) {
             if (this.navigatorOptions.adaptToUpdatedData !== false) {
                 baseSeries.forEach(function (series) {
-                    removeEvent(series, 'updatedData', this.updatedDataHandler);
+                    (0,external_highcharts_src_js_default_namespaceObject.removeEvent)(series, 'updatedData', this.updatedDataHandler);
                 }, this);
             }
             // We only listen for extremes-events on the first baseSeries
             if (baseSeries[0].xAxis) {
-                removeEvent(baseSeries[0].xAxis, 'foundExtremes', this.modifyBaseAxisExtremes);
+                (0,external_highcharts_src_js_default_namespaceObject.removeEvent)(baseSeries[0].xAxis, 'foundExtremes', this.modifyBaseAxisExtremes);
             }
         }
     }
     /**
      * Calculate the navigator xAxis offsets
      *
-     * @private
+     * @internal
      */
     getXAxisOffsets() {
         return (this.chart.inverted ?
@@ -5519,7 +4163,7 @@ class Navigator {
     /**
      * Initialize the Navigator object
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#init
      */
     init(chart) {
@@ -5542,7 +4186,7 @@ class Navigator {
         if (navigator.navigatorEnabled) {
             const offsets = this.getXAxisOffsets();
             // An x axis is required for scrollbar also
-            navigator.xAxis = new (external_highcharts_src_js_default_Axis_default())(chart, merge({
+            navigator.xAxis = new (external_highcharts_src_js_default_Axis_default())(chart, (0,external_highcharts_src_js_default_namespaceObject.merge)({
                 // Inherit base xAxis' break, ordinal options and overscroll
                 breaks: baseXaxis.options.breaks,
                 ordinal: baseXaxis.options.ordinal,
@@ -5569,12 +4213,12 @@ class Navigator {
                 offsets,
                 height
             }), 'xAxis');
-            navigator.yAxis = new (external_highcharts_src_js_default_Axis_default())(chart, merge(navigatorOptions.yAxis, {
+            navigator.yAxis = new (external_highcharts_src_js_default_Axis_default())(chart, (0,external_highcharts_src_js_default_namespaceObject.merge)(navigatorOptions.yAxis, {
                 alignTicks: false,
                 offset: 0,
                 index: yAxisIndex,
                 isInternal: true,
-                reversed: pick((navigatorOptions.yAxis &&
+                reversed: (0,external_highcharts_src_js_default_namespaceObject.pick)((navigatorOptions.yAxis &&
                     navigatorOptions.yAxis.reversed), (chart.yAxis[0] && chart.yAxis[0].reversed), false), // #14060
                 zoomEnabled: false
             }, chart.inverted ? {
@@ -5582,13 +4226,17 @@ class Navigator {
             } : {
                 height: height
             }), 'yAxis');
+            navigator.xAxis.clippable = false;
+            navigator.yAxis.clippable = false;
             // If we have a base series, initialize the navigator series
-            if (baseSeries || navigatorOptions.series?.data) {
+            if (baseSeries ||
+                navigatorOptions.series?.data ||
+                navigatorOptions.series?.dataTable) {
                 navigator.updateNavigatorSeries(false);
                 // If not, set up an event to listen for added series
             }
             else if (chart.series.length === 0) {
-                navigator.unbindRedraw = addEvent(chart, 'beforeRedraw', function () {
+                navigator.unbindRedraw = (0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart, 'beforeRedraw', function () {
                     // We've got one, now add it as base
                     if (chart.series.length > 0 && !navigator.series) {
                         navigator.setBaseSeries();
@@ -5629,12 +4277,12 @@ class Navigator {
         }
         // Initialize the scrollbar
         if (chart.options.scrollbar?.enabled) {
-            const options = merge(chart.options.scrollbar, { vertical: chart.inverted });
-            if (!isNumber(options.margin)) {
+            const options = (0,external_highcharts_src_js_default_namespaceObject.merge)(chart.options.scrollbar, { vertical: chart.inverted });
+            if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(options.margin)) {
                 options.margin = chart.inverted ? -3 : 3;
             }
             chart.scrollbar = navigator.scrollbar = new Scrollbar_Scrollbar(chart.renderer, options, chart);
-            addEvent(navigator.scrollbar, 'changed', function (e) {
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(navigator.scrollbar, 'changed', function (e) {
                 const range = navigator.size, to = range * this.to, from = range * this.from;
                 navigator.hasDragged = navigator.scrollbar?.hasDragged;
                 navigator.render(0, 0, from, to);
@@ -5653,17 +4301,17 @@ class Navigator {
     /**
      * Set the opposite property on navigator
      *
-     * @private
+     * @internal
      */
     setOpposite() {
         const navigatorOptions = this.navigatorOptions, navigatorEnabled = this.navigatorEnabled, chart = this.chart;
-        this.opposite = pick(navigatorOptions.opposite, Boolean(!navigatorEnabled && chart.inverted)); // #6262
+        this.opposite = (0,external_highcharts_src_js_default_namespaceObject.pick)(navigatorOptions.opposite, Boolean(!navigatorEnabled && chart.inverted)); // #6262
     }
     /**
      * Get the union data extremes of the chart - the outer data extremes of the
      * base X axis and the navigator axis.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#getUnionExtremes
      */
     getUnionExtremes(returnFalseOnNoBaseSeries) {
@@ -5671,9 +4319,9 @@ class Navigator {
         let ret;
         if (!returnFalseOnNoBaseSeries || baseAxis.dataMin !== null) {
             ret = {
-                dataMin: pick(// #4053
+                dataMin: (0,external_highcharts_src_js_default_namespaceObject.pick)(// #4053
                 time.parse(navAxisOptions?.min), numExt('min', time.parse(baseAxisOptions.min), baseAxis.dataMin, navAxis.dataMin, navAxis.min)),
-                dataMax: pick(time.parse(navAxisOptions?.max), numExt('max', time.parse(baseAxisOptions.max), baseAxis.dataMax, navAxis.dataMax, navAxis.max))
+                dataMax: (0,external_highcharts_src_js_default_namespaceObject.pick)(time.parse(navAxisOptions?.max), numExt('max', time.parse(baseAxisOptions.max), baseAxis.dataMax, navAxis.dataMax, navAxis.max))
             };
         }
         return ret;
@@ -5683,7 +4331,7 @@ class Navigator {
      * of modification we should be able to make this an API method to be called
      * from the outside
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#setBaseSeries
      * @param {Highcharts.SeriesOptionsType} [baseSeriesOptions]
      *        Additional series options for a navigator
@@ -5696,7 +4344,7 @@ class Navigator {
             chart.options.navigator?.baseSeries ||
             (chart.series.length ?
                 // Find the first non-navigator series (#8430)
-                find(chart.series, (s) => (!s.options.isInternal)).index :
+                (0,external_highcharts_src_js_default_namespaceObject.find)(chart.series, (s) => (!s.options.isInternal)).index :
                 0));
         // Iterate through series and add the ones that should be shown in
         // navigator.
@@ -5720,7 +4368,7 @@ class Navigator {
      * Update series in the navigator from baseSeries, adding new if does not
      * exist.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator.updateNavigatorSeries
      */
     updateNavigatorSeries(addEvents, redraw) {
@@ -5749,7 +4397,7 @@ class Navigator {
                     // If there is still a base series connected to this
                     // series, remove event handler and reference.
                     if (base) {
-                        removeEvent(base, 'updatedData', navigator.updatedDataHandler);
+                        (0,external_highcharts_src_js_default_namespaceObject.removeEvent)(base, 'updatedData', navigator.updatedDataHandler);
                         delete base.navigatorSeries;
                     }
                     // Kill the nav series. It may already have been
@@ -5766,12 +4414,12 @@ class Navigator {
         // series
         if (baseSeries && baseSeries.length) {
             baseSeries.forEach((base) => {
-                const linkedNavSeries = base.navigatorSeries, userNavOptions = extend(
+                const linkedNavSeries = base.navigatorSeries, userNavOptions = (0,external_highcharts_src_js_default_namespaceObject.extend)(
                 // Grab color and visibility from base as default
                 {
                     color: base.color,
                     visible: base.visible
-                }, !isArray(chartNavigatorSeriesOptions) ?
+                }, !(0,external_highcharts_src_js_default_namespaceObject.isArray)(chartNavigatorSeriesOptions) ?
                     chartNavigatorSeriesOptions :
                     Navigator_defaultOptions.navigator.series);
                 // Don't update if the series exists in nav and we have disabled
@@ -5785,29 +4433,36 @@ class Navigator {
                 baseNavigatorOptions = baseOptions.navigatorOptions || {};
                 // The dataLabels options are not merged correctly
                 // if the settings are an array, #13847.
-                userNavOptions.dataLabels = splat(userNavOptions.dataLabels);
-                mergedNavSeriesOptions = merge(baseOptions, navSeriesMixin, userNavOptions, baseNavigatorOptions);
+                userNavOptions.dataLabels = (0,external_highcharts_src_js_default_namespaceObject.splat)(userNavOptions.dataLabels);
+                mergedNavSeriesOptions = (0,external_highcharts_src_js_default_namespaceObject.merge)(baseOptions, navSeriesMixin, userNavOptions, baseNavigatorOptions);
                 // Once nav series type is resolved, pick correct pointRange
-                mergedNavSeriesOptions.pointRange = pick(
+                mergedNavSeriesOptions.pointRange = (0,external_highcharts_src_js_default_namespaceObject.pick)(
                 // Strictly set pointRange in options
                 userNavOptions.pointRange, baseNavigatorOptions.pointRange, 
                 // Fallback to default values, e.g. `null` for column
                 Navigator_defaultOptions.plotOptions[mergedNavSeriesOptions.type || 'line']?.pointRange);
                 // Merge data separately. Do a slice to avoid mutating the
                 // navigator options from base series (#4923).
-                const navigatorSeriesData = baseNavigatorOptions.data || userNavOptions.data;
+                const navigatorSeriesData = baseNavigatorOptions.data || userNavOptions.data, navigatorSeriesDataTable = baseNavigatorOptions.dataTable ||
+                    userNavOptions.dataTable;
                 navigator.hasNavigatorData =
-                    navigator.hasNavigatorData || !!navigatorSeriesData;
-                mergedNavSeriesOptions.data = (navigatorSeriesData ||
-                    baseOptions.data?.slice(0));
+                    navigator.hasNavigatorData ||
+                        !!navigatorSeriesData ||
+                        !!navigatorSeriesDataTable;
+                mergedNavSeriesOptions.data =
+                    navigatorSeriesData ||
+                        baseOptions.data?.slice(0);
+                mergedNavSeriesOptions.dataTable =
+                    navigatorSeriesDataTable ||
+                        baseOptions.dataTable;
                 // Update or add the series
                 if (linkedNavSeries && linkedNavSeries.options) {
                     linkedNavSeries.update(mergedNavSeriesOptions, redraw);
                 }
                 else {
                     base.navigatorSeries = chart.initSeries(mergedNavSeriesOptions);
-                    // Set data on initial run with dataSorting enabled (#20318)
-                    chart.setSortedData();
+                    // Trigger setSortedData with dataSorting enabled (#20318)
+                    (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(base.navigatorSeries, 'afterUpdate');
                     base.navigatorSeries.baseSeries = base; // Store ref
                     navigatorSeries.push(base.navigatorSeries);
                 }
@@ -5816,31 +4471,35 @@ class Navigator {
         // If user has defined data (and no base series) or explicitly defined
         // navigator.series as an array, we create these series on top of any
         // base series.
-        if (chartNavigatorSeriesOptions?.data &&
+        if ((chartNavigatorSeriesOptions?.data ||
+            chartNavigatorSeriesOptions?.dataTable) &&
             !(baseSeries && baseSeries.length) ||
-            isArray(chartNavigatorSeriesOptions)) {
+            (0,external_highcharts_src_js_default_namespaceObject.isArray)(chartNavigatorSeriesOptions)) {
+            const colors = chart.options.colors || [];
             navigator.hasNavigatorData = false;
             // Allow navigator.series to be an array
             chartNavigatorSeriesOptions =
-                splat(chartNavigatorSeriesOptions);
+                (0,external_highcharts_src_js_default_namespaceObject.splat)(chartNavigatorSeriesOptions);
             chartNavigatorSeriesOptions.forEach((userSeriesOptions, i) => {
                 navSeriesMixin.name =
                     'Navigator ' + (navigatorSeries.length + 1);
-                mergedNavSeriesOptions = merge(Navigator_defaultOptions.navigator?.series, {
+                mergedNavSeriesOptions = (0,external_highcharts_src_js_default_namespaceObject.merge)(Navigator_defaultOptions.navigator?.series, {
                     // Since we don't have a base series to pull color from,
                     // try to fake it by using color from series with same
                     // index. Otherwise pull from the colors array. We need
                     // an explicit color as otherwise updates will increment
                     // color counter and we'll get a new color for each
                     // update of the nav series.
-                    color: chart.series[i] &&
+                    color: (chart.series[i] &&
                         !chart.series[i].options.isInternal &&
-                        chart.series[i].color ||
-                        chart.options.colors?.[i] ||
-                        chart.options.colors?.[0]
+                        chart.series[i].color) ||
+                        colors[i] ||
+                        colors[0]
                 }, navSeriesMixin, userSeriesOptions);
                 mergedNavSeriesOptions.data = userSeriesOptions.data;
-                if (mergedNavSeriesOptions.data) {
+                mergedNavSeriesOptions.dataTable = userSeriesOptions.dataTable;
+                if (mergedNavSeriesOptions.data ||
+                    mergedNavSeriesOptions.dataTable) {
                     navigator.hasNavigatorData = true;
                     navigatorSeries.push(chart.initSeries(mergedNavSeriesOptions));
                 }
@@ -5854,7 +4513,7 @@ class Navigator {
      * Add data events.
      * For example when main series is updated we need to recalculate extremes
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#addBaseSeriesEvent
      */
     addBaseSeriesEvents() {
@@ -5864,16 +4523,16 @@ class Navigator {
         // Adding this multiple times to the same axis is no problem, as
         // duplicates should be discarded by the browser.
         if (baseSeries[0] && baseSeries[0].xAxis) {
-            baseSeries[0].eventsToUnbind.push(addEvent(baseSeries[0].xAxis, 'foundExtremes', this.modifyBaseAxisExtremes));
+            baseSeries[0].eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(baseSeries[0].xAxis, 'foundExtremes', this.modifyBaseAxisExtremes));
         }
         baseSeries.forEach((base) => {
             // Link base series show/hide to navigator series visibility
-            base.eventsToUnbind.push(addEvent(base, 'show', function () {
+            base.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(base, 'show', function () {
                 if (this.navigatorSeries) {
                     this.navigatorSeries.setVisible(true, false);
                 }
             }));
-            base.eventsToUnbind.push(addEvent(base, 'hide', function () {
+            base.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(base, 'hide', function () {
                 if (this.navigatorSeries) {
                     this.navigatorSeries.setVisible(false, false);
                 }
@@ -5882,17 +4541,17 @@ class Navigator {
             // not adapting to data changes.
             if (this.navigatorOptions.adaptToUpdatedData !== false) {
                 if (base.xAxis) {
-                    base.eventsToUnbind.push(addEvent(base, 'updatedData', this.updatedDataHandler));
+                    base.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(base, 'updatedData', this.updatedDataHandler));
                 }
             }
             // Handle series removal
-            base.eventsToUnbind.push(addEvent(base, 'remove', function () {
+            base.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(base, 'remove', function () {
                 if (baseSeries) {
-                    erase(baseSeries, base); // #21043
+                    (0,external_highcharts_src_js_default_namespaceObject.erase)(baseSeries, base); // #21043
                 }
                 if (this.navigatorSeries && navigator.series) {
-                    erase(navigator.series, this.navigatorSeries);
-                    if (defined(this.navigatorSeries.options)) {
+                    (0,external_highcharts_src_js_default_namespaceObject.erase)(navigator.series, this.navigatorSeries);
+                    if ((0,external_highcharts_src_js_default_namespaceObject.defined)(this.navigatorSeries.options)) {
                         this.navigatorSeries.remove(false);
                     }
                     delete this.navigatorSeries;
@@ -5902,7 +4561,7 @@ class Navigator {
     }
     /**
      * Get minimum from all base series connected to the navigator
-     * @private
+     * @internal
      * @param {number} currentSeriesMin
      *        Minium from the current series
      * @return {number}
@@ -5919,7 +4578,7 @@ class Navigator {
      * extremes should always be the extremes of the union of all series in the
      * chart as well as the navigator series.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#modifyNavigatorAxisExtremes
      */
     modifyNavigatorAxisExtremes() {
@@ -5937,11 +4596,11 @@ class Navigator {
     /**
      * Hook to modify the base axis extremes with information from the Navigator
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#modifyBaseAxisExtremes
      */
     modifyBaseAxisExtremes() {
-        const baseXAxis = this, navigator = baseXAxis.chart.navigator, baseExtremes = baseXAxis.getExtremes(), baseMin = baseExtremes.min, baseMax = baseExtremes.max, baseDataMin = baseExtremes.dataMin, baseDataMax = baseExtremes.dataMax, range = baseMax - baseMin, stickToMin = navigator?.stickToMin, stickToMax = navigator?.stickToMax, overscroll = pick(baseXAxis.ordinal?.convertOverscroll(baseXAxis.options.overscroll), 0), navigatorSeries = navigator.series && navigator.series[0], hasSetExtremes = !!baseXAxis.setExtremes, 
+        const baseXAxis = this, navigator = baseXAxis.chart.navigator, baseExtremes = baseXAxis.getExtremes(), baseMin = baseExtremes.min, baseMax = baseExtremes.max, baseDataMin = baseExtremes.dataMin, baseDataMax = baseExtremes.dataMax, range = baseMax - baseMin, stickToMin = navigator?.stickToMin, stickToMax = navigator?.stickToMax, overscroll = (0,external_highcharts_src_js_default_namespaceObject.pick)(baseXAxis.ordinal?.convertOverscroll(baseXAxis.options.overscroll), 0), navigatorSeries = navigator.series && navigator.series[0], hasSetExtremes = !!baseXAxis.setExtremes, 
         // When the extremes have been set by range selector button, don't
         // stick to min or max. The range selector buttons will handle the
         // extremes. (#5489)
@@ -5969,7 +4628,7 @@ class Navigator {
             }
             // Update the extremes
             if (hasSetExtremes && (stickToMin || stickToMax)) {
-                if (isNumber(newMin)) {
+                if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(newMin)) {
                     baseXAxis.min = baseXAxis.userMin = newMin;
                     baseXAxis.max = baseXAxis.userMax = newMax;
                 }
@@ -5984,7 +4643,7 @@ class Navigator {
      * navigator series must reflect it. This is called from the Chart.redraw
      * function before axis and series extremes are computed.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#updateDataHandler
      */
     updatedDataHandler() {
@@ -5993,25 +4652,25 @@ class Navigator {
             Math.round(navigator.zoomedMax) >= Math.round(navigator.size);
         // If the scrollbar is scrolled all the way to the right, keep right as
         // new data comes in, unless user set navigator.stickToMax to false.
-        navigator.stickToMax = pick(this.chart.options.navigator &&
+        navigator.stickToMax = (0,external_highcharts_src_js_default_namespaceObject.pick)(this.chart.options.navigator &&
             this.chart.options.navigator.stickToMax, shouldStickToMax);
         navigator.stickToMin = navigator.shouldStickToMin(baseSeries, navigator);
         // Set the navigator series data to the new data of the base series
         if (navigatorSeries && !navigator.hasNavigatorData) {
             navigatorSeries.options.pointStart = baseSeries.getColumn('x')[0];
-            navigatorSeries.setData(baseSeries.options.data, false, void 0, false); // #5414
+            navigatorSeries.setData(baseSeries.options.data || baseSeries.options.dataTable, false, void 0, false); // #5414
         }
     }
     /**
      * Detect if the zoomed area should stick to the minimum, #14742.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#shouldStickToMin
      */
     shouldStickToMin(baseSeries, navigator) {
         const xDataMin = navigator.getBaseSeriesMin(baseSeries.getColumn('x')[0]), xAxis = baseSeries.xAxis, max = xAxis.max, min = xAxis.min, range = xAxis.options.range;
         let stickToMin = true;
-        if (isNumber(max) && isNumber(min)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(max) && (0,external_highcharts_src_js_default_namespaceObject.isNumber)(min)) {
             // If range declared, stick to the minimum only if the range
             // is smaller than the data set range.
             if (range && max - xDataMin > 0) {
@@ -6031,7 +4690,7 @@ class Navigator {
     /**
      * Add chart events, like redrawing navigator, when chart requires that.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#addChartEvents
      */
     addChartEvents() {
@@ -6041,7 +4700,7 @@ class Navigator {
         this.eventsToUnbind.push(
         // Move the scrollbar after redraw, like after data updata even if
         // axes don't redraw
-        addEvent(this.chart, 'redraw', function () {
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(this.chart, 'redraw', function () {
             const navigator = this.navigator, xAxis = navigator && (navigator.baseSeries &&
                 navigator.baseSeries[0] &&
                 navigator.baseSeries[0].xAxis ||
@@ -6051,7 +4710,7 @@ class Navigator {
             }
         }), 
         // Make room for the navigator, can be placed around the chart:
-        addEvent(this.chart, 'getMargins', function () {
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(this.chart, 'getMargins', function () {
             const chart = this, navigator = chart.navigator;
             let marginName = navigator.opposite ?
                 'plotTop' : 'marginBottom';
@@ -6063,26 +4722,26 @@ class Navigator {
                 navigator.height +
                     (this.scrollbar?.options.margin || 0) +
                     navigator.scrollbarHeight : 0) + (navigator.navigatorOptions.margin || 0);
-        }), addEvent(this, 'setRange', function (e) {
+        }), (0,external_highcharts_src_js_default_namespaceObject.addEvent)(this, 'setRange', function (e) {
             this.chart.xAxis[0].setExtremes(e.min, e.max, e.redraw, e.animation, e.eventArguments);
         }));
     }
     /**
      * Destroys allocated elements.
      *
-     * @private
+     * @internal
      * @function Highcharts.Navigator#destroy
      */
     destroy() {
         // Disconnect events added in addEvents
         this.removeEvents();
         if (this.xAxis) {
-            erase(this.chart.xAxis, this.xAxis);
-            erase(this.chart.axes, this.xAxis);
+            (0,external_highcharts_src_js_default_namespaceObject.erase)(this.chart.xAxis, this.xAxis);
+            (0,external_highcharts_src_js_default_namespaceObject.erase)(this.chart.axes, this.xAxis);
         }
         if (this.yAxis) {
-            erase(this.chart.yAxis, this.yAxis);
-            erase(this.chart.axes, this.yAxis);
+            (0,external_highcharts_src_js_default_namespaceObject.erase)(this.chart.yAxis, this.yAxis);
+            (0,external_highcharts_src_js_default_namespaceObject.erase)(this.chart.axes, this.yAxis);
         }
         // Destroy series
         (this.series || []).forEach((s) => {
@@ -6103,7 +4762,7 @@ class Navigator {
         });
         // Destroy elements in collection
         [this.handles].forEach((coll) => {
-            destroyObjectProperties(coll);
+            (0,external_highcharts_src_js_default_namespaceObject.destroyObjectProperties)(coll);
         });
         // Clean up linked series
         this.baseSeries.forEach((s) => {
@@ -6117,6 +4776,7 @@ class Navigator {
  *  Default Export
  *
  * */
+/** @internal */
 /* harmony default export */ const Navigator_Navigator = (Navigator);
 
 ;// ./code/es-modules/Data/ColumnUtils.js
@@ -6124,8 +4784,9 @@ class Navigator {
  *
  *  (c) 2020-2026 Highsoft AS
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  *  Authors:
@@ -6256,8 +4917,9 @@ const ColumnUtils = {
  *
  *  (c) 2009-2026 Highsoft AS
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  *  Authors:
@@ -6281,49 +4943,42 @@ const { setLength: DataTableCore_setLength, splice: DataTableCore_splice } = Dat
  * to add, remove, and manipulate columns and rows, as well as to retrieve data
  * from specific cells.
  *
+ * Highcharts allows passing a `DataTable` or a configuration object for a data
+ * table in the `dataTable` property, either chart-level
+ * [dataTable](https://api.highcharts.com/highcharts/dataTable) or as
+ * [series.dataTable](https://api.highcharts.com/highcharts/series.dataTable).
+ * The `DataTable` is then used as a source for the series data points, mapped
+ * by the `series.dataMapping` option.
+ *
+ * After chart instantiation, the data table can be accessed from the series as
+ * `series.dataTable`. CRUD operations on the data table will be reflected in
+ * the chart.
+ *
+ * @example
+ * const dataTable = new Highcharts.DataTable({
+ *   columns: {
+ *     year: [2020, 2021, 2022, 2023],
+ *     cost: [11, 13, 12, 14],
+ *     revenue: [12, 15, 14, 18]
+ *   }
+ * });
+ *
  * @class
  * @name Highcharts.DataTable
  *
- * @param {Highcharts.DataTableOptions} [options]
+ * @param {Highcharts.DataTableOptionsObject} [options]
  * Options to initialize the new DataTable instance.
  */
 class DataTableCore {
-    /**
-     * Constructs an instance of the DataTable class.
-     *
-     * @example
-     * const dataTable = new Highcharts.DataTableCore({
-     *   columns: {
-     *     year: [2020, 2021, 2022, 2023],
-     *     cost: [11, 13, 12, 14],
-     *     revenue: [12, 15, 14, 18]
-     *   }
-     * });
-
-     *
-     * @param {Highcharts.DataTableOptions} [options]
-     * Options to initialize the new DataTable instance.
-     */
     constructor(options = {}) {
-        /**
-         * Whether the ID was automatic generated or given in the constructor.
-         *
-         * @name Highcharts.DataTable#autoId
-         * @type {boolean}
-         */
+        this.isDataTable = true;
         this.autoId = !options.id;
         this.columns = {};
-        /**
-         * ID of the table for identification purposes.
-         *
-         * @name Highcharts.DataTable#id
-         * @type {string}
-         */
         this.id = (options.id || (0,external_highcharts_src_js_default_namespaceObject.uniqueKey)());
         this.rowCount = 0;
         this.versionTag = (0,external_highcharts_src_js_default_namespaceObject.uniqueKey)();
         let rowCount = 0;
-        objectEach(options.columns || {}, (column, columnId) => {
+        (0,external_highcharts_src_js_default_namespaceObject.objectEach)(options.columns || {}, (column, columnId) => {
             this.columns[columnId] = column.slice();
             rowCount = Math.max(rowCount, column.length);
         });
@@ -6343,7 +4998,7 @@ class DataTableCore {
      */
     applyRowCount(rowCount) {
         this.rowCount = rowCount;
-        objectEach(this.columns, (column, columnId) => {
+        (0,external_highcharts_src_js_default_namespaceObject.objectEach)(this.columns, (column, columnId) => {
             if (column.length !== rowCount) {
                 this.columns[columnId] = DataTableCore_setLength(column, rowCount);
             }
@@ -6352,6 +5007,13 @@ class DataTableCore {
     /**
      * Delete rows. Simplified version of the full
      * `DataTable.deleteRows` method.
+     *
+     * @sample highcharts/datatable/live-chart/
+     *       Add and delete rows in a live chart
+     * @sample highcharts/datatable/shared-with-grid/
+     *       Chart with data table CRUD operations
+     *
+     * @function Highcharts.DataTable#deleteRows
      *
      * @param {number} rowIndex
      * The start row index
@@ -6366,22 +5028,24 @@ class DataTableCore {
     deleteRows(rowIndex, rowCount = 1) {
         if (rowCount > 0 && rowIndex < this.rowCount) {
             let length = 0;
-            objectEach(this.columns, (column, columnId) => {
+            (0,external_highcharts_src_js_default_namespaceObject.objectEach)(this.columns, (column, columnId) => {
                 this.columns[columnId] =
                     DataTableCore_splice(column, rowIndex, rowCount).array;
                 length = column.length;
             });
             this.rowCount = length;
         }
-        fireEvent(this, 'afterDeleteRows', { rowIndex, rowCount });
+        (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this, 'afterDeleteRows', { rowIndex, rowCount });
         this.versionTag = (0,external_highcharts_src_js_default_namespaceObject.uniqueKey)();
     }
     /**
-     * Fetches the given column by the canonical column name. Simplified version
+     * Fetches the given column by the canonical column ID. Simplified version
      * of the full `DataTable.getRow` method, always returning by reference.
      *
+     * @function Highcharts.DataTable#setColumn
+     *
      * @param {string} columnId
-     * Name of the column to get.
+     * ID of the column to get.
      *
      * @return {Highcharts.DataTableColumn|undefined}
      * A copy of the column, or `undefined` if not found.
@@ -6394,6 +5058,8 @@ class DataTableCore {
     /**
      * Retrieves all or the given columns. Simplified version of the full
      * `DataTable.getColumns` method, always returning by reference.
+     *
+     * @function Highcharts.DataTable#getColumns
      *
      * @param {Array<string>} [columnIds]
      * Column ids to retrieve.
@@ -6413,20 +5079,29 @@ class DataTableCore {
     /**
      * Retrieves the row at a given index.
      *
+     * @function Highcharts.DataTable#getRowObject
+     *
      * @param {number} rowIndex
      * Row index to retrieve. First row has index 0.
      *
-     * @param {Array<string>} [columnIds]
+     * @param {Array<string>} [columnNames]
      * Column names to retrieve.
      *
      * @return {Record<string, number|string|undefined>|undefined}
      * Returns the row values, or `undefined` if not found.
      */
-    getRow(rowIndex, columnIds) {
-        return (columnIds || Object.keys(this.columns)).map((key) => this.columns[key]?.[rowIndex]);
+    getRowObject(rowIndex, columnNames) {
+        const row = {}, columns = this.columns;
+        columnNames ?? (columnNames = Object.keys(this.columns));
+        for (const columnName of columnNames) {
+            row[columnName] = columns[columnName]?.[rowIndex];
+        }
+        return row;
     }
     /**
      * Sets cell values for a column. Will insert a new column, if not found.
+     *
+     * @function Highcharts.DataTable#setColumn
      *
      * @param {string} columnId
      * Column name to set.
@@ -6448,15 +5123,20 @@ class DataTableCore {
     }
     /**
      * Sets cell values for multiple columns. Will insert new columns, if not
-     * found. Simplified version of the full `DataTableCore.setColumns`, limited
+     * found. Simplified version of the full `DataTable.setColumns`, limited
      * to full replacement of the columns (undefined `rowIndex`).
+     *
+     * @sample highcharts/datatable/shared-with-grid/
+     *       Chart with data table CRUD operations
+     *
+     * @function Highcharts.DataTable#setColumns
      *
      * @param {Highcharts.DataTableColumnCollection} columns
      * Columns as a collection, where the keys are the column names.
      *
      * @param {number} [rowIndex]
-     * Index of the first row to change. Ignored in the `DataTableCore`, as it
-     * always replaces the full column.
+     * Index of the first row to change. Ignored in the simplified `DataTable`,
+     * as it always replaces the full column.
      *
      * @param {Record<string, (boolean|number|string|null|undefined)>} [eventDetail]
      * Custom information for pending events.
@@ -6466,13 +5146,13 @@ class DataTableCore {
      */
     setColumns(columns, rowIndex, eventDetail) {
         let rowCount = this.rowCount;
-        objectEach(columns, (column, columnId) => {
+        (0,external_highcharts_src_js_default_namespaceObject.objectEach)(columns, (column, columnId) => {
             this.columns[columnId] = column.slice();
             rowCount = column.length;
         });
         this.applyRowCount(rowCount);
         if (!eventDetail?.silent) {
-            fireEvent(this, 'afterSetColumns');
+            (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this, 'afterSetColumns');
             this.versionTag = (0,external_highcharts_src_js_default_namespaceObject.uniqueKey)();
         }
     }
@@ -6480,6 +5160,15 @@ class DataTableCore {
      * Sets cell values of a row. Will insert a new row if no index was
      * provided, or if the index is higher than the total number of table rows.
      * A simplified version of the full `DateTable.setRow`, limited to objects.
+     *
+     * @sample highcharts/datatable/live-chart/
+     *       Add and delete rows in a live chart
+     * @sample stock/datatable/live-candlestick/
+     *       Live candlestick
+     * @sample highcharts/datatable/shared-with-grid/
+     *       Chart with data table CRUD operations
+     *
+     * @function Highcharts.DataTable#setRow
      *
      * @param {Record<string, number|string|undefined>} row
      * Cell values to set.
@@ -6496,34 +5185,33 @@ class DataTableCore {
      * @emits #afterSetRows
      */
     setRow(row, rowIndex = this.rowCount, insert, eventDetail) {
+        var _a;
         const { columns } = this, indexRowCount = insert ? this.rowCount + 1 : rowIndex + 1, rowKeys = Object.keys(row);
         if (eventDetail?.addColumns !== false) {
             for (let i = 0, iEnd = rowKeys.length; i < iEnd; i++) {
-                const key = rowKeys[i];
-                if (!columns[key]) {
-                    columns[key] = [];
-                }
+                columns[_a = rowKeys[i]] || (columns[_a] = new Array(this.rowCount));
             }
         }
-        objectEach(columns, (column, columnId) => {
-            if (!column && eventDetail?.addColumns !== false) {
-                column = new Array(indexRowCount);
-            }
+        (0,external_highcharts_src_js_default_namespaceObject.objectEach)(columns, (column, columnId) => {
             if (column) {
                 if (insert) {
-                    column = DataTableCore_splice(column, rowIndex, 0, true, [row[columnId] ?? null]).array;
+                    column = DataTableCore_splice(column, rowIndex, 0, true, [row[columnId]]).array;
                 }
                 else {
-                    column[rowIndex] = row[columnId] ?? null;
+                    column[rowIndex] =
+                        // Preserve explicit null and undefined but fall back
+                        // to existing value if the new row does not have the
+                        // key
+                        columnId in row ?
+                            row[columnId] :
+                            column[rowIndex];
                 }
                 columns[columnId] = column;
             }
         });
-        if (indexRowCount > this.rowCount) {
-            this.applyRowCount(indexRowCount);
-        }
+        this.applyRowCount(Math.max(indexRowCount, this.rowCount));
         if (!eventDetail?.silent) {
-            fireEvent(this, 'afterSetRows');
+            (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this, 'afterSetRows', { rowIndex });
             this.versionTag = (0,external_highcharts_src_js_default_namespaceObject.uniqueKey)();
         }
     }
@@ -6531,7 +5219,7 @@ class DataTableCore {
      * Returns the modified (clone) or the original data table if the modified
      * one does not exist.
      *
-     * @return {Highcharts.DataTableCore}
+     * @return {Highcharts.DataTable}
      * The modified (clone) or the original data table.
      */
     getModified() {
@@ -6550,30 +5238,45 @@ class DataTableCore {
  *
  * */
 /**
+ * A collection of data table columns defined by a object where the key is the
+ * column ID and the value is an array of the column values. Typed arrays are
+ * supported.
+ *
+ * @type {Highcharts.DataTableColumnCollection|undefined}
+ * @apioption dataTable.columns
+ */
+/**
+ * Custom ID to identify the new DataTable instance.
+ *
+ * @type {string|undefined}
+ * @apioption dataTable.id
+ */
+/**
  * A typed array.
  * @typedef {Int8Array|Uint8Array|Uint8ClampedArray|Int16Array|Uint16Array|Int32Array|Uint32Array|Float32Array|Float64Array} Highcharts.TypedArray
- * //**
- * A column of values in a data table.
- * @typedef {Array<boolean|null|number|string|undefined>|Highcharts.TypedArray} Highcharts.DataTableColumn
  */ /**
+* A column of values in a data table.
+* @typedef {Array<boolean|null|number|string|undefined>|Highcharts.TypedArray} Highcharts.DataTableColumn
+*/ /**
 * A collection of data table columns defined by a object where the key is the
-* column name and the value is an array of the column values.
+* column ID and the value is an array of the column values. Typed arrays are
+* supported.
 * @typedef {Record<string, Highcharts.DataTableColumn>} Highcharts.DataTableColumnCollection
 */
 /**
  * Options for the `DataTable` or `DataTableCore` classes.
- * @interface Highcharts.DataTableOptions
+ * @interface Highcharts.DataTableOptionsObject
  */ /**
 * The column options for the data table. The columns are defined by an object
 * where the key is the column ID and the value is an array of the column
 * values.
 *
-* @name Highcharts.DataTableOptions.columns
+* @name Highcharts.DataTableOptionsObject.columns
 * @type {Highcharts.DataTableColumnCollection|undefined}
 */ /**
 * Custom ID to identify the new DataTable instance.
 *
-* @name Highcharts.DataTableOptions.id
+* @name Highcharts.DataTableOptionsObject.id
 * @type {string|undefined}
 */
 (''); // Keeps doclets above in JS file
@@ -6584,8 +5287,9 @@ class DataTableCore {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -6629,13 +5333,13 @@ var OrdinalAxis;
             axisProto.val2lin = val2lin;
             // Record this to prevent overwriting by broken-axis module (#5979)
             axisProto.ordinal2lin = axisProto.val2lin;
-            addEvent(AxisClass, 'afterInit', onAxisAfterInit);
-            addEvent(AxisClass, 'foundExtremes', onAxisFoundExtremes);
-            addEvent(AxisClass, 'afterSetScale', onAxisAfterSetScale);
-            addEvent(AxisClass, 'initialAxisTranslation', onAxisInitialAxisTranslation);
-            addEvent(ChartClass, 'pan', onChartPan);
-            addEvent(ChartClass, 'touchpan', onChartPan);
-            addEvent(SeriesClass, 'updatedData', onSeriesUpdatedData);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'afterInit', onAxisAfterInit);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'foundExtremes', onAxisFoundExtremes);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'afterSetScale', onAxisAfterSetScale);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'initialAxisTranslation', onAxisInitialAxisTranslation);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'pan', onChartPan);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'touchpan', onChartPan);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'updatedData', onSeriesUpdatedData);
         }
         return AxisClass;
     }
@@ -6650,12 +5354,12 @@ var OrdinalAxis;
      * tick position logic.
      * @internal
      */
-    function getTimeTicks(normalizedInterval, min, max, startOfWeek, positions = [], closestDistance = 0, findHigherRanks) {
-        const higherRanks = {}, tickPixelIntervalOption = this.options.tickPixelInterval, time = this.chart.time, 
+    function getTimeTicks(normalizedInterval, min, max, startOfWeek, positions = [], closestDistance = 0, findBoundaryTicks) {
+        const boundaryTicks = {}, tickPixelIntervalOption = this.options.tickPixelInterval, time = this.chart.time, 
         // Record all the start positions of a segment, to use when
         // deciding what's a gap in the data.
         segmentStarts = [];
-        let end, segmentPositions, hasCrossedHigherRank, info, outsideMax, start = 0, groupPositions = [], lastGroupPosition = -Number.MAX_VALUE;
+        let end, segmentPositions, hasCrossedBoundary, info, outsideMax, start = 0, groupPositions = [], lastGroupPosition = -Number.MAX_VALUE;
         // The positions are not always defined, for example for ordinal
         // positions when data has regular interval (#1557, #2090)
         if ((!this.options.ordinal && !this.options.breaks) ||
@@ -6706,24 +5410,24 @@ var OrdinalAxis;
         // the same for all segments.
         if (segmentPositions) {
             info = segmentPositions.info;
-            // Optionally identify ticks with higher rank, for example
+            // Optionally identify ticks with boundary, for example
             // when the ticks have crossed midnight.
-            if (findHigherRanks && info.unitRange <= external_highcharts_src_js_default_namespaceObject.timeUnits.hour) {
+            if (findBoundaryTicks && info.unitRange <= external_highcharts_src_js_default_namespaceObject.timeUnits.hour) {
                 end = groupPositions.length - 1;
                 // Compare points two by two
                 for (start = 1; start < end; start++) {
                     if (time.dateFormat('%d', groupPositions[start]) !==
                         time.dateFormat('%d', groupPositions[start - 1])) {
-                        higherRanks[groupPositions[start]] = 'day';
-                        hasCrossedHigherRank = true;
+                        boundaryTicks[groupPositions[start]] = 'day';
+                        hasCrossedBoundary = true;
                     }
                 }
                 // If the complete array has crossed midnight, we want
-                // to mark the first positions also as higher rank
-                if (hasCrossedHigherRank) {
-                    higherRanks[groupPositions[0]] = 'day';
+                // to mark the first positions also as boundary
+                if (hasCrossedBoundary) {
+                    boundaryTicks[groupPositions[0]] = 'day';
                 }
-                info.higherRanks = higherRanks;
+                info.boundaryTicks = boundaryTicks;
             }
             // Save the info
             info.segmentStarts = segmentStarts;
@@ -6735,7 +5439,7 @@ var OrdinalAxis;
         // Don't show ticks within a gap in the ordinal axis, where the
         // space between two points is greater than a portion of the tick
         // pixel interval
-        if (findHigherRanks && defined(tickPixelIntervalOption)) {
+        if (findBoundaryTicks && (0,external_highcharts_src_js_default_namespaceObject.defined)(tickPixelIntervalOption)) {
             const length = groupPositions.length, translatedArr = [], distances = [];
             let itemToRemove, translated, lastTranslated, medianDistance, distance, i = length;
             // Find median pixel distance in order to keep a reasonably even
@@ -6767,10 +5471,10 @@ var OrdinalAxis;
                 if (lastTranslated &&
                     distance < tickPixelIntervalOption * 0.8 &&
                     (medianDistance === null || distance < medianDistance * 0.8)) {
-                    // Is this a higher ranked position with a normal
+                    // Is this a boundary position with a normal
                     // position to the right?
-                    if (higherRanks[groupPositions[i]] &&
-                        !higherRanks[groupPositions[i + 1]]) {
+                    if (boundaryTicks[groupPositions[i]] &&
+                        !boundaryTicks[groupPositions[i + 1]]) {
                         // Yes: remove the lower ranked neighbor to the right
                         itemToRemove = i + 1;
                         lastTranslated = translated; // #709
@@ -6841,8 +5545,8 @@ var OrdinalAxis;
         // getExtendedPositions might return undefined.
         if (positions?.length) {
             // Convert back from modified value to pixels. // #15970
-            const pixelVal = correctFloat((val - localMin) * localA +
-                axis.minPixelPadding), index = correctFloat(ordinal.getIndexOfPoint(pixelVal, positions)), mantissa = correctFloat(index % 1);
+            const pixelVal = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)((val - localMin) * localA +
+                axis.minPixelPadding), index = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(ordinal.getIndexOfPoint(pixelVal, positions)), mantissa = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)(index % 1);
             // Check if the index is inside position array. If true,
             // read/approximate value for that exact index.
             if (index >= 0 && index <= positions.length - 1) {
@@ -6878,17 +5582,17 @@ var OrdinalAxis;
     function onAxisFoundExtremes() {
         const axis = this, { eventArgs, options } = axis;
         if (axis.isXAxis &&
-            defined(options.overscroll) &&
+            (0,external_highcharts_src_js_default_namespaceObject.defined)(options.overscroll) &&
             options.overscroll !== 0 &&
-            isNumber(axis.max) &&
-            isNumber(axis.min)) {
+            (0,external_highcharts_src_js_default_namespaceObject.isNumber)(axis.max) &&
+            (0,external_highcharts_src_js_default_namespaceObject.isNumber)(axis.min)) {
             if (axis.options.ordinal && !axis.ordinal.originalOrdinalRange) {
                 // Calculate the original ordinal range
                 axis.ordinal.getExtendedPositions(false);
             }
             // #22334
-            axis.isFullRange = (defined(axis.dataMin) &&
-                defined(axis.dataMax) &&
+            axis.isFullRange = ((0,external_highcharts_src_js_default_namespaceObject.defined)(axis.dataMin) &&
+                (0,external_highcharts_src_js_default_namespaceObject.defined)(axis.dataMax) &&
                 axis.max - axis.min === axis.dataMax - axis.dataMin);
             if (axis.max === axis.dataMax &&
                 (
@@ -6902,7 +5606,7 @@ var OrdinalAxis;
                 axis.max += overscroll;
                 // Live data and buttons require translation for the min:
                 if (!axis.isInternal &&
-                    defined(axis.userMin) &&
+                    (0,external_highcharts_src_js_default_namespaceObject.defined)(axis.userMin) &&
                     eventArgs?.trigger !== 'mousewheel') {
                     axis.min += overscroll;
                 }
@@ -7005,7 +5709,7 @@ var OrdinalAxis;
                     xAxis.setExtremes(trimmedRange.min, trimmedRange.max, true, false, { trigger: 'pan' });
                 }
                 chart.mouseDownX = chartX; // Set new reference for next run
-                css(chart.container, { cursor: 'move' });
+                (0,external_highcharts_src_js_default_namespaceObject.css)(chart.container, { cursor: 'move' });
             }
         }
         else {
@@ -7013,7 +5717,7 @@ var OrdinalAxis;
         }
         // Revert to the linear chart.pan version
         if (runBase || (panning && /y/.test(panning.type))) {
-            if (overscroll && isNumber(xAxis.dataMax)) {
+            if (overscroll && (0,external_highcharts_src_js_default_namespaceObject.isNumber)(xAxis.dataMax)) {
                 xAxis.max = xAxis.dataMax + overscroll;
             }
         }
@@ -7173,7 +5877,7 @@ var OrdinalAxis;
                             // Without a custom function it is sorted as strings
                             return a - b;
                         });
-                        overscrollPointsRange = Math.min(overscrollPointsRange, pick(
+                        overscrollPointsRange = Math.min(overscrollPointsRange, (0,external_highcharts_src_js_default_namespaceObject.pick)(
                         // Check for a single-point series:
                         series.closestPointRange, overscrollPointsRange));
                         if (len) {
@@ -7276,7 +5980,7 @@ var OrdinalAxis;
                     ordinal.offset = min - (minIndex * slope);
                 }
                 else {
-                    ordinal.overscrollPointsRange = pick(axis.closestPointRange, ordinal.overscrollPointsRange);
+                    ordinal.overscrollPointsRange = (0,external_highcharts_src_js_default_namespaceObject.pick)(axis.closestPointRange, ordinal.overscrollPointsRange);
                     ordinal.positions = axis.ordinal.slope = ordinal.offset =
                         void 0;
                 }
@@ -7379,12 +6083,17 @@ var OrdinalAxis;
                         groupPixelWidth: series.groupPixelWidth,
                         destroyGroupedData: (external_highcharts_src_js_default_default()).noop,
                         getColumn: series.getColumn,
+                        getX: (external_highcharts_src_js_default_default()).noop,
                         applyGrouping: series.applyGrouping,
                         getProcessedData: series.getProcessedData,
                         reserveSpace: series.reserveSpace,
                         visible: series.visible
                     };
-                    const xData = series.getColumn('x').concat(withOverscroll ?
+                    const xColumn = series.getColumn('x'), xData = (
+                    // No concat on TypedArrays, use Array.from
+                    Array.isArray(xColumn) ?
+                        xColumn :
+                        Array.from(xColumn)).concat(withOverscroll ?
                         ordinal.getOverscrollPositions() :
                         []);
                     fakeSeries.dataTable = new Data_DataTableCore({
@@ -7501,7 +6210,7 @@ var OrdinalAxis;
                 (ordinal.slope ||
                     axis.closestPointRange ||
                     ordinal.overscrollPointsRange);
-            const shiftIndex = correctFloat((pixelVal - minX) / ordinalPointPixelInterval);
+            const shiftIndex = (0,external_highcharts_src_js_default_namespaceObject.correctFloat)((pixelVal - minX) / ordinalPointPixelInterval);
             return indexOfMin + shiftIndex;
         }
         /**
@@ -7516,7 +6225,7 @@ var OrdinalAxis;
         getOverscrollPositions() {
             const ordinal = this, axis = ordinal.axis, extraRange = ordinal.convertOverscroll(axis.options.overscroll), distance = ordinal.overscrollPointsRange, positions = [];
             let max = axis.dataMax;
-            if (defined(distance)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(distance)) {
                 // Max + pointRange because we need to scroll to the last
                 while (max < axis.dataMax + extraRange) {
                     max += distance;
@@ -7564,15 +6273,15 @@ var OrdinalAxis;
          */
         convertOverscroll(overscroll = 0) {
             const ordinal = this, axis = ordinal.axis, calculateOverscroll = function (overscrollPercentage) {
-                return pick(ordinal.originalOrdinalRange, defined(axis.dataMax) && defined(axis.dataMin) ?
+                return (0,external_highcharts_src_js_default_namespaceObject.pick)(ordinal.originalOrdinalRange, (0,external_highcharts_src_js_default_namespaceObject.defined)(axis.dataMax) && (0,external_highcharts_src_js_default_namespaceObject.defined)(axis.dataMin) ?
                     axis.dataMax - axis.dataMin : 0) * overscrollPercentage;
             };
-            if (isString(overscroll)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.isString)(overscroll)) {
                 const overscrollValue = parseInt(overscroll, 10);
                 // #22334
                 if (axis.isFullRange === false &&
-                    isNumber(axis.min) &&
-                    isNumber(axis.max)) {
+                    (0,external_highcharts_src_js_default_namespaceObject.isNumber)(axis.min) &&
+                    (0,external_highcharts_src_js_default_namespaceObject.isNumber)(axis.max)) {
                     this.originalOrdinalRange = axis.max - axis.min;
                 }
                 if (/%$/.test(overscroll)) {
@@ -7609,8 +6318,9 @@ var OrdinalAxis;
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -7952,7 +6662,7 @@ const rangeSelector = {
      * Deprecated. The height of the range selector. Currently it is
      * calculated dynamically.
      *
-     * @deprecated
+     * @deprecated 6.0.0
      * @type  {number|undefined}
      * @since 2.1.9
      */
@@ -8128,7 +6838,7 @@ const rangeSelector = {
      */
     inputStyle: {
         /** @ignore */
-        color: "#334eff" /* Palette.highlightColor80 */,
+        color: 'var(--highcharts-highlight-color-80)',
         /** @ignore */
         cursor: 'pointer',
         /** @ignore */
@@ -8147,7 +6857,7 @@ const rangeSelector = {
      */
     labelStyle: {
         /** @ignore */
-        color: "#666666" /* Palette.neutralColor60 */,
+        color: 'var(--highcharts-neutral-color-60)',
         /** @ignore */
         fontSize: '0.8em'
     }
@@ -8157,10 +6867,12 @@ const rangeSelector = {
  *  Default Export
  *
  * */
+/** @internal */
 const RangeSelectorDefaults = {
     lang,
     rangeSelector
 };
+/** @internal */
 /* harmony default export */ const RangeSelector_RangeSelectorDefaults = (RangeSelectorDefaults);
 
 ;// ./code/es-modules/Stock/RangeSelector/RangeSelectorComposition.js
@@ -8169,8 +6881,9 @@ const RangeSelectorDefaults = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -8204,7 +6917,7 @@ let RangeSelectorConstructor;
  * selected range is a multiple of months or years, it is compensated for
  * various month lengths.
  *
- * @private
+ * @internal
  * @function Highcharts.Axis#minFromRange
  * @return {number|undefined}
  *         The new minimum value.
@@ -8237,7 +6950,7 @@ function axisMinFromRange() {
         return d - base;
     };
     let min, range;
-    if (isNumber(rangeOptions)) {
+    if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(rangeOptions)) {
         min = max - rangeOptions;
         range = rangeOptions;
     }
@@ -8248,8 +6961,8 @@ function axisMinFromRange() {
             this.chart.setFixedRange(max - min);
         }
     }
-    const dataMin = pick(this.dataMin, Number.MIN_VALUE);
-    if (!isNumber(min)) {
+    const dataMin = (0,external_highcharts_src_js_default_namespaceObject.pick)(this.dataMin, Number.MIN_VALUE);
+    if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(min)) {
         min = dataMin;
     }
     if (min <= dataMin) {
@@ -8257,47 +6970,43 @@ function axisMinFromRange() {
         if (typeof range === 'undefined') { // #4501
             range = getTrueRange(min, rangeOptions.count);
         }
-        this.newMax = Math.min(min + range, pick(this.dataMax, Number.MAX_VALUE));
+        this.newMax = Math.min(min + range, (0,external_highcharts_src_js_default_namespaceObject.pick)(this.dataMax, Number.MAX_VALUE));
     }
-    if (!isNumber(max)) {
+    if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(max)) {
         min = void 0;
     }
-    else if (!isNumber(rangeOptions) &&
+    else if (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(rangeOptions) &&
         rangeOptions &&
         rangeOptions._offsetMin) {
         min += rangeOptions._offsetMin;
     }
     return min;
 }
-/**
- * @private
- */
+/** @internal */
 function updateRangeSelectorButtons() {
     this.rangeSelector?.redrawElements();
 }
-/**
- * @private
- */
+/** @internal */
 function RangeSelectorComposition_compose(AxisClass, ChartClass, RangeSelectorClass) {
     RangeSelectorConstructor = RangeSelectorClass;
-    if (pushUnique(RangeSelectorComposition_composed, 'RangeSelector')) {
+    if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(RangeSelectorComposition_composed, 'RangeSelector')) {
         const chartProto = ChartClass.prototype;
         AxisClass.prototype.minFromRange = axisMinFromRange;
-        addEvent(ChartClass, 'afterGetContainer', createRangeSelector);
-        addEvent(ChartClass, 'beforeRender', RangeSelectorComposition_onChartBeforeRender);
-        addEvent(ChartClass, 'destroy', onChartDestroy);
-        addEvent(ChartClass, 'getMargins', onChartGetMargins);
-        addEvent(ChartClass, 'redraw', redrawRangeSelector);
-        addEvent(ChartClass, 'update', RangeSelectorComposition_onChartUpdate);
-        addEvent(ChartClass, 'beforeRedraw', updateRangeSelectorButtons);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'afterGetContainer', createRangeSelector);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'beforeRender', RangeSelectorComposition_onChartBeforeRender);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'destroy', onChartDestroy);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'getMargins', onChartGetMargins);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'redraw', redrawRangeSelector);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'update', RangeSelectorComposition_onChartUpdate);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(ChartClass, 'beforeRedraw', updateRangeSelectorButtons);
         chartProto.callbacks.push(redrawRangeSelector);
-        extend(RangeSelectorComposition_defaultOptions, { rangeSelector: RangeSelector_RangeSelectorDefaults.rangeSelector });
-        extend(RangeSelectorComposition_defaultOptions.lang, RangeSelector_RangeSelectorDefaults.lang);
+        (0,external_highcharts_src_js_default_namespaceObject.extend)(RangeSelectorComposition_defaultOptions, { rangeSelector: RangeSelector_RangeSelectorDefaults.rangeSelector });
+        (0,external_highcharts_src_js_default_namespaceObject.extend)(RangeSelectorComposition_defaultOptions.lang, RangeSelector_RangeSelectorDefaults.lang);
     }
 }
 /**
  * Initialize rangeselector for stock charts
- * @private
+ * @internal
  */
 function createRangeSelector() {
     if (this.options.rangeSelector &&
@@ -8305,13 +7014,11 @@ function createRangeSelector() {
         this.rangeSelector = new RangeSelectorConstructor(this);
     }
 }
-/**
- * @private
- */
+/** @internal */
 function RangeSelectorComposition_onChartBeforeRender() {
     const chart = this, rangeSelector = chart.rangeSelector;
     if (rangeSelector) {
-        if (isNumber(rangeSelector.deferredYTDClick)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(rangeSelector.deferredYTDClick)) {
             rangeSelector.clickButton(rangeSelector.deferredYTDClick);
             delete rangeSelector.deferredYTDClick;
         }
@@ -8328,7 +7035,7 @@ function RangeSelectorComposition_onChartBeforeRender() {
 }
 /**
  * Redraw rangeSelector on chart redraw event
- * @private
+ * @internal
  */
 function redrawRangeSelector() {
     const chart = this;
@@ -8341,7 +7048,7 @@ function redrawRangeSelector() {
     const legend = chart.legend;
     const verticalAlign = (rangeSelector &&
         rangeSelector.options.verticalAlign);
-    if (isNumber(extremes.min)) {
+    if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(extremes.min)) {
         rangeSelector.render(extremes.min, extremes.max);
     }
     // Re-align the legend so that it's below the rangeselector
@@ -8349,7 +7056,7 @@ function redrawRangeSelector() {
         verticalAlign === 'top' &&
         verticalAlign === legend.options.verticalAlign) {
         // Create a new alignment box for the legend.
-        alignTo = merge(chart.spacingBox);
+        alignTo = (0,external_highcharts_src_js_default_namespaceObject.merge)(chart.spacingBox);
         if (legend.options.layout === 'vertical') {
             alignTo.y = chart.plotTop;
         }
@@ -8362,7 +7069,7 @@ function redrawRangeSelector() {
 }
 /**
  * Remove resize/afterSetExtremes at chart destroy.
- * @private
+ * @internal
  */
 function onChartDestroy() {
     for (let i = 0, iEnd = chartDestroyEvents.length; i < iEnd; ++i) {
@@ -8376,14 +7083,14 @@ function onChartDestroy() {
 }
 /**
  * Reflow rangeSelector and adjust chart layout
- * @private
+ * @internal
  */
 function onChartGetMargins() {
     const rangeSelector = this.rangeSelector;
     if (rangeSelector?.options?.enabled) {
         // Rerender rangeSelector in order to return correct plotHeight, #23058
         const { min, max } = this.xAxis[0].getExtremes();
-        if (isNumber(min) &&
+        if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(min) &&
             rangeSelector.inputGroup &&
             rangeSelector.inputGroup.getBBox().width < 20) {
             rangeSelector.render(min, max);
@@ -8400,15 +7107,13 @@ function onChartGetMargins() {
         }
     }
 }
-/**
- * @private
- */
+/** @internal */
 function RangeSelectorComposition_onChartUpdate(e) {
     const chart = this, options = e.options, optionsRangeSelector = options.rangeSelector, extraBottomMarginWas = this.extraBottomMargin, extraTopMarginWas = this.extraTopMargin;
     let rangeSelector = chart.rangeSelector;
     if (optionsRangeSelector &&
         optionsRangeSelector.enabled &&
-        !defined(rangeSelector) &&
+        !(0,external_highcharts_src_js_default_namespaceObject.defined)(rangeSelector) &&
         this.options.rangeSelector) {
         this.options.rangeSelector.enabled = true;
         this.rangeSelector = rangeSelector = new RangeSelectorConstructor(this);
@@ -8437,9 +7142,11 @@ function RangeSelectorComposition_onChartUpdate(e) {
  *  Default Export
  *
  * */
+/** @internal */
 const RangeSelectorComposition = {
     compose: RangeSelectorComposition_compose
 };
+/** @internal */
 /* harmony default export */ const RangeSelector_RangeSelectorComposition = (RangeSelectorComposition);
 
 ;// external ["../highcharts.src.js","default","SVGElement"]
@@ -8454,8 +7161,9 @@ var external_highcharts_src_js_default_Templating_default = /*#__PURE__*/__webpa
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -8477,23 +7185,23 @@ const { format } = (external_highcharts_src_js_default_Templating_default());
 /**
  * Get the preferred input type based on a date format string.
  *
- * @private
+ * @internal
  * @function preferredInputType
  */
 function preferredInputType(format) {
     const hasTimeKey = (char) => new RegExp(`%[[a-zA-Z]*${char}`).test(format);
-    const ms = isString(format) ?
+    const ms = (0,external_highcharts_src_js_default_namespaceObject.isString)(format) ?
         format.indexOf('%L') !== -1 :
         // Implemented but not typed as of 2024
         format.fractionalSecondDigits;
     if (ms) {
         return 'text';
     }
-    const date = isString(format) ?
+    const date = (0,external_highcharts_src_js_default_namespaceObject.isString)(format) ?
         ['a', 'A', 'd', 'e', 'w', 'b', 'B', 'm', 'o', 'y', 'Y']
             .some(hasTimeKey) :
         format.dateStyle || format.day || format.month || format.year;
-    const time = isString(format) ?
+    const time = (0,external_highcharts_src_js_default_namespaceObject.isString)(format) ?
         ['H', 'k', 'I', 'l', 'M', 'S'].some(hasTimeKey) :
         format.timeStyle || format.hour || format.minute || format.second;
     if (date && time) {
@@ -8515,7 +7223,7 @@ function preferredInputType(format) {
 /**
  * The range selector.
  *
- * @private
+ * @internal
  * @class
  * @name Highcharts.RangeSelector
  * @param {Highcharts.Chart} chart
@@ -8526,9 +7234,7 @@ class RangeSelector {
      *  Static Functions
      *
      * */
-    /**
-     * @private
-     */
+    /** @internal */
     static compose(AxisClass, ChartClass) {
         RangeSelector_RangeSelectorComposition.compose(AxisClass, ChartClass, RangeSelector);
     }
@@ -8562,7 +7268,7 @@ class RangeSelector {
      * The method to run when one of the buttons in the range selectors is
      * clicked
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#clickButton
      * @param {number} i
      *        The index of the button
@@ -8570,7 +7276,7 @@ class RangeSelector {
      */
     clickButton(i, redraw) {
         const rangeSelector = this, chart = rangeSelector.chart, rangeOptions = rangeSelector.buttonOptions[i], baseAxis = chart.xAxis[0], unionExtremes = (chart.scroller && chart.scroller.getUnionExtremes()) || baseAxis || {}, type = rangeOptions.type, dataGrouping = rangeOptions.dataGrouping;
-        let dataMin = unionExtremes.dataMin, dataMax = unionExtremes.dataMax, newMin, newMax = isNumber(baseAxis?.max) ? Math.round(Math.min(baseAxis.max, dataMax ?? baseAxis.max)) : void 0, // #1568
+        let dataMin = unionExtremes.dataMin, dataMax = unionExtremes.dataMax, newMin, newMax = (0,external_highcharts_src_js_default_namespaceObject.isNumber)(baseAxis?.max) ? Math.round(Math.min(baseAxis.max, dataMax ?? baseAxis.max)) : void 0, // #1568
         baseXAxisOptions, range = rangeOptions._range, rangeMin, ctx, ytdExtremes, addOffsetMin = true;
         // Chart has no data, base series is removed
         if (dataMin === null || dataMax === null) {
@@ -8599,7 +7305,7 @@ class RangeSelector {
                     dataMax: dataMax
                 };
                 newMin = baseAxis.minFromRange.call(ctx);
-                if (isNumber(ctx.newMax)) {
+                if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(ctx.newMax)) {
                     newMax = ctx.newMax;
                 }
                 // #15799: offsetMin is added in minFromRange so that it works
@@ -8609,7 +7315,7 @@ class RangeSelector {
             // Fixed times like minutes, hours, days
         }
         else if (range) {
-            if (isNumber(newMax)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(newMax)) {
                 newMin = Math.max(newMax - range, dataMin);
                 newMax = Math.min(newMin + range, dataMax);
                 addOffsetMin = false;
@@ -8624,8 +7330,8 @@ class RangeSelector {
                 // event (below). When the series are initialized, but before
                 // the chart is rendered, we have access to the xData array
                 // (#942).
-                if (baseAxis.hasData() && (!isNumber(dataMax) ||
-                    !isNumber(dataMin))) {
+                if (baseAxis.hasData() && (!(0,external_highcharts_src_js_default_namespaceObject.isNumber)(dataMax) ||
+                    !(0,external_highcharts_src_js_default_namespaceObject.isNumber)(dataMin))) {
                     dataMin = Number.MAX_VALUE;
                     dataMax = -Number.MAX_VALUE;
                     chart.series.forEach((series) => {
@@ -8638,7 +7344,7 @@ class RangeSelector {
                     });
                     redraw = false;
                 }
-                if (isNumber(dataMax) && isNumber(dataMin)) {
+                if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(dataMax) && (0,external_highcharts_src_js_default_namespaceObject.isNumber)(dataMin)) {
                     ytdExtremes = rangeSelector.getYTDExtremes(dataMax, dataMin);
                     newMin = rangeMin = ytdExtremes.min;
                     newMax = ytdExtremes.max;
@@ -8661,10 +7367,10 @@ class RangeSelector {
             newMin = dataMin;
             newMax = dataMax;
         }
-        if (addOffsetMin && rangeOptions._offsetMin && defined(newMin)) {
+        if (addOffsetMin && rangeOptions._offsetMin && (0,external_highcharts_src_js_default_namespaceObject.defined)(newMin)) {
             newMin += rangeOptions._offsetMin;
         }
-        if (rangeOptions._offsetMax && defined(newMax)) {
+        if (rangeOptions._offsetMax && (0,external_highcharts_src_js_default_namespaceObject.defined)(newMax)) {
             newMax += rangeOptions._offsetMax;
         }
         if (this.dropdown) {
@@ -8675,13 +7381,13 @@ class RangeSelector {
             // Axis not yet instantiated. Temporarily set min and range
             // options and axes once defined and remove them on
             // chart load (#4317 & #20529).
-            baseXAxisOptions = splat(chart.options.xAxis || {})[0];
-            const axisRangeUpdateEvent = addEvent(chart, 'afterCreateAxes', function () {
+            baseXAxisOptions = (0,external_highcharts_src_js_default_namespaceObject.splat)(chart.options.xAxis || {})[0];
+            const axisRangeUpdateEvent = (0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart, 'afterCreateAxes', function () {
                 const xAxis = chart.xAxis[0];
                 xAxis.range = xAxis.options.range = range;
                 xAxis.min = xAxis.options.min = rangeMin;
             });
-            addEvent(chart, 'load', function resetMinAndRange() {
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart, 'load', function resetMinAndRange() {
                 const xAxis = chart.xAxis[0];
                 chart.setFixedRange(rangeOptions._range);
                 xAxis.options.range = baseXAxisOptions.range;
@@ -8689,22 +7395,22 @@ class RangeSelector {
                 axisRangeUpdateEvent(); // Remove event
             });
         }
-        else if (isNumber(newMin) || isNumber(newMax)) {
+        else if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(newMin) || (0,external_highcharts_src_js_default_namespaceObject.isNumber)(newMax)) {
             // Existing axis object. Set extremes after render time.
-            baseAxis.setExtremes(newMin, newMax, pick(redraw, true), void 0, // Auto animation
+            baseAxis.setExtremes(newMin, newMax, (0,external_highcharts_src_js_default_namespaceObject.pick)(redraw, true), void 0, // Auto animation
             {
                 trigger: 'rangeSelectorButton',
                 rangeSelectorButton: rangeOptions
             });
             chart.setFixedRange(rangeOptions._range);
         }
-        fireEvent(this, 'afterBtnClick');
+        (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this, 'afterBtnClick');
     }
     /**
      * Set the selected option. This method only sets the internal flag, it
      * doesn't update the buttons or the actual zoomed range.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#setSelected
      * @param {number} [selected]
      */
@@ -8714,7 +7420,7 @@ class RangeSelector {
     /**
      * Initialize the range selector
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#init
      * @param {Highcharts.Chart} chart
      */
@@ -8723,10 +7429,10 @@ class RangeSelector {
             const minInput = rangeSelector.minInput, maxInput = rangeSelector.maxInput;
             // #3274 in some case blur is not defined
             if (minInput && !!minInput.blur) {
-                fireEvent(minInput, 'blur');
+                (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(minInput, 'blur');
             }
             if (maxInput && !!maxInput.blur) {
-                fireEvent(maxInput, 'blur');
+                (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(maxInput, 'blur');
             }
         };
         rangeSelector.chart = chart;
@@ -8747,8 +7453,8 @@ class RangeSelector {
             return opt;
         });
         this.eventsToUnbind = [];
-        this.eventsToUnbind.push(addEvent(chart.container, 'mousedown', blurInputs));
-        this.eventsToUnbind.push(addEvent(chart, 'resize', blurInputs));
+        this.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart.container, 'mousedown', blurInputs));
+        this.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart, 'resize', blurInputs));
         // Extend the buttonOptions with actual range
         buttonOptions.forEach(rangeSelector.computeButtonRange);
         // Zoomed range based on a pre-selected button index
@@ -8756,13 +7462,13 @@ class RangeSelector {
             buttonOptions[selectedOption]) {
             this.clickButton(selectedOption, false);
         }
-        this.eventsToUnbind.push(addEvent(chart, 'load', function () {
+        this.eventsToUnbind.push((0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart, 'load', function () {
             // If a data grouping is applied to the current button, release it
             // when extremes change
             if (chart.xAxis && chart.xAxis[0]) {
-                addEvent(chart.xAxis[0], 'setExtremes', function (e) {
-                    if (isNumber(this.max) &&
-                        isNumber(this.min) &&
+                (0,external_highcharts_src_js_default_namespaceObject.addEvent)(chart.xAxis[0], 'setExtremes', function (e) {
+                    if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(this.max) &&
+                        (0,external_highcharts_src_js_default_namespaceObject.isNumber)(this.min) &&
                         this.max - this.min !== chart.fixedRange &&
                         e.trigger !== 'rangeSelectorButton' &&
                         e.trigger !== 'updatedData' &&
@@ -8779,14 +7485,14 @@ class RangeSelector {
      * Dynamically update the range selector buttons after a new range has been
      * set
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#updateButtonStates
      */
     updateButtonStates() {
         const rangeSelector = this, chart = this.chart, dropdown = this.dropdown, dropdownLabel = this.dropdownLabel, baseAxis = chart.xAxis[0], actualRange = Math.round(baseAxis.max - baseAxis.min), hasNoData = !baseAxis.hasVisibleSeries, day = 24 * 36e5, // A single day in milliseconds
         unionExtremes = (chart.scroller &&
             chart.scroller.getUnionExtremes()) || baseAxis, dataMin = unionExtremes.dataMin, dataMax = unionExtremes.dataMax, ytdExtremes = rangeSelector.getYTDExtremes(dataMax, dataMin), ytdMin = ytdExtremes.min, ytdMax = ytdExtremes.max, selected = rangeSelector.selected, allButtonsEnabled = rangeSelector.options.allButtonsEnabled, buttonStates = new Array(rangeSelector.buttonOptions.length)
-            .fill(0), selectedExists = isNumber(selected), buttons = rangeSelector.buttons;
+            .fill(0), selectedExists = (0,external_highcharts_src_js_default_namespaceObject.isNumber)(selected), buttons = rangeSelector.buttons;
         let isSelectedTooGreat = false, selectedIndex = null;
         rangeSelector.buttonOptions.forEach((rangeOptions, i) => {
             const range = rangeOptions._range, type = rangeOptions.type, count = rangeOptions.count || 1, offsetRange = rangeOptions._offsetMax -
@@ -8889,7 +7595,7 @@ class RangeSelector {
                         dropdown.selectedIndex = i + 1;
                     }
                     const bbox = dropdownLabel.getBBox();
-                    css(dropdown, {
+                    (0,external_highcharts_src_js_default_namespaceObject.css)(dropdown, {
                         width: `${bbox.width}px`,
                         height: `${bbox.height}px`
                     });
@@ -8900,7 +7606,7 @@ class RangeSelector {
     /**
      * Compute and cache the range for an individual button
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#computeButtonRange
      * @param {Highcharts.RangeSelectorButtonsOptions} rangeOptions
      */
@@ -8926,15 +7632,15 @@ class RangeSelector {
                 year: 365
             }[type] * 24 * 36e5 * count;
         }
-        rangeOptions._offsetMin = pick(rangeOptions.offsetMin, 0);
-        rangeOptions._offsetMax = pick(rangeOptions.offsetMax, 0);
+        rangeOptions._offsetMin = (0,external_highcharts_src_js_default_namespaceObject.pick)(rangeOptions.offsetMin, 0);
+        rangeOptions._offsetMax = (0,external_highcharts_src_js_default_namespaceObject.pick)(rangeOptions.offsetMax, 0);
         rangeOptions._range +=
             rangeOptions._offsetMax - rangeOptions._offsetMin;
     }
     /**
      * Get the unix timestamp of a HTML input for the dates
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#getInputValue
      */
     getInputValue(name) {
@@ -8951,7 +7657,7 @@ class RangeSelector {
     /**
      * Set the internal and displayed value of a HTML input for the dates
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#setInputValue
      */
     setInputValue(name, inputTime) {
@@ -8959,10 +7665,10 @@ class RangeSelector {
         if (input) {
             input.setAttribute('type', preferredInputType(options.inputDateFormat || '%e %b %Y'));
             const hcTimeAttr = input.getAttribute('data-hc-time');
-            let updatedTime = defined(hcTimeAttr) ? Number(hcTimeAttr) : void 0;
-            if (defined(inputTime)) {
+            let updatedTime = (0,external_highcharts_src_js_default_namespaceObject.defined)(hcTimeAttr) ? Number(hcTimeAttr) : void 0;
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(inputTime)) {
                 const previousTime = updatedTime;
-                if (defined(previousTime)) {
+                if ((0,external_highcharts_src_js_default_namespaceObject.defined)(previousTime)) {
                     input.setAttribute('data-hc-time-previous', previousTime);
                 }
                 input.setAttribute('data-hc-time', inputTime);
@@ -8980,7 +7686,7 @@ class RangeSelector {
     /**
      * Set the min and max value of a HTML input for the dates
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#setInputExtremes
      */
     setInputExtremes(name, min, max) {
@@ -9001,7 +7707,7 @@ class RangeSelector {
         }
     }
     /**
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#showInput
      * @param {string} name
      */
@@ -9009,7 +7715,7 @@ class RangeSelector {
         const dateBox = name === 'min' ? this.minDateBox : this.maxDateBox, input = name === 'min' ? this.minInput : this.maxInput;
         if (input && dateBox && this.inputGroup) {
             const isTextInput = input.type === 'text', { translateX = 0, translateY = 0 } = this.inputGroup, { x = 0, width = 0, height = 0 } = dateBox, { inputBoxWidth } = this.options;
-            css(input, {
+            (0,external_highcharts_src_js_default_namespaceObject.css)(input, {
                 width: isTextInput ?
                     ((width + (inputBoxWidth ? -2 : 20)) + 'px') :
                     'auto',
@@ -9017,7 +7723,7 @@ class RangeSelector {
                 border: '2px solid silver'
             });
             if (isTextInput && inputBoxWidth) {
-                css(input, {
+                (0,external_highcharts_src_js_default_namespaceObject.css)(input, {
                     left: (translateX + x) + 'px',
                     top: translateY + 'px'
                 });
@@ -9025,7 +7731,7 @@ class RangeSelector {
                 // on top of the dateBox
             }
             else {
-                css(input, {
+                (0,external_highcharts_src_js_default_namespaceObject.css)(input, {
                     left: Math.min(Math.round(x +
                         translateX -
                         (input.offsetWidth - width) / 2), this.chart.chartWidth - input.offsetWidth) + 'px',
@@ -9035,14 +7741,14 @@ class RangeSelector {
         }
     }
     /**
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#hideInput
      * @param {string} name
      */
     hideInput(name) {
         const input = name === 'min' ? this.minInput : this.maxInput;
         if (input) {
-            css(input, {
+            (0,external_highcharts_src_js_default_namespaceObject.css)(input, {
                 top: '-9999em',
                 border: 0,
                 width: '1px',
@@ -9051,7 +7757,7 @@ class RangeSelector {
         }
     }
     /**
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#defaultInputDateParser
      */
     defaultInputDateParser(inputDate, useUTC, time) {
@@ -9060,22 +7766,20 @@ class RangeSelector {
     /**
      * Draw either the 'from' or the 'to' HTML input box of the range selector
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#drawInput
      */
     drawInput(name) {
         const { chart, div, inputGroup } = this;
         const rangeSelector = this, chartStyle = chart.renderer.style || {}, renderer = chart.renderer, options = chart.options.rangeSelector, lang = RangeSelector_defaultOptions.lang, isMin = name === 'min';
-        /**
-         * @private
-         */
+        /** @internal */
         function updateExtremes(name) {
             const { maxInput, minInput } = rangeSelector, chartAxis = chart.xAxis[0], unionExtremes = chart.scroller?.getUnionExtremes() || chartAxis, dataMin = unionExtremes.dataMin, dataMax = unionExtremes.dataMax, currentExtreme = chart.xAxis[0].getExtremes()[name];
             let value = rangeSelector.getInputValue(name);
-            if (isNumber(value) && value !== currentExtreme) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(value) && value !== currentExtreme) {
                 // Validate the extremes. If it goes beyond the data min or
                 // max, use the actual data extreme (#2438).
-                if (isMin && maxInput && isNumber(dataMin)) {
+                if (isMin && maxInput && (0,external_highcharts_src_js_default_namespaceObject.isNumber)(dataMin)) {
                     if (value > Number(maxInput.getAttribute('data-hc-time'))) {
                         value = void 0;
                     }
@@ -9083,7 +7787,7 @@ class RangeSelector {
                         value = dataMin;
                     }
                 }
-                else if (minInput && isNumber(dataMax)) {
+                else if (minInput && (0,external_highcharts_src_js_default_namespaceObject.isNumber)(dataMax)) {
                     if (value < Number(minInput.getAttribute('data-hc-time'))) {
                         value = void 0;
                     }
@@ -9133,7 +7837,7 @@ class RangeSelector {
         dateBox.add(inputGroup);
         // Create the HTML input element. This is rendered as 1x1 pixel then set
         // to the right size when focused.
-        const input = createElement('input', {
+        const input = (0,external_highcharts_src_js_default_namespaceObject.createElement)('input', {
             name: name,
             className: 'highcharts-range-selector'
         }, void 0, div);
@@ -9142,11 +7846,11 @@ class RangeSelector {
         input.setAttribute('type', preferredInputType(options.inputDateFormat || '%e %b %Y'));
         if (!chart.styledMode) {
             // Styles
-            label.css(merge(chartStyle, options.labelStyle));
-            dateBox.css(merge({
-                color: "#333333" /* Palette.neutralColor80 */
+            label.css((0,external_highcharts_src_js_default_namespaceObject.merge)(chartStyle, options.labelStyle));
+            dateBox.css((0,external_highcharts_src_js_default_namespaceObject.merge)({
+                color: 'var(--highcharts-neutral-color-80)'
             }, chartStyle, options.inputStyle));
-            css(input, extend({
+            (0,external_highcharts_src_js_default_namespaceObject.css)(input, (0,external_highcharts_src_js_default_namespaceObject.extend)({
                 position: 'absolute',
                 border: 0,
                 boxShadow: '0 0 15px rgba(0,0,0,0.3)',
@@ -9210,7 +7914,7 @@ class RangeSelector {
      * Get the position of the range selector buttons and inputs. This can be
      * overridden from outside for custom positioning.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#getPosition
      */
     getPosition() {
@@ -9227,7 +7931,7 @@ class RangeSelector {
      * the current timestamp. Will choose dataMin if its value is higher than
      * the timestamp for the start of current year.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#getYTDExtremes
      * @return {*}
      * Returns min and max for the YTD
@@ -9240,7 +7944,7 @@ class RangeSelector {
         };
     }
     createElements() {
-        const chart = this.chart, renderer = chart.renderer, container = chart.container, chartOptions = chart.options, options = chartOptions.rangeSelector, inputEnabled = options.inputEnabled, inputsZIndex = pick(chartOptions.chart.style?.zIndex, 0) + 1;
+        const chart = this.chart, renderer = chart.renderer, container = chart.container, chartOptions = chart.options, options = chartOptions.rangeSelector, inputEnabled = options.inputEnabled, inputsZIndex = (0,external_highcharts_src_js_default_namespaceObject.pick)(chartOptions.chart.style?.zIndex, 0) + 1;
         if (options.enabled === false) {
             return;
         }
@@ -9249,7 +7953,7 @@ class RangeSelector {
             zIndex: 7
         })
             .add();
-        this.div = createElement('div', void 0, {
+        this.div = (0,external_highcharts_src_js_default_namespaceObject.createElement)('div', void 0, {
             position: 'relative',
             height: 0,
             zIndex: inputsZIndex
@@ -9286,7 +7990,7 @@ class RangeSelector {
      * time render is called, the elements are created and positioned. On
      * subsequent calls, they are moved and updated.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#render
      * @param {number} [min]
      *        X axis minimum
@@ -9312,8 +8016,8 @@ class RangeSelector {
                 this.minLabel?.css(options.labelStyle);
             }
             const unionExtremes = (chart.scroller && chart.scroller.getUnionExtremes()) || chart.xAxis[0] || {};
-            if (defined(unionExtremes.dataMin) &&
-                defined(unionExtremes.dataMax)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(unionExtremes.dataMin) &&
+                (0,external_highcharts_src_js_default_namespaceObject.defined)(unionExtremes.dataMax)) {
                 const minRange = chart.xAxis[0].minRange || 0;
                 this.setInputExtremes('min', unionExtremes.dataMin, Math.min(unionExtremes.dataMax, this.getInputValue('max')) - minRange);
                 this.setInputExtremes('max', Math.max(unionExtremes.dataMin, this.getInputValue('min')) + minRange, unionExtremes.dataMax);
@@ -9355,7 +8059,7 @@ class RangeSelector {
      * Render the range buttons. This only runs the first time, later the
      * positioning is laid out in alignElements.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#renderButtons
      */
     renderButtons() {
@@ -9363,7 +8067,7 @@ class RangeSelector {
         const { chart, options } = this;
         const lang = RangeSelector_defaultOptions.lang;
         const renderer = chart.renderer;
-        const buttonTheme = merge(options.buttonTheme);
+        const buttonTheme = (0,external_highcharts_src_js_default_namespaceObject.merge)(options.buttonTheme);
         const states = buttonTheme && buttonTheme.states;
         // Prevent the button from resetting the width when the button state
         // changes since we need more control over the width when collapsing
@@ -9371,7 +8075,7 @@ class RangeSelector {
         delete buttonTheme.width;
         delete buttonTheme.states;
         this.buttonGroup = renderer.g('range-selector-buttons').add(this.group);
-        const dropdown = this.dropdown = createElement('select', void 0, {
+        const dropdown = this.dropdown = (0,external_highcharts_src_js_default_namespaceObject.createElement)('select', void 0, {
             position: 'absolute',
             padding: 0,
             border: 0,
@@ -9380,29 +8084,29 @@ class RangeSelector {
         }, this.div);
         // Create a label for dropdown select element
         const userButtonTheme = chart.userOptions.rangeSelector?.buttonTheme;
-        this.dropdownLabel = renderer.button('', 0, 0, () => { }, merge(buttonTheme, {
-            'stroke-width': pick(buttonTheme['stroke-width'], 0),
+        this.dropdownLabel = renderer.button('', 0, 0, () => { }, (0,external_highcharts_src_js_default_namespaceObject.merge)(buttonTheme, {
+            'stroke-width': (0,external_highcharts_src_js_default_namespaceObject.pick)(buttonTheme['stroke-width'], 0),
             width: 'auto',
-            paddingLeft: pick(options.buttonTheme.paddingLeft, userButtonTheme?.padding, 8),
-            paddingRight: pick(options.buttonTheme.paddingRight, userButtonTheme?.padding, 8)
+            paddingLeft: (0,external_highcharts_src_js_default_namespaceObject.pick)(options.buttonTheme.paddingLeft, userButtonTheme?.padding, 8),
+            paddingRight: (0,external_highcharts_src_js_default_namespaceObject.pick)(options.buttonTheme.paddingRight, userButtonTheme?.padding, 8)
         }), states && states.hover, states && states.select, states && states.disabled)
             .hide()
             .add(this.group);
         // Prevent page zoom on iPhone
-        addEvent(dropdown, 'touchstart', () => {
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(dropdown, 'touchstart', () => {
             dropdown.style.fontSize = '16px';
         });
         // Forward events from select to button
         const mouseOver = (external_highcharts_src_js_default_default()).isMS ? 'mouseover' : 'mouseenter', mouseOut = (external_highcharts_src_js_default_default()).isMS ? 'mouseout' : 'mouseleave';
-        addEvent(dropdown, mouseOver, () => {
-            fireEvent(this.dropdownLabel.element, mouseOver);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(dropdown, mouseOver, () => {
+            (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this.dropdownLabel.element, mouseOver);
         });
-        addEvent(dropdown, mouseOut, () => {
-            fireEvent(this.dropdownLabel.element, mouseOut);
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(dropdown, mouseOut, () => {
+            (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(this.dropdownLabel.element, mouseOut);
         });
-        addEvent(dropdown, 'change', () => {
+        (0,external_highcharts_src_js_default_namespaceObject.addEvent)(dropdown, 'change', () => {
             const button = this.buttons[dropdown.selectedIndex - 1];
-            fireEvent(button.element, 'click');
+            (0,external_highcharts_src_js_default_namespaceObject.fireEvent)(button.element, 'click');
         });
         this.zoomText = renderer
             .label(lang.rangeSelectorZoom || '', 0)
@@ -9417,7 +8121,7 @@ class RangeSelector {
             this.zoomText.css(options.labelStyle);
             (_a = options.buttonTheme)['stroke-width'] ?? (_a['stroke-width'] = 0);
         }
-        createElement('option', {
+        (0,external_highcharts_src_js_default_namespaceObject.createElement)('option', {
             textContent: this.zoomText.textStr,
             disabled: true
         }, void 0, dropdown);
@@ -9425,7 +8129,7 @@ class RangeSelector {
     }
     createButtons() {
         const { options } = this;
-        const buttonTheme = merge(options.buttonTheme);
+        const buttonTheme = (0,external_highcharts_src_js_default_namespaceObject.merge)(options.buttonTheme);
         const states = buttonTheme && buttonTheme.states;
         // Prevent the button from resetting the width when the button state
         // changes since we need more control over the width when collapsing
@@ -9440,8 +8144,8 @@ class RangeSelector {
     createButton(rangeOptions, i, width, states) {
         const { dropdown, buttons, chart, options } = this;
         const renderer = chart.renderer;
-        const buttonTheme = merge(options.buttonTheme);
-        dropdown?.add(createElement('option', {
+        const buttonTheme = (0,external_highcharts_src_js_default_namespaceObject.merge)(options.buttonTheme);
+        dropdown?.add((0,external_highcharts_src_js_default_namespaceObject.createElement)('option', {
             textContent: rangeOptions.title || rangeOptions.text
         }), i + 2);
         buttons[i] = renderer
@@ -9470,7 +8174,7 @@ class RangeSelector {
     /**
      * Align the elements horizontally and vertically.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#alignElements
      */
     alignElements() {
@@ -9565,7 +8269,7 @@ class RangeSelector {
                     legendOptions.enabled &&
                     !legendOptions.floating ?
                     (chart.legend.legendHeight +
-                        pick(legendOptions.margin, 10)) :
+                        (0,external_highcharts_src_js_default_namespaceObject.pick)(legendOptions.margin, 10)) :
                     0);
                 groupHeight = groupHeight + legendHeight - 20;
                 translateY = (alignTranslateY -
@@ -9610,9 +8314,7 @@ class RangeSelector {
             }
         }
     }
-    /**
-     * @private
-     */
+    /** @internal */
     redrawElements() {
         const chart = this.chart, { inputBoxHeight, inputBoxBorderColor } = this.options;
         this.maxDateBox?.attr({
@@ -9636,7 +8338,7 @@ class RangeSelector {
             const newButtonsOptions = this.options.buttons ?? [];
             const btnLength = Math.min(newButtonsOptions.length, this.buttonOptions.length);
             const { dropdown, options } = this;
-            const buttonTheme = merge(options.buttonTheme);
+            const buttonTheme = (0,external_highcharts_src_js_default_namespaceObject.merge)(options.buttonTheme);
             const states = buttonTheme && buttonTheme.states;
             // Prevent the button from resetting the width when the button state
             // changes since we need more control over the width when collapsing
@@ -9666,7 +8368,7 @@ class RangeSelector {
                 }
             }
             this.buttonOptions = this.options.buttons ?? [];
-            if (defined(this.options.selected) && this.buttons.length) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(this.options.selected) && this.buttons.length) {
                 this.clickButton(this.options.selected, false);
             }
         }
@@ -9674,7 +8376,7 @@ class RangeSelector {
     /**
      * Align the button group horizontally and vertically.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#alignButtonGroup
      * @param {number} xOffsetForExportButton
      * @param {number} [width]
@@ -9701,7 +8403,7 @@ class RangeSelector {
             }
         }
         if (dropdown) {
-            css(dropdown, {
+            (0,external_highcharts_src_js_default_namespaceObject.css)(dropdown, {
                 left: dropdownTranslateX + 'px',
                 top: buttonGroup?.translateY + 'px'
             });
@@ -9713,14 +8415,14 @@ class RangeSelector {
             // Align button group
             buttonGroup.align({
                 y: buttonPosition.y,
-                width: pick(width, this.initialButtonGroupWidth),
+                width: (0,external_highcharts_src_js_default_namespaceObject.pick)(width, this.initialButtonGroupWidth),
                 align: buttonPosition.align,
                 x: translateX
             }, true, chart.spacingBox);
         }
     }
     /**
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#positionButtons
      */
     positionButtons() {
@@ -9732,7 +8434,7 @@ class RangeSelector {
         if (zoomText && zoomText.visibility !== 'hidden') {
             // #8769, allow dynamically updating margins
             zoomText[verb]({
-                x: pick(plotLeft + buttonPosition.x, plotLeft)
+                x: (0,external_highcharts_src_js_default_namespaceObject.pick)(plotLeft + buttonPosition.x, plotLeft)
             });
             // Button start position
             buttonLeft += buttonPosition.x +
@@ -9752,7 +8454,7 @@ class RangeSelector {
     /**
      * Handle collision between the button group and the input group
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#handleCollision
      *
      * @param  {number} xOffsetForExportButton
@@ -9822,7 +8524,8 @@ class RangeSelector {
     /**
      * Collapse the buttons and show the select element.
      *
-     * @private
+     * @internal
+     * @function Highcharts.RangeSelector#collapseButtons
      */
     collapseButtons() {
         const { buttons, zoomText } = this;
@@ -9837,7 +8540,7 @@ class RangeSelector {
     /**
      * Show all the buttons and hide the select element.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#expandButtons
      */
     expandButtons() {
@@ -9854,26 +8557,26 @@ class RangeSelector {
     /**
      * Position the select element on top of the button.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#showDropdown
      */
     showDropdown() {
         const { buttonGroup, dropdownLabel, dropdown } = this;
         if (buttonGroup && dropdown) {
             dropdownLabel.show();
-            css(dropdown, { visibility: 'inherit' });
+            (0,external_highcharts_src_js_default_namespaceObject.css)(dropdown, { visibility: 'inherit' });
             this.hasVisibleDropdown = true;
         }
     }
     /**
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#hideDropdown
      */
     hideDropdown() {
         const { dropdown } = this;
         if (dropdown) {
             this.dropdownLabel.hide();
-            css(dropdown, {
+            (0,external_highcharts_src_js_default_namespaceObject.css)(dropdown, {
                 visibility: 'hidden'
             });
             this.hasVisibleDropdown = false;
@@ -9882,7 +8585,7 @@ class RangeSelector {
     /**
      * Extracts height of range selector
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#getHeight
      * @return {number}
      * Returns rangeSelector height
@@ -9911,7 +8614,7 @@ class RangeSelector {
     /**
      * Detect collision with title or subtitle
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#titleCollision
      * @return {boolean}
      * Returns collision status
@@ -9923,19 +8626,19 @@ class RangeSelector {
     /**
      * Update the range selector with new options
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#update
      * @param {Highcharts.RangeSelectorOptions} options
      */
     update(options, redraw = true) {
         const chart = this.chart;
-        merge(true, this.options, options);
+        (0,external_highcharts_src_js_default_namespaceObject.merge)(true, this.options, options);
         if (this.options.selected &&
             this.options.selected >= this.options.buttons.length) {
             this.options.selected = void 0;
             chart.options.rangeSelector.selected = void 0;
         }
-        if (defined(options.enabled)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.defined)(options.enabled)) {
             this.destroy();
             return this.init(chart);
         }
@@ -9947,7 +8650,7 @@ class RangeSelector {
     /**
      * Destroys allocated elements.
      *
-     * @private
+     * @internal
      * @function Highcharts.RangeSelector#destroy
      */
     destroy() {
@@ -9957,7 +8660,7 @@ class RangeSelector {
             rSelector.eventsToUnbind = void 0;
         }
         // Destroy elements in collections
-        destroyObjectProperties(rSelector.buttons);
+        (0,external_highcharts_src_js_default_namespaceObject.destroyObjectProperties)(rSelector.buttons);
         // Clear input element events
         if (minInput) {
             minInput.onfocus = minInput.onblur = minInput.onchange = null;
@@ -9966,7 +8669,7 @@ class RangeSelector {
             maxInput.onfocus = maxInput.onblur = maxInput.onchange = null;
         }
         // Destroy HTML and SVG elements
-        objectEach(rSelector, function (val, key) {
+        (0,external_highcharts_src_js_default_namespaceObject.objectEach)(rSelector, function (val, key) {
             if (val && key !== 'chart') {
                 if (val instanceof (external_highcharts_src_js_default_SVGElement_default())) {
                     // SVGElement
@@ -9974,7 +8677,7 @@ class RangeSelector {
                 }
                 else if (val instanceof window.HTMLElement) {
                     // HTML element
-                    discardElement(val);
+                    (0,external_highcharts_src_js_default_namespaceObject.discardElement)(val);
                 }
                 delete rSelector[key];
             }
@@ -9985,10 +8688,10 @@ class RangeSelector {
         this.buttons = [];
     }
 }
-extend(RangeSelector.prototype, {
+(0,external_highcharts_src_js_default_namespaceObject.extend)(RangeSelector.prototype, {
     /**
      * The date formats to use when setting min, max and value on date inputs.
-     * @private
+     * @internal
      */
     inputTypeFormats: {
         'datetime-local': '%Y-%m-%dT%H:%M:%S',
@@ -10001,6 +8704,7 @@ extend(RangeSelector.prototype, {
  *  Default Export
  *
  * */
+/** @internal */
 /* harmony default export */ const RangeSelector_RangeSelector = (RangeSelector);
 /* *
  *
@@ -10020,8 +8724,8 @@ extend(RangeSelector.prototype, {
  * @param {global.Event} e
  *        Event arguments.
  *
- * @param {boolean|undefined}
- *        Return false to cancel the default button event.
+ * @return {boolean|undefined}
+ *         Return false to cancel the default button event.
  */
 /**
  * Callback function to parse values entered in the input boxes and return a
@@ -10046,8 +8750,9 @@ var external_highcharts_src_js_default_Chart_default = /*#__PURE__*/__webpack_re
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -10110,7 +8815,7 @@ function getForcedAxisOptions(type, chartOptions) {
     if (type === 'xAxis') {
         // Always disable startOnTick:true on the main axis when the navigator
         // is enabled (#1090)
-        const navigatorEnabled = pick(chartOptions.navigator?.enabled, Navigator_NavigatorDefaults.enabled, true);
+        const navigatorEnabled = (0,external_highcharts_src_js_default_namespaceObject.pick)(chartOptions.navigator?.enabled, Navigator_NavigatorDefaults.enabled, true);
         const axisOptions = {
             type: 'datetime',
             categories: void 0
@@ -10152,10 +8857,10 @@ class StockChart extends (external_highcharts_src_js_default_Chart_default()) {
      * @param {Highcharts.Options} userOptions
      *        Custom options.
      *
-     * @param {Function} [callback]
+     * @param {Function|true} [callback]
      *        Function to run when the chart has loaded and all external
-     *        images are loaded.
-     *
+     *        images are loaded. Set to `true` to return a promise that
+     *        resolves when the chart is ready.
      *
      * @emits Highcharts.StockChart#event:init
      * @emits Highcharts.StockChart#event:afterInit
@@ -10164,10 +8869,10 @@ class StockChart extends (external_highcharts_src_js_default_Chart_default()) {
         const defaultOptions = getOptions(), xAxisOptions = userOptions.xAxis, yAxisOptions = userOptions.yAxis, 
         // Always disable startOnTick:true on the main axis when the
         // navigator is enabled (#1090)
-        navigatorEnabled = pick(userOptions.navigator?.enabled, Navigator_NavigatorDefaults.enabled, true);
+        navigatorEnabled = (0,external_highcharts_src_js_default_namespaceObject.pick)(userOptions.navigator?.enabled, Navigator_NavigatorDefaults.enabled, true);
         // Avoid doing these twice
         userOptions.xAxis = userOptions.yAxis = void 0;
-        const options = merge({
+        const options = (0,external_highcharts_src_js_default_namespaceObject.merge)({
             chart: {
                 panning: {
                     enabled: true,
@@ -10185,17 +8890,17 @@ class StockChart extends (external_highcharts_src_js_default_Chart_default()) {
             },
             scrollbar: {
                 // #4988 - check if setOptions was called
-                enabled: pick(Scrollbar_ScrollbarDefaults.enabled, true)
+                enabled: (0,external_highcharts_src_js_default_namespaceObject.pick)(Scrollbar_ScrollbarDefaults.enabled, true)
             },
             rangeSelector: {
                 // #4988 - check if setOptions was called
-                enabled: pick(RangeSelector_RangeSelectorDefaults.rangeSelector.enabled, true)
+                enabled: (0,external_highcharts_src_js_default_namespaceObject.pick)(RangeSelector_RangeSelectorDefaults.rangeSelector.enabled, true)
             },
             title: {
                 text: null
             },
             tooltip: {
-                split: pick(defaultOptions.tooltip?.split, true),
+                split: (0,external_highcharts_src_js_default_namespaceObject.pick)(defaultOptions.tooltip?.split, true),
                 crosshairs: true
             },
             legend: {
@@ -10208,12 +8913,12 @@ class StockChart extends (external_highcharts_src_js_default_Chart_default()) {
         userOptions.xAxis = xAxisOptions;
         userOptions.yAxis = yAxisOptions;
         // Apply X axis options to both single and multi y axes
-        options.xAxis = splat(userOptions.xAxis || {}).map((xAxisOptions) => merge(getDefaultAxisOptions('xAxis', xAxisOptions, defaultOptions.xAxis), 
+        options.xAxis = (0,external_highcharts_src_js_default_namespaceObject.splat)(userOptions.xAxis || {}).map((xAxisOptions) => (0,external_highcharts_src_js_default_namespaceObject.merge)(getDefaultAxisOptions('xAxis', xAxisOptions, defaultOptions.xAxis), 
         // #7690
         xAxisOptions, // User options
         getForcedAxisOptions('xAxis', userOptions)));
         // Apply Y axis options to both single and multi y axes
-        options.yAxis = splat(userOptions.yAxis || {}).map((yAxisOptions) => merge(getDefaultAxisOptions('yAxis', yAxisOptions, defaultOptions.yAxis), 
+        options.yAxis = (0,external_highcharts_src_js_default_namespaceObject.splat)(userOptions.yAxis || {}).map((yAxisOptions) => (0,external_highcharts_src_js_default_namespaceObject.merge)(getDefaultAxisOptions('yAxis', yAxisOptions, defaultOptions.yAxis), 
         // #7690
         yAxisOptions // User options
         ));
@@ -10231,17 +8936,17 @@ class StockChart extends (external_highcharts_src_js_default_Chart_default()) {
      * The axis creation options.
      */
     createAxis(coll, options) {
-        options.axis = merge(getDefaultAxisOptions(coll, options.axis, getOptions()[coll]), options.axis, getForcedAxisOptions(coll, this.userOptions));
+        options.axis = (0,external_highcharts_src_js_default_namespaceObject.merge)(getDefaultAxisOptions(coll, options.axis, getOptions()[coll]), options.axis, getForcedAxisOptions(coll, this.userOptions));
         return super.createAxis(coll, options);
     }
 }
-addEvent((external_highcharts_src_js_default_Chart_default()), 'update', function (e) {
+(0,external_highcharts_src_js_default_namespaceObject.addEvent)((external_highcharts_src_js_default_Chart_default()), 'update', function (e) {
     const chart = this, options = e.options;
     // Use case: enabling scrollbar from a disabled state.
     // Scrollbar needs to be initialized from a controller, Navigator in this
     // case (#6615)
     if ('scrollbar' in options && chart.navigator) {
-        merge(true, chart.options.scrollbar, options.scrollbar);
+        (0,external_highcharts_src_js_default_namespaceObject.merge)(true, chart.options.scrollbar, options.scrollbar);
         chart.navigator.update({ enabled: !!chart.navigator.navigatorEnabled });
         delete options.scrollbar;
     }
@@ -10278,14 +8983,14 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
     function compose(ChartClass, AxisClass, SeriesClass, SVGRendererClass) {
         const seriesProto = SeriesClass.prototype;
         if (!seriesProto.forceCropping) {
-            addEvent(AxisClass, 'afterDrawCrosshair', onAxisAfterDrawCrosshair);
-            addEvent(AxisClass, 'afterHideCrosshair', onAxisAfterHideCrosshair);
-            addEvent(AxisClass, 'autoLabelAlign', onAxisAutoLabelAlign);
-            addEvent(AxisClass, 'destroy', onAxisDestroy);
-            addEvent(AxisClass, 'getPlotLinePath', onAxisGetPlotLinePath);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'afterDrawCrosshair', onAxisAfterDrawCrosshair);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'afterHideCrosshair', onAxisAfterHideCrosshair);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'autoLabelAlign', onAxisAutoLabelAlign);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'destroy', onAxisDestroy);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(AxisClass, 'getPlotLinePath', onAxisGetPlotLinePath);
             ChartClass.prototype.setFixedRange = StockChart_setFixedRange;
             seriesProto.forceCropping = seriesForceCropping;
-            addEvent(SeriesClass, 'setOptions', onSeriesSetOptions);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'setOptions', onSeriesSetOptions);
             SVGRendererClass.prototype.crispPolyLine = svgRendererCrispPolyLine;
         }
     }
@@ -10299,8 +9004,8 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
         // Check if the label has to be drawn
         if (!(axis.crosshair?.label?.enabled &&
             axis.cross &&
-            isNumber(axis.min) &&
-            isNumber(axis.max))) {
+            (0,external_highcharts_src_js_default_namespaceObject.isNumber)(axis.min) &&
+            (0,external_highcharts_src_js_default_namespaceObject.isNumber)(axis.max))) {
             return;
         }
         const chart = axis.chart, log = axis.logarithmic, options = axis.crosshair.label, // The label's options
@@ -10329,8 +9034,8 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
                 axis.series[0] && this.series[0].colorIndex))
                 .attr({
                 align: options.align || align,
-                padding: pick(options.padding, 8),
-                r: pick(options.borderRadius, 3),
+                padding: (0,external_highcharts_src_js_default_namespaceObject.pick)(options.padding, 8),
+                r: (0,external_highcharts_src_js_default_namespaceObject.pick)(options.borderRadius, 3),
                 zIndex: 2
             })
                 .add(axis.labelGroup);
@@ -10340,12 +9045,12 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
                     .attr({
                     fill: options.backgroundColor ||
                         point?.series?.color || // #14888
-                        "#666666" /* Palette.neutralColor60 */,
+                        'var(--highcharts-neutral-color-60)',
                     stroke: options.borderColor || '',
                     'stroke-width': options.borderWidth || 0
                 })
-                    .css(extend({
-                    color: "#ffffff" /* Palette.backgroundColor */,
+                    .css((0,external_highcharts_src_js_default_namespaceObject.extend)({
+                    color: 'var(--highcharts-background-color)',
                     fontWeight: 'normal',
                     fontSize: '0.7em',
                     textAlign: 'center'
@@ -10375,12 +9080,12 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
         // of currentPriceIndicator should be inside the plot area (#14879).
         const isInside = point?.series ?
             point.series.isPointInside(point) :
-            (isNumber(value) && value > min && value < max);
+            ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(value) && value > min && value < max);
         let text = '';
         if (formatOption) {
             text = StockChart_format(formatOption, { value }, chart);
         }
-        else if (options.formatter && isNumber(value)) {
+        else if (options.formatter && (0,external_highcharts_src_js_default_namespaceObject.isNumber)(value)) {
             text = options.formatter.call(axis, value, axis);
         }
         crossLabel.attr({
@@ -10391,10 +9096,10 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
         });
         const crossBox = crossLabel.getBBox();
         // Now it is placed we can correct its position
-        if (isNumber(crossLabel.x) && !horiz && !opposite) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(crossLabel.x) && !horiz && !opposite) {
             posx = crossLabel.x - (crossBox.width / 2);
         }
-        if (isNumber(crossLabel.y)) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(crossLabel.y)) {
             if (horiz) {
                 if ((tickInside && !opposite) || (!tickInside && opposite)) {
                     posy = crossLabel.y - crossBox.height;
@@ -10492,25 +9197,26 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
      * @internal
      */
     function onAxisGetPlotLinePath(e) {
-        const axis = this, series = (axis.isLinked && !axis.series && axis.linkedParent ?
+        const axis = this, axisOptions = axis.options, series = (axis.isLinked && !axis.series && axis.linkedParent ?
             axis.linkedParent.series :
-            axis.series), { chart, horiz } = axis, renderer = chart.renderer, result = [], { acrossPanes = true, force, translatedValue, value } = e, allPerpendicularAxes = (axis.isXAxis ? chart.yAxis : chart.xAxis) || [], 
+            axis.series), { chart, horiz } = axis, renderer = chart.renderer, result = [], { acrossPanes = true, force, translatedValue, value } = e, allPerpendicularAxes = (axis.isXAxis ? chart.yAxis : chart.xAxis) || [], crossingPosName = horiz ? 'top' : 'left', crossingLenName = horiz ? 'height' : 'width', hasCrossingBounds = (0,external_highcharts_src_js_default_namespaceObject.defined)(axisOptions[crossingPosName]) ||
+            (0,external_highcharts_src_js_default_namespaceObject.defined)(axisOptions[crossingLenName]), 
         /**
          * Return the other axis based on either the axis option or on
          * related series.
          * @internal
          */
         getAxis = (coll) => {
-            const otherColl = coll === 'xAxis' ? 'yAxis' : 'xAxis', opt = axis.options[otherColl];
-            if (acrossPanes && !axis.options.isInternal) {
+            const otherColl = coll === 'xAxis' ? 'yAxis' : 'xAxis', opt = axisOptions[otherColl];
+            if (acrossPanes && !axisOptions.isInternal) {
                 return allPerpendicularAxes.filter((a) => !a.options.isInternal);
             }
             // Other axis indexed by number
-            if (isNumber(opt)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(opt)) {
                 return [chart[otherColl][opt]];
             }
             // Other axis indexed by id (like navigator)
-            if (isString(opt)) {
+            if ((0,external_highcharts_src_js_default_namespaceObject.isString)(opt)) {
                 return [chart.get(opt)];
             }
             // Auto detect based on existing series
@@ -10524,7 +9230,7 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
         }
         let axes = [], // #3416 need a default array
         uniqueAxes, transVal;
-        if (chart.options.isStock &&
+        if ((chart.options.isStock || hasCrossingBounds) &&
             // Ignore in case of colorAxis or zAxis. #3360, #3524, #6720
             (axis.coll === 'xAxis' || axis.coll === 'yAxis')) {
             e.preventDefault();
@@ -10533,7 +9239,7 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
             // Get the related axes based options.*Axis setting #2810
             for (const A of allPerpendicularAxes) {
                 if (!A.options.isInternal) {
-                    const a = (A.isXAxis ? 'yAxis' : 'xAxis'), relatedAxis = (defined(A.options[a]) &&
+                    const a = (A.isXAxis ? 'yAxis' : 'xAxis'), relatedAxis = ((0,external_highcharts_src_js_default_namespaceObject.defined)(A.options[a]) &&
                         chart[a][A.options[a]]);
                     if (axis === relatedAxis) {
                         axes.push(A);
@@ -10549,13 +9255,13 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
             for (const axis2 of axes) {
                 if (uniqueAxes.indexOf(axis2) === -1 &&
                     // Do not draw on axis which overlap completely. #5424
-                    !find(uniqueAxes, (unique) => (unique.pos === axis2.pos &&
+                    !(0,external_highcharts_src_js_default_namespaceObject.find)(uniqueAxes, (unique) => (unique.pos === axis2.pos &&
                         unique.len === axis2.len))) {
                     uniqueAxes.push(axis2);
                 }
             }
-            transVal = pick(translatedValue, axis.translate(value || 0, void 0, void 0, e.old));
-            if (isNumber(transVal)) {
+            transVal = (0,external_highcharts_src_js_default_namespaceObject.pick)(translatedValue, axis.translate(value || 0, void 0, void 0, e.old));
+            if ((0,external_highcharts_src_js_default_namespaceObject.isNumber)(transVal)) {
                 let skip, pos = horiz ?
                     transVal + axis.pos :
                     axis.pos + axis.len - transVal;
@@ -10563,21 +9269,23 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
                 if (force !== 'pass' &&
                     (pos < axis.pos || pos > axis.pos + axis.len)) {
                     if (force) {
-                        pos = clamp(pos, axis.pos, axis.pos + axis.len);
+                        pos = (0,external_highcharts_src_js_default_namespaceObject.clamp)(pos, axis.pos, axis.pos + axis.len);
                     }
                     else {
                         skip = true;
                     }
                 }
                 if (!skip) {
-                    const crossingPosName = horiz ? 'top' : 'left', crossingLenName = horiz ? 'height' : 'width';
-                    if (!acrossPanes &&
-                        // If the perpendicular position is set explicitly on
-                        // the axis, use it. For example, if `top` and `height`
-                        // options are set on a horizontal x-axis, the grid
-                        // lines should conform to that position.
-                        (axis.options[crossingPosName] ||
-                            axis.options[crossingLenName])) {
+                    if (
+                    // If the perpendicular position is set explicitly on
+                    // the axis, use it. For example, if `top` and `height`
+                    // options are set on a horizontal x-axis, the grid
+                    // lines should conform to that position.
+                    hasCrossingBounds &&
+                        // In parallel coordinates, the axis height/width is 0,
+                        // so we need to skip that, #24442.
+                        axis[crossingLenName] > 0 &&
+                        !acrossPanes) {
                         pushSegment(pos, axis[crossingPosName], axis[crossingPosName] + axis[crossingLenName]);
                     }
                     else {
@@ -10617,7 +9325,7 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
                 };
             }
             if (overrides) {
-                e.plotOptions[series.type] = merge(e.plotOptions[series.type], overrides);
+                e.plotOptions[series.type] = (0,external_highcharts_src_js_default_namespaceObject.merge)(e.plotOptions[series.type], overrides);
             }
         }
     }
@@ -10631,7 +9339,7 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
     function seriesForceCropping() {
         const series = this, chart = series.chart, options = series.options, dataGroupingOptions = options.dataGrouping, groupingEnabled = (series.allowDG !== false &&
             dataGroupingOptions &&
-            pick(dataGroupingOptions.enabled, chart.options.isStock));
+            (0,external_highcharts_src_js_default_namespaceObject.pick)(dataGroupingOptions.enabled, chart.options.isStock));
         return groupingEnabled;
     }
     /* eslint-disable jsdoc/check-param-names */
@@ -10668,7 +9376,8 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
      *         The chart object.
      */
     function stockChart(a, b, c) {
-        return new StockChart(a, b, c);
+        const chart = new StockChart(a, b, c);
+        return chart.promise || chart;
     }
     StockChart.stockChart = stockChart;
     /* eslint-enable jsdoc/check-param-names */
@@ -10683,11 +9392,11 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
         // normalize to a crisp line
         for (let i = 0; i < points.length; i = i + 2) {
             const start = points[i], end = points[i + 1];
-            if (defined(start[1]) && start[1] === end[1]) {
-                start[1] = end[1] = crisp(start[1], width);
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(start[1]) && start[1] === end[1]) {
+                start[1] = end[1] = (0,external_highcharts_src_js_default_namespaceObject.crisp)(start[1], width);
             }
-            if (defined(start[2]) && start[2] === end[2]) {
-                start[2] = end[2] = crisp(start[2], width);
+            if ((0,external_highcharts_src_js_default_namespaceObject.defined)(start[2]) && start[2] === end[2]) {
+                start[2] = end[2] = (0,external_highcharts_src_js_default_namespaceObject.crisp)(start[2], width);
             }
         }
         return points;
@@ -10706,8 +9415,9 @@ addEvent((external_highcharts_src_js_default_Chart_default()), 'update', functio
  *  (c) 2010-2026 Highsoft AS
  *  Author: Paweł Lysy
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -10720,6 +9430,24 @@ const { column: { prototype: { pointClass: ColumnPoint } } } = (external_highcha
  *
  * */
 class HLCPoint extends ColumnPoint {
+    /**
+     * Get the origin position for entrance animation of new points
+     */
+    getOrigin({ x = 0 }, shape = {}) {
+        const d = shape.d, shiftX = x - (this.plotX || 0);
+        if (d) {
+            return {
+                d: d.map((segment) => {
+                    const slice = segment.slice();
+                    if (typeof slice[1] === 'number') {
+                        slice[1] += shiftX;
+                    }
+                    return slice;
+                })
+            };
+        }
+        return shape;
+    }
 }
 /* *
  *
@@ -10734,8 +9462,9 @@ class HLCPoint extends ColumnPoint {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Paweł Lysy
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -10783,6 +9512,16 @@ const HLCSeriesDefaults = {
      * @default   close
      * @apioption plotOptions.hlc.colorKey
      */
+    /**
+     * What type of legend symbol to render for this series. For HLC series,
+     * the default is `hlc`, a vertical stem with a tick on the right
+     * representing the closing value.
+     *
+     * @default   hlc
+     * @product   highstock
+     * @apioption plotOptions.hlc.legendSymbol
+     */
+    legendSymbol: 'hlc',
     /**
      * The pixel width of the line/border. Defaults to `1`.
      *
@@ -10895,6 +9634,7 @@ const HLCSeriesDefaults = {
  *    }]
  *    ```
  *
+ * @basic
  * @type      {Array<Array<(number|string),number,number>|Array<(number|string),number,number,number>|*>}
  * @extends   series.arearange.data
  * @excluding y, marker
@@ -10916,14 +9656,63 @@ const HLCSeriesDefaults = {
  * */
 /* harmony default export */ const HLC_HLCSeriesDefaults = (HLCSeriesDefaults);
 
+;// ./code/es-modules/Series/FinancialSymbols.js
+
+
+
+const { composed: FinancialSymbols_composed } = (external_highcharts_src_js_default_default());
+/* *
+ * Composition
+ * */
+var FinancialSymbols;
+(function (FinancialSymbols) {
+    function compose(SVGRendererClass) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(FinancialSymbols_composed, 'Series.FinancialSymbols')) {
+            const symbols = SVGRendererClass.prototype.symbols;
+            const hlcPath = (x, y, w, h, isOhlc) => {
+                const cx = Math.round(x + w / 2), 
+                // Up bar: close is higher up (smaller Y) than open
+                closeY = Math.round(y + h * (isOhlc ? 0.3 : 0.5)), path = [
+                    ['M', cx, y], ['L', cx, y + h], // Stem
+                    ['M', cx, closeY], ['L', x + w, closeY] // Close tick
+                ];
+                if (isOhlc) {
+                    // Up bar: open is lower down (larger Y)
+                    const openY = Math.round(y + h * 0.7);
+                    path.push(['M', x, openY], ['L', cx, openY]);
+                }
+                return path;
+            };
+            symbols.hlc = (x, y, w, h) => hlcPath(x, y, w, h);
+            symbols.ohlc = (x, y, w, h) => hlcPath(x, y, w, h, true);
+            symbols.candlestick = (x, y, w, h) => {
+                const cx = Math.round(x + w / 2), top = Math.round(y + h * 0.25), bottom = Math.round(y + h * 0.75), 
+                // 1. Explicitly type the base array as SVGPath
+                path = [
+                    ['M', cx, y], ['L', cx, top], // Top wick
+                    ['M', cx, bottom], ['L', cx, y + h] // Bottom wick
+                ];
+                // 2. Push the rect path segments directly into it
+                if (symbols.rect) {
+                    path.push(...symbols.rect(x, top, w, bottom - top));
+                }
+                return path;
+            };
+        }
+    }
+    FinancialSymbols.compose = compose;
+})(FinancialSymbols || (FinancialSymbols = {}));
+/* harmony default export */ const Series_FinancialSymbols = (FinancialSymbols);
+
 ;// ./code/es-modules/Series/HLC/HLCSeries.js
 /* *
  *
  *  (c) 2010-2026 Highsoft AS
  *  Author: Paweł Lysy
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -10932,6 +9721,7 @@ const HLCSeriesDefaults = {
 
 
 const { column: ColumnSeries } = (external_highcharts_src_js_default_SeriesRegistry_default()).seriesTypes;
+
 
 
 const { defaultOptions: HLCSeries_defaultOptions } = (external_highcharts_src_js_default_default());
@@ -10950,6 +9740,14 @@ const { defaultOptions: HLCSeries_defaultOptions } = (external_highcharts_src_js
  * @augments Highcharts.Series
  */
 class HLCSeries extends ColumnSeries {
+    /* *
+     *
+     *  Static Properties
+     *
+     * */
+    static compose(_SeriesClass, SVGRendererClass) {
+        Series_FinancialSymbols.compose(SVGRendererClass);
+    }
     /* *
      *
      *  Functions
@@ -10975,15 +9773,15 @@ class HLCSeries extends ColumnSeries {
         }
     }
     /**
-     * Function to create SVGPath of the point based on the
-     * plot positions of this point.
+     * Function to create SVGPath of the point based on the plot positions of
+     * this point.
      * @private
      */
-    getPointPath(point, graphic) {
+    getPointPath(point) {
         // Crisp vector coordinates
-        const strokeWidth = graphic.strokeWidth(), series = point.series, 
+        const series = point.series, strokeWidth = series.borderWidth, 
         // #2596:
-        crispX = crisp(point.plotX || 0, strokeWidth), halfWidth = Math.round(point.shapeArgs.width / 2);
+        crispX = (0,external_highcharts_src_js_default_namespaceObject.crisp)(point.plotX || 0, strokeWidth), halfWidth = Math.round(point.shapeArgs.width / 2);
         // The vertical stem
         const path = [
             ['M', crispX, Math.round(point.yBottom)],
@@ -10991,40 +9789,11 @@ class HLCSeries extends ColumnSeries {
         ];
         // Close
         if (point.close !== null) {
-            const plotClose = crisp(point.plotClose, strokeWidth);
+            const plotClose = (0,external_highcharts_src_js_default_namespaceObject.crisp)(point.plotClose, strokeWidth);
             path.push(['M', crispX, plotClose], ['L', crispX + halfWidth, plotClose]);
             series.extendStem(path, strokeWidth / 2, plotClose);
         }
         return path;
-    }
-    /**
-     * Draw single point
-     * @private
-     */
-    drawSinglePoint(point) {
-        const series = point.series, chart = series.chart;
-        let path, graphic = point.graphic;
-        if (typeof point.plotY !== 'undefined') {
-            // Create and/or update the graphic
-            if (!graphic) {
-                point.graphic = graphic = chart.renderer.path()
-                    .add(series.group);
-            }
-            if (!chart.styledMode) {
-                graphic.attr(series.pointAttribs(point, (point.selected && 'select'))); // #3897
-            }
-            // Crisp vector coordinates
-            path = series.getPointPath(point, graphic);
-            graphic[!graphic ? 'attr' : 'animate']({ d: path })
-                .addClass(point.getClassName(), true);
-        }
-    }
-    /**
-     * Draw the data points
-     * @private
-     */
-    drawPoints() {
-        this.points.forEach(this.drawSinglePoint);
     }
     /**
      * @private
@@ -11040,7 +9809,9 @@ class HLCSeries extends ColumnSeries {
      */
     pointAttribs(point, state) {
         const attribs = super.pointAttribs.call(this, point, state);
-        delete attribs.fill;
+        if (point) {
+            delete attribs.fill;
+        }
         return attribs;
     }
     toYData(point) {
@@ -11054,12 +9825,13 @@ class HLCSeries extends ColumnSeries {
      * @function Highcharts.seriesTypes.hlc#translate
      */
     translate() {
-        const series = this, yAxis = series.yAxis, names = (this.pointArrayMap && this.pointArrayMap.slice()) || [], translated = names.map((name) => `plot${name.charAt(0).toUpperCase() + name.slice(1)}`);
+        const series = this, yAxis = series.yAxis, names = (this.pointArrayMap && this.pointArrayMap.slice()) || [], translated = names.map((name) => `plot${name.charAt(0).toUpperCase() + name.slice(1)}`), lineWidth = series.options.lineWidth ?? 1;
         translated.push('yBottom');
         names.push('low');
         super.translate.apply(series);
+        series.borderWidth = lineWidth;
         // Do the translation
-        series.points.forEach(function (point) {
+        series.points.concat(series.condemnedPoints).forEach((point) => {
             names.forEach(function (name, i) {
                 let value = point[name];
                 if (value !== null) {
@@ -11070,20 +9842,20 @@ class HLCSeries extends ColumnSeries {
                         yAxis.toPixels(value, true);
                 }
             });
-            // Align the tooltip to the high value to avoid covering the
-            // point
+            // The data label box
+            const { x = 0, y = 0, width = 0, height = 0 } = point.shapeArgs || {};
+            point.dlBox = { x, y, width, height };
+            // The new shape args overwrite those of ColumnSeries
+            point.shapeType = 'path';
+            point.shapeArgs = { d: series.getPointPath(point) };
+            // Align the tooltip to the high value to avoid covering the point
             point.tooltipPos[1] =
                 point.plotHigh + yAxis.pos - series.chart.plotTop;
         });
     }
 }
-/* *
- *
- *  Static Properties
- *
- * */
-HLCSeries.defaultOptions = merge(ColumnSeries.defaultOptions, HLC_HLCSeriesDefaults);
-extend(HLCSeries.prototype, {
+HLCSeries.defaultOptions = (0,external_highcharts_src_js_default_namespaceObject.merge)(ColumnSeries.defaultOptions, HLC_HLCSeriesDefaults);
+(0,external_highcharts_src_js_default_namespaceObject.extend)(HLCSeries.prototype, {
     pointClass: HLC_HLCPoint,
     animate: null, // Disable animation
     directTouch: false,
@@ -11102,14 +9874,14 @@ const HLCDefaultLangOptions = {
     stockLow: 'Low',
     stockClose: 'Close'
 };
-extend(HLCSeries_defaultOptions.lang, HLCDefaultLangOptions);
+(0,external_highcharts_src_js_default_namespaceObject.extend)(HLCSeries_defaultOptions.lang, HLCDefaultLangOptions);
 external_highcharts_src_js_default_SeriesRegistry_default().registerSeriesType('hlc', HLCSeries);
 /* *
  *
  *  Default Export
  *
  * */
-/* harmony default export */ const HLC_HLCSeries = ((/* unused pure expression or super */ null && (HLCSeries)));
+/* harmony default export */ const HLC_HLCSeries = (HLCSeries);
 
 ;// ./code/es-modules/Series/OHLC/OHLCPoint.js
 /* *
@@ -11117,8 +9889,9 @@ external_highcharts_src_js_default_SeriesRegistry_default().registerSeriesType('
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -11208,8 +9981,9 @@ class OHLCPoint extends OHLCPoint_HLCSeries.prototype.pointClass {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -11238,6 +10012,16 @@ const OHLCSeriesDefaults = {
      * @product   highstock
      * @apioption plotOptions.ohlc.dataGrouping.approximation
      */
+    /**
+     * What type of legend symbol to render for this series. For OHLC series,
+     * the default is `ohlc`, a vertical stem with an open tick on the left
+     * and a close tick on the right.
+     *
+     * @default   ohlc
+     * @product   highstock
+     * @apioption plotOptions.ohlc.legendSymbol
+     */
+    legendSymbol: 'ohlc',
     /**
      * Determines which one of  `open`, `high`, `low`, `close` values should
      * be represented as `point.y`, which is later used to set dataLabel
@@ -11274,7 +10058,7 @@ const OHLCSeriesDefaults = {
  *
  * @type      {boolean}
  * @product   highstock
- * @apioption plotOptions.line.useOhlcData
+ * @apioption plotOptions.series.useOhlcData
  */
 /**
  * A `ohlc` series. If the [type](#series.ohlc.type) option is not
@@ -11329,6 +10113,7 @@ const OHLCSeriesDefaults = {
  *    }]
  *    ```
  *
+ * @basic
  * @type      {Array<Array<(number|string),number,number,number>|Array<(number|string),number,number,number,number>|*>}
  * @extends   series.arearange.data
  * @excluding y, marker
@@ -11363,8 +10148,9 @@ const OHLCSeriesDefaults = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -11401,7 +10187,7 @@ function onSeriesInit(eventOptions) {
     const series = this, options = eventOptions.options;
     if (options.useOhlcData &&
         options.id !== 'highcharts-navigator-series') {
-        extend(series, {
+        (0,external_highcharts_src_js_default_namespaceObject.extend)(series, {
             pointValKey: OHLCSeries.prototype.pointValKey,
             // Keys: ohlcProto.keys, // @todo potentially nonsense
             pointArrayMap: OHLCSeries.prototype.pointArrayMap,
@@ -11430,9 +10216,9 @@ class OHLCSeries extends OHLCSeries_HLCSeries {
      *
      * */
     static compose(SeriesClass, ..._args) {
-        if (pushUnique(OHLCSeries_composed, 'OHLCSeries')) {
-            addEvent(SeriesClass, 'afterSetOptions', onSeriesAfterSetOptions);
-            addEvent(SeriesClass, 'init', onSeriesInit);
+        if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(OHLCSeries_composed, 'OHLCSeries')) {
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'afterSetOptions', onSeriesAfterSetOptions);
+            (0,external_highcharts_src_js_default_namespaceObject.addEvent)(SeriesClass, 'init', onSeriesInit);
         }
     }
     /* *
@@ -11440,10 +10226,10 @@ class OHLCSeries extends OHLCSeries_HLCSeries {
      *  Functions
      *
      * */
-    getPointPath(point, graphic) {
-        const path = super.getPointPath(point, graphic), strokeWidth = graphic.strokeWidth(), crispX = crisp(point.plotX || 0, strokeWidth), halfWidth = Math.round(point.shapeArgs.width / 2);
+    getPointPath(point) {
+        const path = super.getPointPath(point), strokeWidth = this.borderWidth, crispX = (0,external_highcharts_src_js_default_namespaceObject.crisp)(point.plotX || 0, strokeWidth), halfWidth = Math.round(point.shapeArgs.width / 2);
         if (point.open !== null) {
-            const plotOpen = crisp(point.plotOpen, strokeWidth);
+            const plotOpen = (0,external_highcharts_src_js_default_namespaceObject.crisp)(point.plotOpen, strokeWidth);
             path.push(['M', crispX, plotOpen], ['L', crispX - halfWidth, plotOpen]);
             super.extendStem(path, strokeWidth / 2, plotOpen);
         }
@@ -11456,9 +10242,9 @@ class OHLCSeries extends OHLCSeries_HLCSeries {
     pointAttribs(point, state) {
         const attribs = super.pointAttribs.call(this, point, state), options = this.options;
         delete attribs.fill;
-        if (!point.options.color &&
+        if (!point?.options.color &&
             options.upColor &&
-            point.open < point.close) {
+            (point?.open || 0) < (point?.close || 0)) {
             attribs.stroke = options.upColor;
         }
         return attribs;
@@ -11473,8 +10259,8 @@ class OHLCSeries extends OHLCSeries_HLCSeries {
  *  Static Properties
  *
  * */
-OHLCSeries.defaultOptions = merge(OHLCSeries_HLCSeries.defaultOptions, OHLC_OHLCSeriesDefaults);
-extend(OHLCSeries.prototype, {
+OHLCSeries.defaultOptions = (0,external_highcharts_src_js_default_namespaceObject.merge)(OHLCSeries_HLCSeries.defaultOptions, OHLC_OHLCSeriesDefaults);
+(0,external_highcharts_src_js_default_namespaceObject.extend)(OHLCSeries.prototype, {
     pointClass: OHLC_OHLCPoint,
     pointArrayMap: ['open', 'high', 'low', 'close']
 });
@@ -11492,8 +10278,9 @@ external_highcharts_src_js_default_SeriesRegistry_default().registerSeriesType('
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -11549,6 +10336,16 @@ const CandlestickSeriesDefaults = {
      */
     threshold: null,
     /**
+     * What type of legend symbol to render for this series. For candlestick
+     * series, the default is `candlestick`, a vertical line (wick) with a
+     * rectangular body.
+     *
+     * @default   candlestick
+     * @product   highstock
+     * @apioption plotOptions.candlestick.legendSymbol
+     */
+    legendSymbol: 'candlestick',
+    /**
      * The color of the line/border of the candlestick.
      *
      * In styled mode, the line stroke can be set with the
@@ -11563,7 +10360,7 @@ const CandlestickSeriesDefaults = {
      * @default #000000
      * @product highstock
      */
-    lineColor: "#000000" /* Palette.neutralColor100 */,
+    lineColor: 'var(--highcharts-neutral-color-100)',
     /**
      * The pixel width of the candlestick line/border. Defaults to `1`.
      *
@@ -11589,7 +10386,7 @@ const CandlestickSeriesDefaults = {
      * @default #ffffff
      * @product highstock
     */
-    upColor: "#ffffff" /* Palette.backgroundColor */,
+    upColor: 'var(--highcharts-background-color)',
     /**
      * @product highstock
      */
@@ -11650,6 +10447,7 @@ const CandlestickSeriesDefaults = {
  *    }]
  *    ```
  *
+ * @basic
  * @type      {Array<Array<(number|string),number,number,number>|Array<(number|string),number,number,number,number>|*>}
  * @extends   series.ohlc.data
  * @excluding y
@@ -11670,8 +10468,9 @@ const CandlestickSeriesDefaults = {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -11707,11 +10506,11 @@ class CandlestickSeries extends CandlestickSeries_OHLCSeries {
      * @function Highcharts.seriesTypes.candlestick#pointAttribs
      */
     pointAttribs(point, state) {
-        const attribs = CandlestickSeries_ColumnSeries.prototype.pointAttribs.call(this, point, state), options = this.options, isUp = point.open < point.close, stroke = options.lineColor || this.color, color = point.color || this.color; // (#14826)
+        const attribs = CandlestickSeries_ColumnSeries.prototype.pointAttribs.call(this, point, state), options = this.options, isUp = (point?.open || 0) < (point?.close || 0), stroke = options.lineColor || this.color, color = point?.color || this.color; // (#14826)
         attribs['stroke-width'] = options.lineWidth;
-        attribs.fill = point.options.color ||
+        attribs.fill = point?.options.color ||
             (isUp ? (options.upColor || color) : color);
-        attribs.stroke = point.options.lineColor ||
+        attribs.stroke = point?.options.lineColor ||
             (isUp ? (options.upLineColor || stroke) : stroke);
         // Select or hover states
         if (state) {
@@ -11724,75 +10523,47 @@ class CandlestickSeries extends CandlestickSeries_OHLCSeries {
         return attribs;
     }
     /**
-     * Draw the data points.
-     *
+     * Create the SVGPath of the point based on the plot positions
      * @private
-     * @function Highcharts.seriesTypes.candlestick#drawPoints
      */
-    drawPoints() {
-        const series = this, points = series.points, chart = series.chart, reversedYAxis = series.yAxis.reversed;
-        for (const point of points) {
-            let graphic = point.graphic, plotOpen, plotClose, topBox, bottomBox, hasTopWhisker, hasBottomWhisker, crispX, path, halfWidth;
-            const isNew = !graphic;
-            if (typeof point.plotY !== 'undefined') {
-                if (!graphic) {
-                    point.graphic = graphic = chart.renderer.path()
-                        .add(series.group);
-                }
-                if (!series.chart.styledMode) {
-                    graphic
-                        .attr(series.pointAttribs(point, (point.selected && 'select'))) // #3897
-                        .shadow(series.options.shadow);
-                }
-                // Crisp vector coordinates
-                const strokeWidth = graphic.strokeWidth();
-                // #2596:
-                crispX = crisp(point.plotX || 0, strokeWidth);
-                plotOpen = point.plotOpen;
-                plotClose = point.plotClose;
-                topBox = Math.min(plotOpen, plotClose);
-                bottomBox = Math.max(plotOpen, plotClose);
-                halfWidth = Math.round(point.shapeArgs.width / 2);
-                hasTopWhisker = reversedYAxis ?
-                    bottomBox !== point.yBottom :
-                    Math.round(topBox) !==
-                        Math.round(point.plotHigh || 0);
-                hasBottomWhisker = reversedYAxis ?
-                    Math.round(topBox) !==
-                        Math.round(point.plotHigh || 0) :
-                    bottomBox !== point.yBottom;
-                topBox = crisp(topBox, strokeWidth);
-                bottomBox = crisp(bottomBox, strokeWidth);
-                // Create the path. Due to a bug in Chrome 49, the path is
-                // first instantiated with no values, then the values
-                // pushed. For unknown reasons, instantiating the path array
-                // with all the values would lead to a crash when updating
-                // frequently (#5193).
-                path = [];
-                path.push(['M', crispX - halfWidth, bottomBox], ['L', crispX - halfWidth, topBox], ['L', crispX + halfWidth, topBox], ['L', crispX + halfWidth, bottomBox], ['Z'], // Ensure a nice rectangle #2602
-                ['M', crispX, topBox], [
-                    'L',
-                    // #460, #2094
-                    crispX,
-                    hasTopWhisker ?
-                        Math.round(reversedYAxis ?
-                            point.yBottom :
-                            point.plotHigh) :
-                        topBox
-                ], ['M', crispX, bottomBox], [
-                    'L',
-                    // #460, #2094
-                    crispX,
-                    hasBottomWhisker ?
-                        Math.round(reversedYAxis ?
-                            point.plotHigh :
-                            point.yBottom) :
-                        bottomBox
-                ]);
-                graphic[isNew ? 'attr' : 'animate']({ d: path })
-                    .addClass(point.getClassName(), true);
-            }
-        }
+    getPointPath(point) {
+        // Crisp vector coordinates
+        const strokeWidth = this.borderWidth, 
+        // #2596:
+        crispX = (0,external_highcharts_src_js_default_namespaceObject.crisp)(point.plotX || 0, strokeWidth), plotOpen = point.plotOpen, plotClose = point.plotClose, topBoxFloat = Math.min(plotOpen, plotClose), bottomBoxFloat = Math.max(plotOpen, plotClose), halfWidth = Math.round(point.shapeArgs.width / 2), reversedYAxis = this.yAxis.reversed, hasTopWhisker = reversedYAxis ?
+            bottomBoxFloat !== point.yBottom :
+            Math.round(topBoxFloat) !==
+                Math.round(point.plotHigh || 0), hasBottomWhisker = reversedYAxis ?
+            Math.round(topBoxFloat) !==
+                Math.round(point.plotHigh || 0) :
+            bottomBoxFloat !== point.yBottom, topBox = (0,external_highcharts_src_js_default_namespaceObject.crisp)(topBoxFloat, strokeWidth), bottomBox = (0,external_highcharts_src_js_default_namespaceObject.crisp)(bottomBoxFloat, strokeWidth);
+        // Create the path. Due to a bug in Chrome 49, the path is
+        // first instantiated with no values, then the values
+        // pushed. For unknown reasons, instantiating the path array
+        // with all the values would lead to a crash when updating
+        // frequently (#5193).
+        const path = [];
+        path.push(['M', crispX - halfWidth, bottomBox], ['L', crispX - halfWidth, topBox], ['L', crispX + halfWidth, topBox], ['L', crispX + halfWidth, bottomBox], ['Z'], // Ensure a nice rectangle #2602
+        ['M', crispX, topBox], [
+            'L',
+            // #460, #2094
+            crispX,
+            hasTopWhisker ?
+                Math.round(reversedYAxis ?
+                    point.yBottom :
+                    point.plotHigh) :
+                topBox
+        ], ['M', crispX, bottomBox], [
+            'L',
+            // #460, #2094
+            crispX,
+            hasBottomWhisker ?
+                Math.round(reversedYAxis ?
+                    point.plotHigh :
+                    point.yBottom) :
+                bottomBox
+        ]);
+        return path;
     }
 }
 /* *
@@ -11800,7 +10571,7 @@ class CandlestickSeries extends CandlestickSeries_OHLCSeries {
  *  Static Properties
  *
  * */
-CandlestickSeries.defaultOptions = merge(CandlestickSeries_OHLCSeries.defaultOptions, { tooltip: CandlestickSeries_OHLCSeries.defaultOptions.tooltip }, Candlestick_CandlestickSeriesDefaults);
+CandlestickSeries.defaultOptions = (0,external_highcharts_src_js_default_namespaceObject.merge)(CandlestickSeries_OHLCSeries.defaultOptions, { tooltip: CandlestickSeries_OHLCSeries.defaultOptions.tooltip }, Candlestick_CandlestickSeriesDefaults);
 external_highcharts_src_js_default_SeriesRegistry_default().registerSeriesType('candlestick', CandlestickSeries);
 /* *
  *
@@ -11815,8 +10586,9 @@ external_highcharts_src_js_default_SeriesRegistry_default().registerSeriesType('
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -11850,7 +10622,7 @@ class FlagsPoint extends FlagsPoint_ColumnPoint {
     isValid() {
         // #9233 - Prevent from treating flags as null points (even if
         // they have no y values defined).
-        return isNumber(this.y) || typeof this.y === 'undefined';
+        return (0,external_highcharts_src_js_default_namespaceObject.isNumber)(this.y) || typeof this.y === 'undefined';
     }
     /**
      * @private
@@ -11873,8 +10645,9 @@ class FlagsPoint extends FlagsPoint_ColumnPoint {
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -11921,6 +10694,15 @@ const FlagsSeriesDefaults = {
      * @validvalue ["y", "open", "high", "low", "close"]
      * @apioption  plotOptions.flags.onKey
      */
+    /**
+   * What type of legend symbol to render for this series. For flags
+   * series, the default is `flag-icon`, a pole with a pennant.
+   *
+     * @default   flag-icon
+     * @product   highstock
+     * @apioption plotOptions.flags.legendSymbol
+     */
+    legendSymbol: 'flag-icon',
     /**
      * The id of the series that the flags should be drawn on. If no id
      * is given, the flags are drawn on the x axis.
@@ -12045,7 +10827,7 @@ const FlagsSeriesDefaults = {
      * @type    {Highcharts.ColorType}
      * @product highstock
      */
-    fillColor: "#ffffff" /* Palette.backgroundColor */,
+    fillColor: 'var(--highcharts-background-color)',
     /**
      * The color of the line/border of the flag.
      *
@@ -12075,14 +10857,14 @@ const FlagsSeriesDefaults = {
              * @type    {Highcharts.ColorType}
              * @product highstock
              */
-            lineColor: "#000000" /* Palette.neutralColor100 */,
+            lineColor: 'var(--highcharts-neutral-color-100)',
             /**
              * The fill or background color of the flag.
              *
              * @type    {Highcharts.ColorType}
              * @product highstock
              */
-            fillColor: "#ccd3ff" /* Palette.highlightColor20 */
+            fillColor: 'var(--highcharts-highlight-color-20)'
         }
     },
     /**
@@ -12097,7 +10879,7 @@ const FlagsSeriesDefaults = {
      */
     style: {
         /** @ignore-option */
-        color: "#000000" /* Palette.neutralColor100 */,
+        color: 'var(--highcharts-neutral-color-100)',
         /** @ignore-option */
         fontSize: '0.7em',
         /** @ignore-option */
@@ -12137,6 +10919,7 @@ const FlagsSeriesDefaults = {
  *    }]
  *    ```
  *
+ * @basic
  * @type      {Array<*>}
  * @extends   series.line.data
  * @excluding dataLabels, marker, name, y
@@ -12180,6 +10963,8 @@ const FlagsSeriesDefaults = {
  *
  * */
 
+
+const { composed: FlagsSymbols_composed } = (external_highcharts_src_js_default_default());
 /* *
  *
  *  Composition
@@ -12189,12 +10974,6 @@ var FlagsSymbols;
 (function (FlagsSymbols) {
     /* *
      *
-     *  Constants
-     *
-     * */
-    const modifiedMembers = [];
-    /* *
-     *
      *  Functions
      *
      * */
@@ -12202,18 +10981,17 @@ var FlagsSymbols;
      * @private
      */
     function compose(SVGRendererClass) {
-        if (modifiedMembers.indexOf(SVGRendererClass) === -1) {
-            modifiedMembers.push(SVGRendererClass);
+        if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(FlagsSymbols_composed, 'Series.Flags')) {
             const symbols = SVGRendererClass.prototype.symbols;
             symbols.flag = flag;
             createPinSymbol(symbols, 'circle');
             createPinSymbol(symbols, 'square');
-        }
-        const RendererClass = external_highcharts_src_js_default_RendererRegistry_default().getRendererType();
-        // The symbol callbacks are generated on the SVGRenderer object in all
-        // browsers.
-        if (modifiedMembers.indexOf(RendererClass)) {
-            modifiedMembers.push(RendererClass);
+            symbols['flag-icon'] = function (x, y, w, h) {
+                return flag.call(this, x, y, w, Math.round(h * 0.6), {
+                    anchorX: Math.round(x),
+                    anchorY: Math.round(y + h)
+                });
+            };
         }
     }
     FlagsSymbols.compose = compose;
@@ -12291,8 +11069,9 @@ var external_highcharts_src_js_default_Series_types_column_default = /*#__PURE__
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -12325,7 +11104,7 @@ var OnSeriesComposition;
      * @private
      */
     function compose(SeriesClass) {
-        if (pushUnique(OnSeriesComposition_composed, 'OnSeries')) {
+        if ((0,external_highcharts_src_js_default_namespaceObject.pushUnique)(OnSeriesComposition_composed, 'OnSeries')) {
             const seriesProto = SeriesClass.prototype;
             seriesProto.getPlotBox = getPlotBox;
             seriesProto.translate = translate;
@@ -12361,7 +11140,7 @@ var OnSeriesComposition;
             lastX = (onData[i - 1].x +
                 (currentDataGrouping ? currentDataGrouping.totalRange : 0)); // #2374
             // sort the data points
-            stableSort(points, (a, b) => (a.x - b.x));
+            (0,external_highcharts_src_js_default_namespaceObject.stableSort)(points, (a, b) => (a.x - b.x));
             onKey = 'plot' + onKey[0].toUpperCase() + onKey.substr(1);
             while (i-- && points[cursor]) {
                 leftPoint = onData[i];
@@ -12379,7 +11158,7 @@ var OnSeriesComposition;
                                 typeof rightPoint[onKey] !== 'undefined') {
                                 // If the series is spline, calculate Y of the
                                 // point on the bezier line. #19264
-                                if (defined(point.plotX) &&
+                                if ((0,external_highcharts_src_js_default_namespaceObject.defined)(point.plotX) &&
                                     onSeries.is('spline')) {
                                     leftPoint = leftPoint;
                                     rightPoint = rightPoint;
@@ -12418,7 +11197,7 @@ var OnSeriesComposition;
                                             tMax = tMid;
                                         }
                                     }
-                                    if (defined(t)) {
+                                    if ((0,external_highcharts_src_js_default_namespaceObject.defined)(t)) {
                                         point.plotY =
                                             calculateCoord(t, 1);
                                         point.y =
@@ -12465,7 +11244,7 @@ var OnSeriesComposition;
                     // We're inside xAxis range
                     if (inverted) {
                         point.plotY = xAxis.translate(point.x, 0, 1, 0, 1);
-                        point.plotX = defined(point.y) ?
+                        point.plotX = (0,external_highcharts_src_js_default_namespaceObject.defined)(point.y) ?
                             yAxis.translate(point.y, 0, 0, 0, 1) :
                             0;
                     }
@@ -12505,8 +11284,9 @@ var OnSeriesComposition;
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -12557,7 +11337,7 @@ class FlagsSeries extends FlagsSeries_ColumnSeries {
      * @private
      */
     drawPoints() {
-        const series = this, points = series.points, chart = series.chart, renderer = chart.renderer, inverted = chart.inverted, options = series.options, optionsY = options.y, yAxis = series.yAxis, boxesMap = {}, boxes = [], borderRadius = isNumber(options.borderRadius) ?
+        const series = this, points = series.points, chart = series.chart, renderer = chart.renderer, inverted = chart.inverted, options = series.options, optionsY = options.y, yAxis = series.yAxis, boxesMap = {}, boxes = [], borderRadius = (0,external_highcharts_src_js_default_namespaceObject.isNumber)(options.borderRadius) ?
             options.borderRadius : 0;
         let plotX, plotY, shape, i, point, graphic, stackIndex, anchorY, attribs, outsideRight, centered;
         i = points.length;
@@ -12610,7 +11390,7 @@ class FlagsSeries extends FlagsSeries_ColumnSeries {
                 if (!chart.styledMode) {
                     graphic
                         .attr(series.pointAttribs(point))
-                        .css(merge(options.style, point.style))
+                        .css((0,external_highcharts_src_js_default_namespaceObject.merge)(options.style, point.style))
                         .shadow(options.shadow);
                 }
                 if (plotX > 0) { // #3119
@@ -12656,7 +11436,7 @@ class FlagsSeries extends FlagsSeries_ColumnSeries {
         // Handle X-dimension overlapping
         if (!options.allowOverlapX) {
             let maxDistance = 100;
-            objectEach(boxesMap, function (box) {
+            (0,external_highcharts_src_js_default_namespaceObject.objectEach)(boxesMap, function (box) {
                 box.plotX = box.anchorX;
                 boxes.push(box);
                 maxDistance = Math.max(box.size, maxDistance);
@@ -12669,7 +11449,7 @@ class FlagsSeries extends FlagsSeries_ColumnSeries {
                 if (box && graphic) {
                     // Hide flag when its box position is not specified
                     // (#8573, #9299)
-                    if (!defined(box.pos)) {
+                    if (!(0,external_highcharts_src_js_default_namespaceObject.defined)(box.pos)) {
                         graphic.hide().isNew = true;
                     }
                     else {
@@ -12683,7 +11463,7 @@ class FlagsSeries extends FlagsSeries_ColumnSeries {
         }
         // Can be a mix of SVG and HTML and we need events for both (#6303)
         if (options.useHTML && series.markerGroup) {
-            wrap(series.markerGroup, 'on', function (proceed) {
+            (0,external_highcharts_src_js_default_namespaceObject.wrap)(series.markerGroup, 'on', function (proceed) {
                 return external_highcharts_src_js_default_SVGElement_default().prototype.on.apply(
                 // For HTML
                 // eslint-disable-next-line no-invalid-this
@@ -12712,7 +11492,7 @@ class FlagsSeries extends FlagsSeries_ColumnSeries {
                 if (point.unbindMouseOver) {
                     point.unbindMouseOver();
                 }
-                point.unbindMouseOver = addEvent(graphic.element, 'mouseover', function () {
+                point.unbindMouseOver = (0,external_highcharts_src_js_default_namespaceObject.addEvent)(graphic.element, 'mouseover', function () {
                     // Raise this point
                     if (point.stackIndex > 0 &&
                         !point.raised) {
@@ -12773,9 +11553,9 @@ class FlagsSeries extends FlagsSeries_ColumnSeries {
  *
  * */
 FlagsSeries.compose = Flags_FlagsSymbols.compose;
-FlagsSeries.defaultOptions = merge(FlagsSeries_ColumnSeries.defaultOptions, Flags_FlagsSeriesDefaults);
+FlagsSeries.defaultOptions = (0,external_highcharts_src_js_default_namespaceObject.merge)(FlagsSeries_ColumnSeries.defaultOptions, Flags_FlagsSeriesDefaults);
 Series_OnSeriesComposition.compose(FlagsSeries);
-extend(FlagsSeries.prototype, {
+(0,external_highcharts_src_js_default_namespaceObject.extend)(FlagsSeries.prototype, {
     allowDG: false,
     forceCrop: true,
     invertible: false, // Flags series group should not be invertible (#14063).
@@ -12839,11 +11619,12 @@ G.OrdinalAxis = G.OrdinalAxis || Axis_OrdinalAxis;
 G.RangeSelector = G.RangeSelector || RangeSelector_RangeSelector;
 G.Scrollbar = G.Scrollbar || Scrollbar_Scrollbar;
 // Functions
-G.stockChart = G.stockChart || Chart_StockChart.stockChart;
+G.stockChart = Chart_StockChart.stockChart;
 G.StockChart = G.StockChart || G.stockChart;
-extend(G.StockChart, Chart_StockChart);
+(0,external_highcharts_src_js_default_namespaceObject.extend)(G.StockChart, Chart_StockChart);
 // Compositions
 Series_DataModifyComposition.compose(G.Series, G.Axis, G.Point);
+HLC_HLCSeries.compose(G.Series, G.SVGRenderer);
 Flags_FlagsSeries.compose(G.Renderer);
 OHLC_OHLCSeries.compose(G.Series);
 G.Navigator.compose(G.Chart, G.Axis, G.Series);

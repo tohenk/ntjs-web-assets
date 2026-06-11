@@ -3,8 +3,9 @@
  *  (c) 2010-2026 Highsoft AS
  *  Author: Torstein Hønsi
  *
- *  A commercial license may be required depending on use.
- *  See www.highcharts.com/license
+ *  Integration of this software requires a license.
+ *  - For commercial use, see www.highcharts.com/license
+ *  - For non-commercial, see www.highcharts.com/license-eula
  *
  *
  * */
@@ -44,9 +45,10 @@ class MapChart extends Chart {
      * @param {Highcharts.Options} userOptions
      *        Custom options.
      *
-     * @param {Function} [callback]
+     * @param {Function|true} [callback]
      *        Function to run when the chart has loaded and all external
-     *        images are loaded.
+     *        images are loaded. Set to `true` to return a promise that
+     *        resolves when the chart is ready.
      *
      *
      * @emits Highcharts.MapChart#event:init
@@ -82,7 +84,7 @@ class MapChart extends Chart {
      *
      * Deprecated as of v9.3 in favor of [MapView.zoomBy](https://api.highcharts.com/class-reference/Highcharts.MapView#zoomBy).
      *
-     * @deprecated
+     * @deprecated 9.3.0
      * @function Highcharts.Chart#mapZoom
      *
      * @param {number} [howMuch]
@@ -192,7 +194,8 @@ class MapChart extends Chart {
      * The chart object.
      */
     function mapChart(a, b, c) {
-        return new MapChart(a, b, c);
+        const chart = new MapChart(a, b, c);
+        return chart.promise || chart;
     }
     MapChart.mapChart = mapChart;
     /* eslint-enable jsdoc/check-param-names */
