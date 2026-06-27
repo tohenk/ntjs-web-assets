@@ -223,7 +223,7 @@
     "cdnjs": ""
   },
   "pdfjs": {
-    "version": "6.0.227",
+    "version": "6.1.200",
     "jsdelivr": "pdfjs-dist"
   },
   "popper.js": {
