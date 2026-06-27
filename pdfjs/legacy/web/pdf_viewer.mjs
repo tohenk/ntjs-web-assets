@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.0.227
- * pdfjsBuild = 241dbabbf
+ * pdfjsVersion = 6.1.200
+ * pdfjsBuild = 6353acefe
  */
 /******/ var __webpack_modules__ = ({
 
@@ -192,123 +192,6 @@ module.exports = function (argument) {
 
 // eslint-disable-next-line es/no-typed-arrays -- safe
 module.exports = typeof ArrayBuffer != 'undefined' && typeof DataView != 'undefined';
-
-
-/***/ },
-
-/***/ 7394
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var uncurryThisAccessor = __webpack_require__(6706);
-var classof = __webpack_require__(2195);
-
-var ArrayBuffer = globalThis.ArrayBuffer;
-var TypeError = globalThis.TypeError;
-
-// Includes
-// - Perform ? RequireInternalSlot(O, [[ArrayBufferData]]).
-// - If IsSharedArrayBuffer(O) is true, throw a TypeError exception.
-module.exports = ArrayBuffer && uncurryThisAccessor(ArrayBuffer.prototype, 'byteLength', 'get') || function (O) {
-  if (classof(O) !== 'ArrayBuffer') throw new TypeError('ArrayBuffer expected');
-  return O.byteLength;
-};
-
-
-/***/ },
-
-/***/ 3238
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var NATIVE_ARRAY_BUFFER = __webpack_require__(7811);
-var arrayBufferByteLength = __webpack_require__(7394);
-
-var DataView = globalThis.DataView;
-
-module.exports = function (O) {
-  if (!NATIVE_ARRAY_BUFFER || arrayBufferByteLength(O) !== 0) return false;
-  try {
-    // eslint-disable-next-line no-new -- thrower
-    new DataView(O);
-    return false;
-  } catch (error) {
-    return true;
-  }
-};
-
-
-/***/ },
-
-/***/ 5169
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var isDetached = __webpack_require__(3238);
-
-var $TypeError = TypeError;
-
-module.exports = function (it) {
-  if (isDetached(it)) throw new $TypeError('ArrayBuffer is detached');
-  return it;
-};
-
-
-/***/ },
-
-/***/ 5636
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var uncurryThis = __webpack_require__(9504);
-var uncurryThisAccessor = __webpack_require__(6706);
-var toIndex = __webpack_require__(7696);
-var notDetached = __webpack_require__(5169);
-var arrayBufferByteLength = __webpack_require__(7394);
-var detachTransferable = __webpack_require__(4483);
-var PROPER_STRUCTURED_CLONE_TRANSFER = __webpack_require__(1548);
-
-var structuredClone = globalThis.structuredClone;
-var ArrayBuffer = globalThis.ArrayBuffer;
-var DataView = globalThis.DataView;
-var max = Math.max;
-var min = Math.min;
-var ArrayBufferPrototype = ArrayBuffer.prototype;
-var DataViewPrototype = DataView.prototype;
-var slice = uncurryThis(ArrayBufferPrototype.slice);
-var isResizable = uncurryThisAccessor(ArrayBufferPrototype, 'resizable', 'get');
-var maxByteLength = uncurryThisAccessor(ArrayBufferPrototype, 'maxByteLength', 'get');
-var getInt8 = uncurryThis(DataViewPrototype.getInt8);
-var setInt8 = uncurryThis(DataViewPrototype.setInt8);
-
-module.exports = (PROPER_STRUCTURED_CLONE_TRANSFER || detachTransferable) && function (arrayBuffer, newLength, preserveResizability) {
-  var byteLength = arrayBufferByteLength(arrayBuffer);
-  var newByteLength = newLength === undefined ? byteLength : toIndex(newLength);
-  var fixedLength = !isResizable || !isResizable(arrayBuffer);
-  var newBuffer;
-  notDetached(arrayBuffer);
-  if (PROPER_STRUCTURED_CLONE_TRANSFER) {
-    arrayBuffer = structuredClone(arrayBuffer, { transfer: [arrayBuffer] });
-    if (byteLength === newByteLength && (preserveResizability || fixedLength)) return arrayBuffer;
-  }
-  if (byteLength >= newByteLength && (!preserveResizability || fixedLength)) {
-    newBuffer = slice(arrayBuffer, 0, newByteLength);
-  } else {
-    var options = preserveResizability && !fixedLength && maxByteLength
-      ? { maxByteLength: max(newByteLength, maxByteLength(arrayBuffer)) }
-      : undefined;
-    newBuffer = new ArrayBuffer(newByteLength, options);
-    var a = new DataView(arrayBuffer);
-    var b = new DataView(newBuffer);
-    var copyLength = min(newByteLength, byteLength);
-    for (var i = 0; i < copyLength; i++) setInt8(b, i, getInt8(a, i));
-  }
-  if (!PROPER_STRUCTURED_CLONE_TRANSFER) detachTransferable(arrayBuffer);
-  return newBuffer;
-};
 
 
 /***/ },
@@ -874,50 +757,6 @@ module.exports = !fails(function () {
 
 /***/ },
 
-/***/ 4483
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var getBuiltInNodeModule = __webpack_require__(9429);
-var PROPER_STRUCTURED_CLONE_TRANSFER = __webpack_require__(1548);
-
-var structuredClone = globalThis.structuredClone;
-var $ArrayBuffer = globalThis.ArrayBuffer;
-var $MessageChannel = globalThis.MessageChannel;
-var detach = false;
-var WorkerThreads, channel, buffer, $detach;
-
-if (PROPER_STRUCTURED_CLONE_TRANSFER) {
-  detach = function (transferable) {
-    structuredClone(transferable, { transfer: [transferable] });
-  };
-} else if ($ArrayBuffer) try {
-  if (!$MessageChannel) {
-    WorkerThreads = getBuiltInNodeModule('worker_threads');
-    if (WorkerThreads) $MessageChannel = WorkerThreads.MessageChannel;
-  }
-
-  if ($MessageChannel) {
-    channel = new $MessageChannel();
-    buffer = new $ArrayBuffer(2);
-
-    $detach = function (transferable) {
-      channel.port1.postMessage(null, [transferable]);
-    };
-
-    if (buffer.byteLength === 2) {
-      $detach(buffer);
-      if (buffer.byteLength === 0) detach = $detach;
-    }
-  }
-} catch (error) { /* empty */ }
-
-module.exports = detach;
-
-
-/***/ },
-
 /***/ 4055
 (module, __unused_webpack_exports, __webpack_require__) {
 
@@ -969,17 +808,6 @@ module.exports = [
 
 /***/ },
 
-/***/ 6193
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var ENVIRONMENT = __webpack_require__(4215);
-
-module.exports = ENVIRONMENT === 'NODE';
-
-
-/***/ },
-
 /***/ 2839
 (module, __unused_webpack_exports, __webpack_require__) {
 
@@ -1025,34 +853,6 @@ if (!version && userAgent) {
 }
 
 module.exports = version;
-
-
-/***/ },
-
-/***/ 4215
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-/* global Bun, Deno -- detection */
-var globalThis = __webpack_require__(4576);
-var userAgent = __webpack_require__(2839);
-var classof = __webpack_require__(2195);
-
-var userAgentStartsWith = function (string) {
-  return userAgent.slice(0, string.length) === string;
-};
-
-module.exports = (function () {
-  if (userAgentStartsWith('Bun/')) return 'BUN';
-  if (userAgentStartsWith('Cloudflare-Workers')) return 'CLOUDFLARE';
-  if (userAgentStartsWith('Deno/')) return 'DENO';
-  if (userAgentStartsWith('Node.js/')) return 'NODE';
-  if (globalThis.Bun && typeof Bun.version == 'string') return 'BUN';
-  if (globalThis.Deno && typeof Deno.version == 'object') return 'DENO';
-  if (classof(globalThis.process) === 'process') return 'NODE';
-  if (globalThis.window && globalThis.document) return 'BROWSER';
-  return 'REST';
-})();
 
 
 /***/ },
@@ -1278,28 +1078,6 @@ module.exports = NATIVE_BIND ? uncurryThisWithBind : function (fn) {
   return function () {
     return call.apply(fn, arguments);
   };
-};
-
-
-/***/ },
-
-/***/ 9429
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var IS_NODE = __webpack_require__(6193);
-
-module.exports = function (name) {
-  if (IS_NODE) {
-    try {
-      return globalThis.process.getBuiltinModule(name);
-    } catch (error) { /* empty */ }
-    try {
-      // eslint-disable-next-line no-new-func -- safe
-      return Function('return require("' + name + '")')();
-    } catch (error) { /* empty */ }
-  }
 };
 
 
@@ -3359,29 +3137,6 @@ module.exports = function repeat(count) {
 
 /***/ },
 
-/***/ 1548
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var fails = __webpack_require__(9039);
-var V8 = __webpack_require__(9519);
-var ENVIRONMENT = __webpack_require__(4215);
-
-var structuredClone = globalThis.structuredClone;
-
-module.exports = !!structuredClone && !fails(function () {
-  // prevent V8 ArrayBufferDetaching protector cell invalidation and performance degradation
-  // https://github.com/zloirock/core-js/issues/679
-  if ((ENVIRONMENT === 'DENO' && V8 > 92) || (ENVIRONMENT === 'NODE' && V8 > 94) || (ENVIRONMENT === 'BROWSER' && V8 > 97)) return false;
-  var buffer = new ArrayBuffer(8);
-  var clone = structuredClone(buffer, { transfer: [buffer] });
-  return buffer.byteLength !== 0 || clone.byteLength !== 8;
-});
-
-
-/***/ },
-
 /***/ 4495
 (module, __unused_webpack_exports, __webpack_require__) {
 
@@ -3443,28 +3198,6 @@ module.exports = function (argument) {
   if (typeof prim == 'number') throw new $TypeError("Can't convert number to bigint");
   // eslint-disable-next-line es/no-bigint -- safe
   return BigInt(prim);
-};
-
-
-/***/ },
-
-/***/ 7696
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var toIntegerOrInfinity = __webpack_require__(1291);
-var toLength = __webpack_require__(8014);
-
-var $RangeError = RangeError;
-
-// `ToIndex` abstract operation
-// https://tc39.es/ecma262/#sec-toindex
-module.exports = function (it) {
-  if (it === undefined) return 0;
-  var number = toIntegerOrInfinity(it);
-  var length = toLength(number);
-  if (number !== length) throw new $RangeError('Wrong length or index');
-  return length;
 };
 
 
@@ -3818,66 +3551,6 @@ module.exports = function (name) {
 // a string of all valid unicode whitespaces
 module.exports = '\u0009\u000A\u000B\u000C\u000D\u0020\u00A0\u1680\u2000\u2001\u2002' +
   '\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u3000\u2028\u2029\uFEFF';
-
-
-/***/ },
-
-/***/ 6573
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var DESCRIPTORS = __webpack_require__(3724);
-var defineBuiltInAccessor = __webpack_require__(2106);
-var isDetached = __webpack_require__(3238);
-
-var ArrayBufferPrototype = ArrayBuffer.prototype;
-
-// `ArrayBuffer.prototype.detached` getter
-// https://tc39.es/ecma262/#sec-get-arraybuffer.prototype.detached
-if (DESCRIPTORS && !('detached' in ArrayBufferPrototype)) {
-  defineBuiltInAccessor(ArrayBufferPrototype, 'detached', {
-    configurable: true,
-    get: function detached() {
-      return isDetached(this);
-    }
-  });
-}
-
-
-/***/ },
-
-/***/ 7936
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var $ = __webpack_require__(6518);
-var $transfer = __webpack_require__(5636);
-
-// `ArrayBuffer.prototype.transferToFixedLength` method
-// https://tc39.es/ecma262/#sec-arraybuffer.prototype.transfertofixedlength
-if ($transfer) $({ target: 'ArrayBuffer', proto: true }, {
-  transferToFixedLength: function transferToFixedLength() {
-    return $transfer(this, arguments.length ? arguments[0] : undefined, false);
-  }
-});
-
-
-/***/ },
-
-/***/ 8100
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var $ = __webpack_require__(6518);
-var $transfer = __webpack_require__(5636);
-
-// `ArrayBuffer.prototype.transfer` method
-// https://tc39.es/ecma262/#sec-arraybuffer.prototype.transfer
-if ($transfer) $({ target: 'ArrayBuffer', proto: true }, {
-  transfer: function transfer() {
-    return $transfer(this, arguments.length ? arguments[0] : undefined, true);
-  }
-});
 
 
 /***/ },
@@ -5127,122 +4800,6 @@ $({ target: 'WeakMap', proto: true, real: true, forced: IS_PURE }, {
 
 /***/ },
 
-/***/ 4603
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var defineBuiltIn = __webpack_require__(6840);
-var uncurryThis = __webpack_require__(9504);
-var toString = __webpack_require__(655);
-var validateArgumentsLength = __webpack_require__(2812);
-
-var $URLSearchParams = URLSearchParams;
-var URLSearchParamsPrototype = $URLSearchParams.prototype;
-var append = uncurryThis(URLSearchParamsPrototype.append);
-var $delete = uncurryThis(URLSearchParamsPrototype['delete']);
-var forEach = uncurryThis(URLSearchParamsPrototype.forEach);
-var push = uncurryThis([].push);
-var params = new $URLSearchParams('a=1&a=2&b=3');
-
-params['delete']('a', 1);
-// `undefined` case is a Chromium 117 bug
-// https://bugs.chromium.org/p/v8/issues/detail?id=14222
-params['delete']('b', undefined);
-
-if (params + '' !== 'a=2') {
-  defineBuiltIn(URLSearchParamsPrototype, 'delete', function (name /* , value */) {
-    var length = arguments.length;
-    var $value = length < 2 ? undefined : arguments[1];
-    if (length && $value === undefined) return $delete(this, name);
-    var entries = [];
-    forEach(this, function (v, k) { // also validates `this`
-      push(entries, { key: k, value: v });
-    });
-    validateArgumentsLength(length, 1);
-    var key = toString(name);
-    var value = toString($value);
-    var index = 0;
-    var entriesLength = entries.length;
-    var entry;
-    while (index < entriesLength) {
-      entry = entries[index];
-      $delete(this, entry.key);
-      index++;
-    }
-    index = 0;
-    while (index < entriesLength) {
-      entry = entries[index++];
-      if (!(entry.key === key && entry.value === value)) append(this, entry.key, entry.value);
-    }
-  }, { enumerable: true, unsafe: true });
-}
-
-
-/***/ },
-
-/***/ 7566
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var defineBuiltIn = __webpack_require__(6840);
-var uncurryThis = __webpack_require__(9504);
-var toString = __webpack_require__(655);
-var validateArgumentsLength = __webpack_require__(2812);
-
-var $URLSearchParams = URLSearchParams;
-var URLSearchParamsPrototype = $URLSearchParams.prototype;
-var getAll = uncurryThis(URLSearchParamsPrototype.getAll);
-var $has = uncurryThis(URLSearchParamsPrototype.has);
-var params = new $URLSearchParams('a=1');
-
-// `undefined` case is a Chromium 117 bug
-// https://bugs.chromium.org/p/v8/issues/detail?id=14222
-if (params.has('a', 2) || !params.has('a', undefined)) {
-  defineBuiltIn(URLSearchParamsPrototype, 'has', function has(name /* , value */) {
-    var length = arguments.length;
-    var $value = length < 2 ? undefined : arguments[1];
-    if (length && $value === undefined) return $has(this, name);
-    var values = getAll(this, name); // also validates `this`
-    validateArgumentsLength(length, 1);
-    var value = toString($value);
-    var index = 0;
-    while (index < values.length) {
-      if (values[index++] === value) return true;
-    } return false;
-  }, { enumerable: true, unsafe: true });
-}
-
-
-/***/ },
-
-/***/ 8721
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var DESCRIPTORS = __webpack_require__(3724);
-var uncurryThis = __webpack_require__(9504);
-var defineBuiltInAccessor = __webpack_require__(2106);
-
-var URLSearchParamsPrototype = URLSearchParams.prototype;
-var forEach = uncurryThis(URLSearchParamsPrototype.forEach);
-
-// `URLSearchParams.prototype.size` getter
-// https://github.com/whatwg/url/pull/734
-if (DESCRIPTORS && !('size' in URLSearchParamsPrototype)) {
-  defineBuiltInAccessor(URLSearchParamsPrototype, 'size', {
-    get: function size() {
-      var count = 0;
-      forEach(this, function () { count++; });
-      return count;
-    },
-    configurable: true,
-    enumerable: true
-  });
-}
-
-
-/***/ },
-
 /***/ 5781
 (__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
@@ -5321,12 +4878,6 @@ $({ target: 'URL', stat: true, forced: !USE_NATIVE_URL }, {
 
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.push.js
 var es_array_push = __webpack_require__(4114);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array-buffer.detached.js
-var es_array_buffer_detached = __webpack_require__(6573);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array-buffer.transfer.js
-var es_array_buffer_transfer = __webpack_require__(8100);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array-buffer.transfer-to-fixed-length.js
-var es_array_buffer_transfer_to_fixed_length = __webpack_require__(7936);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.iterator.constructor.js
 var es_iterator_constructor = __webpack_require__(8111);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.iterator.filter.js
@@ -5401,6 +4952,7 @@ const {
   normalizeUnicode,
   OPS,
   OutputScale,
+  PasswordException,
   PasswordResponses,
   PDFDataRangeTransport,
   PDFDateString,
@@ -5541,16 +5093,7 @@ function getNormalizeWithNFKC() {
 
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.includes.js
 var es_array_includes = __webpack_require__(4423);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/web.url-search-params.delete.js
-var web_url_search_params_delete = __webpack_require__(4603);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/web.url-search-params.has.js
-var web_url_search_params_has = __webpack_require__(7566);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/web.url-search-params.size.js
-var web_url_search_params_size = __webpack_require__(8721);
 ;// ./web/ui_utils.js
-
-
-
 
 
 
@@ -6040,15 +5583,12 @@ const calcRound = function () {
 }();
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "9556e50a-f4f8-4f57-9831-f9ddff0176eb";
+const INTERNAL_EVT = "068f09d6-5b37-4f77-a97a-f8ff4f253b68";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
 
 ;// ./web/pdf_find_controller.js
-
-
-
 
 
 
@@ -7088,6 +6628,16 @@ class PDFLinkService {
       ...options
     });
   }
+  async getAttachmentContent(id) {
+    try {
+      return await this.pdfDocument?.getAttachmentContent(id);
+    } catch (error) {
+      if (!(error instanceof PasswordException)) {
+        console.warn(`Unable to load attachment content: ${error}`);
+      }
+    }
+    return null;
+  }
   addLinkAttributes(link, url, newWindow = false) {
     if (!url || typeof url !== "string") {
       throw new Error('A valid "url" parameter must provided.');
@@ -7281,7 +6831,6 @@ class SimpleLinkService extends PDFLinkService {
 class AnnotationLayerBuilder {
   #annotations = null;
   #commentManager = null;
-  #externalHide = false;
   #onAppend = null;
   #eventAC = null;
   #linksInjected = false;
@@ -7401,9 +6950,12 @@ class AnnotationLayerBuilder {
     this._cancelled = true;
     this.#eventAC?.abort();
     this.#eventAC = null;
+    this.annotationLayer?.destroy();
   }
-  hide(internal = false) {
-    this.#externalHide = !internal;
+  refreshCanvases() {
+    this.annotationLayer?.refreshCanvases();
+  }
+  hide() {
     if (!this.div) {
       return;
     }
@@ -7425,9 +6977,6 @@ class AnnotationLayerBuilder {
       return;
     }
     await this.annotationLayer.addLinkAnnotations(newLinks);
-    if (!this.#externalHide) {
-      this.div.hidden = false;
-    }
   }
   #updatePresentationModeState(state) {
     if (!this.div) {
@@ -7444,7 +6993,7 @@ class AnnotationLayerBuilder {
         return;
     }
     for (const section of this.div.childNodes) {
-      if (section.hasAttribute("data-internal-link")) {
+      if (section.hasAttribute("data-internal-link") || section.classList.contains("mediaAnnotation")) {
         continue;
       }
       section.inert = disableFormElements;
@@ -7489,7 +7038,7 @@ class AnnotationLayerBuilder {
     return inferredLinks.filter(link => {
       let linkAreaRects;
       for (const annotation of this.#annotations) {
-        if (annotation.annotationType !== AnnotationType.LINK || !annotation.url) {
+        if (annotation.annotationType !== AnnotationType.LINK) {
           continue;
         }
         const intersections = intersectAnnotations(annotation, link);
@@ -7511,9 +7060,6 @@ var es_weak_map_get_or_insert = __webpack_require__(8454);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.weak-map.get-or-insert-computed.js
 var es_weak_map_get_or_insert_computed = __webpack_require__(9452);
 ;// ./web/base_download_manager.js
-
-
-
 
 
 
@@ -9220,9 +8766,6 @@ const GenericL10n = null;
 
 
 
-
-
-
 function PLATFORM() {
   const {
     isAndroid,
@@ -9964,6 +9507,10 @@ const defaultOptions = {
     value: true,
     kind: OptionKind.BROWSER
   },
+  supportsDownloading: {
+    value: true,
+    kind: OptionKind.BROWSER
+  },
   supportsIntegratedFind: {
     value: false,
     kind: OptionKind.BROWSER
@@ -10554,7 +10101,7 @@ class BasePDFPageView extends RenderableView {
     this.pageColors = options.pageColors || null;
     this.renderingQueue = options.renderingQueue;
     this.enableOptimizedPartialRendering = options.enableOptimizedPartialRendering ?? false;
-    this.enableSelectionRendering = options.enableSelectionRendering !== false;
+    this.enableSelectionRendering = options.enableSelectionRendering !== false && FeatureTest.isBackdropFilterSupported;
     this.imagesRightClickMinSize = options.imagesRightClickMinSize ?? -1;
     this.minDurationToUpdateCanvas = options.minDurationToUpdateCanvas ?? 500;
   }
@@ -10762,10 +10309,7 @@ class DrawLayerBuilder {
   }
   cancel() {
     this._cancelled = true;
-    if (!this.#drawLayer) {
-      return;
-    }
-    this.#drawLayer.destroy();
+    this.#drawLayer?.destroy();
     this.#drawLayer = null;
   }
   setParent(parent) {
@@ -10978,6 +10522,7 @@ class PDFPageDetailView extends BasePDFPageView {
       this.canvas?.remove();
       this.canvas = prevCanvas;
     }, () => {
+      this.pageView._refreshAnnotationLayer();
       this.dispatchPageRendered(false, true);
     });
     div.setAttribute("data-loaded", true);
@@ -11369,7 +10914,7 @@ class TextAccessibilityManager {
       return;
     }
     const children = this.#textChildren;
-    if (!children || children.length === 0) {
+    if (!children?.length) {
       return;
     }
     const {
@@ -11414,7 +10959,7 @@ class TextAccessibilityManager {
       this.removePointerInTextLayer(element);
     }
     const children = this.#textChildren;
-    if (!children || children.length === 0) {
+    if (!children?.length) {
       return null;
     }
     const index = binarySearchFirstItem(children, node => TextAccessibilityManager.#compareElementPositions(element, node) < 0);
@@ -12143,24 +11688,23 @@ class PDFPageView extends BasePDFPageView {
     setLayerDimensions(div, viewport, true, false);
   }
   updatePageNumber(newPageNumber) {
-    if (this.id === newPageNumber) {
-      return;
-    }
     const oldPageNumber = this.id;
-    this.id = newPageNumber;
-    this.renderingId = `page${newPageNumber}`;
-    if (this.pdfPage) {
-      this.pdfPage.pageNumber = newPageNumber;
+    if (oldPageNumber !== newPageNumber) {
+      this.id = newPageNumber;
+      this.renderingId = `page${newPageNumber}`;
+      if (this.pdfPage) {
+        this.pdfPage.pageNumber = newPageNumber;
+      }
+      this.setPageLabel(this.pageLabel);
+      const {
+        div
+      } = this;
+      div.setAttribute("data-page-number", newPageNumber);
+      div.setAttribute("data-l10n-args", JSON.stringify({
+        page: newPageNumber
+      }));
+      this._textHighlighter.pageIdx = newPageNumber - 1;
     }
-    this.setPageLabel(this.pageLabel);
-    const {
-      div
-    } = this;
-    div.setAttribute("data-page-number", newPageNumber);
-    div.setAttribute("data-l10n-args", JSON.stringify({
-      page: newPageNumber
-    }));
-    this._textHighlighter.pageIdx = newPageNumber - 1;
     this.#layerProperties.annotationEditorUIManager?.updatePageIndex(oldPageNumber - 1, newPageNumber - 1);
   }
   setPdfPage(pdfPage) {
@@ -12207,7 +11751,11 @@ class PDFPageView extends BasePDFPageView {
       error
     });
   }
-  async #renderAnnotationLayer() {
+  async #renderAnnotationLayer(textLayerPromise = null) {
+    const {
+      annotationLayer,
+      textLayer
+    } = this;
     let error = null;
     try {
       await this.annotationLayer.render({
@@ -12221,6 +11769,14 @@ class PDFPageView extends BasePDFPageView {
       error = ex;
     } finally {
       this.#dispatchLayerRendered("annotationlayerrendered", error);
+    }
+    if (this.#enableAutoLinking && textLayerPromise) {
+      this.#injectLinkAnnotations(textLayerPromise, annotationLayer, textLayer);
+    }
+  }
+  _refreshAnnotationLayer() {
+    if (this._annotationCanvasMap?.size) {
+      this.annotationLayer?.refreshCanvases();
     }
   }
   async #renderAnnotationEditorLayer() {
@@ -12269,9 +11825,6 @@ class PDFPageView extends BasePDFPageView {
     }
   }
   async #renderTextLayer() {
-    if (!this.textLayer) {
-      return;
-    }
     let error = null;
     try {
       await this.textLayer.render({
@@ -12289,9 +11842,6 @@ class PDFPageView extends BasePDFPageView {
     this.#renderStructTreeLayer();
   }
   async #renderStructTreeLayer() {
-    if (!this.textLayer) {
-      return;
-    }
     const treeDom = await this.structTreeLayer?.render();
     if (treeDom) {
       this.l10n.pause();
@@ -12312,18 +11862,19 @@ class PDFPageView extends BasePDFPageView {
     this._textHighlighter.setTextMapping(textDivs, items);
     this._textHighlighter.enable();
   }
-  async #injectLinkAnnotations(textLayerPromise) {
+  async #injectLinkAnnotations(textLayerPromise, annotationLayer, textLayer) {
     let error = null;
     try {
       await textLayerPromise;
-      if (!this.annotationLayer) {
+      if (annotationLayer !== this.annotationLayer || textLayer !== this.textLayer) {
         return;
       }
-      await this.annotationLayer.injectLinkAnnotations(Autolinker.processLinks(this));
+      await annotationLayer.injectLinkAnnotations(Autolinker.processLinks(this));
     } catch (ex) {
       console.error("#injectLinkAnnotations:", ex);
       error = ex;
     }
+    this.#dispatchLayerRendered("linkannotationsadded", error);
   }
   _resetCanvas() {
     super._resetCanvas();
@@ -12670,6 +12221,9 @@ class PDFPageView extends BasePDFPageView {
         },
         abortSignal: this.#abortSignal
       });
+      if (this.enableSelectionRendering) {
+        this.textLayer.div.classList.add("selectionRendering");
+      }
     }
     if (!this.annotationLayer && this.#annotationMode !== AnnotationMode.DISABLE) {
       const {
@@ -12752,12 +12306,9 @@ class PDFPageView extends BasePDFPageView {
         return;
       }
       this.structTreeLayer ||= new StructTreeLayerBuilder(pdfPage, viewport.rawDims);
-      const textLayerPromise = this.#renderTextLayer();
+      const textLayerPromise = this.textLayer ? this.#renderTextLayer() : null;
       if (this.annotationLayer) {
-        await this.#renderAnnotationLayer();
-        if (this.#enableAutoLinking && this.annotationLayer && this.textLayer) {
-          await this.#injectLinkAnnotations(textLayerPromise);
-        }
+        await this.#renderAnnotationLayer(textLayerPromise);
       }
       this.drawLayer ||= new DrawLayerBuilder({
         pageIndex: this.id,
@@ -12830,9 +12381,6 @@ class PDFPageView extends BasePDFPageView {
 }
 
 ;// ./web/generic_scripting.js
-
-
-
 
 async function docProperties(pdfDocument) {
   const url = "",
@@ -13517,7 +13065,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.0.227";
+    const viewerVersion = "6.1.200";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }
@@ -13803,6 +13351,13 @@ class PDFViewer {
       }
     });
   }
+  #setPrintingAllowed(isAllowed) {
+    this.#printingAllowed = isAllowed;
+    this.eventBus.dispatch("printingallowed", {
+      source: this,
+      isAllowed
+    });
+  }
   #initializePermissions(permissions) {
     const params = {
       annotationEditorMode: this.#annotationEditorMode,
@@ -13810,18 +13365,10 @@ class PDFViewer {
       textLayerMode: this.#textLayerMode
     };
     if (!permissions) {
-      this.#printingAllowed = true;
-      this.eventBus.dispatch("printingallowed", {
-        source: this,
-        isAllowed: this.#printingAllowed
-      });
+      this.#setPrintingAllowed(true);
       return params;
     }
-    this.#printingAllowed = permissions.includes(PermissionFlag.PRINT_HIGH_QUALITY) || permissions.includes(PermissionFlag.PRINT);
-    this.eventBus.dispatch("printingallowed", {
-      source: this,
-      isAllowed: this.#printingAllowed
-    });
+    this.#setPrintingAllowed(permissions.includes(PermissionFlag.PRINT_HIGH_QUALITY) || permissions.includes(PermissionFlag.PRINT));
     if (!permissions.includes(PermissionFlag.COPY) && this.#textLayerMode === TextLayerMode.ENABLE) {
       params.textLayerMode = TextLayerMode.ENABLE_PERMISSIONS;
     }

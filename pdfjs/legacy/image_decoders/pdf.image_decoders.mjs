@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.0.227
- * pdfjsBuild = 241dbabbf
+ * pdfjsVersion = 6.1.200
+ * pdfjsBuild = 6353acefe
  */
 /******/ var __webpack_modules__ = ({
 
@@ -254,61 +254,6 @@ var $TypeError = TypeError;
 module.exports = function (it) {
   if (isDetached(it)) throw new $TypeError('ArrayBuffer is detached');
   return it;
-};
-
-
-/***/ },
-
-/***/ 5636
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var uncurryThis = __webpack_require__(9504);
-var uncurryThisAccessor = __webpack_require__(6706);
-var toIndex = __webpack_require__(7696);
-var notDetached = __webpack_require__(5169);
-var arrayBufferByteLength = __webpack_require__(7394);
-var detachTransferable = __webpack_require__(4483);
-var PROPER_STRUCTURED_CLONE_TRANSFER = __webpack_require__(1548);
-
-var structuredClone = globalThis.structuredClone;
-var ArrayBuffer = globalThis.ArrayBuffer;
-var DataView = globalThis.DataView;
-var max = Math.max;
-var min = Math.min;
-var ArrayBufferPrototype = ArrayBuffer.prototype;
-var DataViewPrototype = DataView.prototype;
-var slice = uncurryThis(ArrayBufferPrototype.slice);
-var isResizable = uncurryThisAccessor(ArrayBufferPrototype, 'resizable', 'get');
-var maxByteLength = uncurryThisAccessor(ArrayBufferPrototype, 'maxByteLength', 'get');
-var getInt8 = uncurryThis(DataViewPrototype.getInt8);
-var setInt8 = uncurryThis(DataViewPrototype.setInt8);
-
-module.exports = (PROPER_STRUCTURED_CLONE_TRANSFER || detachTransferable) && function (arrayBuffer, newLength, preserveResizability) {
-  var byteLength = arrayBufferByteLength(arrayBuffer);
-  var newByteLength = newLength === undefined ? byteLength : toIndex(newLength);
-  var fixedLength = !isResizable || !isResizable(arrayBuffer);
-  var newBuffer;
-  notDetached(arrayBuffer);
-  if (PROPER_STRUCTURED_CLONE_TRANSFER) {
-    arrayBuffer = structuredClone(arrayBuffer, { transfer: [arrayBuffer] });
-    if (byteLength === newByteLength && (preserveResizability || fixedLength)) return arrayBuffer;
-  }
-  if (byteLength >= newByteLength && (!preserveResizability || fixedLength)) {
-    newBuffer = slice(arrayBuffer, 0, newByteLength);
-  } else {
-    var options = preserveResizability && !fixedLength && maxByteLength
-      ? { maxByteLength: max(newByteLength, maxByteLength(arrayBuffer)) }
-      : undefined;
-    newBuffer = new ArrayBuffer(newByteLength, options);
-    var a = new DataView(arrayBuffer);
-    var b = new DataView(newBuffer);
-    var copyLength = min(newByteLength, byteLength);
-    for (var i = 0; i < copyLength; i++) setInt8(b, i, getInt8(a, i));
-  }
-  if (!PROPER_STRUCTURED_CLONE_TRANSFER) detachTransferable(arrayBuffer);
-  return newBuffer;
 };
 
 
@@ -890,50 +835,6 @@ module.exports = !fails(function () {
 
 /***/ },
 
-/***/ 4483
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var getBuiltInNodeModule = __webpack_require__(9429);
-var PROPER_STRUCTURED_CLONE_TRANSFER = __webpack_require__(1548);
-
-var structuredClone = globalThis.structuredClone;
-var $ArrayBuffer = globalThis.ArrayBuffer;
-var $MessageChannel = globalThis.MessageChannel;
-var detach = false;
-var WorkerThreads, channel, buffer, $detach;
-
-if (PROPER_STRUCTURED_CLONE_TRANSFER) {
-  detach = function (transferable) {
-    structuredClone(transferable, { transfer: [transferable] });
-  };
-} else if ($ArrayBuffer) try {
-  if (!$MessageChannel) {
-    WorkerThreads = getBuiltInNodeModule('worker_threads');
-    if (WorkerThreads) $MessageChannel = WorkerThreads.MessageChannel;
-  }
-
-  if ($MessageChannel) {
-    channel = new $MessageChannel();
-    buffer = new $ArrayBuffer(2);
-
-    $detach = function (transferable) {
-      channel.port1.postMessage(null, [transferable]);
-    };
-
-    if (buffer.byteLength === 2) {
-      $detach(buffer);
-      if (buffer.byteLength === 0) detach = $detach;
-    }
-  }
-} catch (error) { /* empty */ }
-
-module.exports = detach;
-
-
-/***/ },
-
 /***/ 4055
 (module, __unused_webpack_exports, __webpack_require__) {
 
@@ -985,17 +886,6 @@ module.exports = [
 
 /***/ },
 
-/***/ 6193
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var ENVIRONMENT = __webpack_require__(4215);
-
-module.exports = ENVIRONMENT === 'NODE';
-
-
-/***/ },
-
 /***/ 2839
 (module, __unused_webpack_exports, __webpack_require__) {
 
@@ -1041,34 +931,6 @@ if (!version && userAgent) {
 }
 
 module.exports = version;
-
-
-/***/ },
-
-/***/ 4215
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-/* global Bun, Deno -- detection */
-var globalThis = __webpack_require__(4576);
-var userAgent = __webpack_require__(2839);
-var classof = __webpack_require__(2195);
-
-var userAgentStartsWith = function (string) {
-  return userAgent.slice(0, string.length) === string;
-};
-
-module.exports = (function () {
-  if (userAgentStartsWith('Bun/')) return 'BUN';
-  if (userAgentStartsWith('Cloudflare-Workers')) return 'CLOUDFLARE';
-  if (userAgentStartsWith('Deno/')) return 'DENO';
-  if (userAgentStartsWith('Node.js/')) return 'NODE';
-  if (globalThis.Bun && typeof Bun.version == 'string') return 'BUN';
-  if (globalThis.Deno && typeof Deno.version == 'object') return 'DENO';
-  if (classof(globalThis.process) === 'process') return 'NODE';
-  if (globalThis.window && globalThis.document) return 'BROWSER';
-  return 'REST';
-})();
 
 
 /***/ },
@@ -1291,28 +1153,6 @@ module.exports = function (options) {
   var alphabet = options && options.alphabet;
   if (alphabet === undefined || alphabet === 'base64' || alphabet === 'base64url') return alphabet || 'base64';
   throw new $TypeError('Incorrect `alphabet` option');
-};
-
-
-/***/ },
-
-/***/ 9429
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var IS_NODE = __webpack_require__(6193);
-
-module.exports = function (name) {
-  if (IS_NODE) {
-    try {
-      return globalThis.process.getBuiltinModule(name);
-    } catch (error) { /* empty */ }
-    try {
-      // eslint-disable-next-line no-new-func -- safe
-      return Function('return require("' + name + '")')();
-    } catch (error) { /* empty */ }
-  }
 };
 
 
@@ -3207,29 +3047,6 @@ module.exports = function (key, value) {
 
 /***/ },
 
-/***/ 1548
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var globalThis = __webpack_require__(4576);
-var fails = __webpack_require__(9039);
-var V8 = __webpack_require__(9519);
-var ENVIRONMENT = __webpack_require__(4215);
-
-var structuredClone = globalThis.structuredClone;
-
-module.exports = !!structuredClone && !fails(function () {
-  // prevent V8 ArrayBufferDetaching protector cell invalidation and performance degradation
-  // https://github.com/zloirock/core-js/issues/679
-  if ((ENVIRONMENT === 'DENO' && V8 > 92) || (ENVIRONMENT === 'NODE' && V8 > 94) || (ENVIRONMENT === 'BROWSER' && V8 > 97)) return false;
-  var buffer = new ArrayBuffer(8);
-  var clone = structuredClone(buffer, { transfer: [buffer] });
-  return buffer.byteLength !== 0 || clone.byteLength !== 8;
-});
-
-
-/***/ },
-
 /***/ 4495
 (module, __unused_webpack_exports, __webpack_require__) {
 
@@ -3291,28 +3108,6 @@ module.exports = function (argument) {
   if (typeof prim == 'number') throw new $TypeError("Can't convert number to bigint");
   // eslint-disable-next-line es/no-bigint -- safe
   return BigInt(prim);
-};
-
-
-/***/ },
-
-/***/ 7696
-(module, __unused_webpack_exports, __webpack_require__) {
-
-
-var toIntegerOrInfinity = __webpack_require__(1291);
-var toLength = __webpack_require__(8014);
-
-var $RangeError = RangeError;
-
-// `ToIndex` abstract operation
-// https://tc39.es/ecma262/#sec-toindex
-module.exports = function (it) {
-  if (it === undefined) return 0;
-  var number = toIntegerOrInfinity(it);
-  var length = toLength(number);
-  if (number !== length) throw new $RangeError('Wrong length or index');
-  return length;
 };
 
 
@@ -3831,66 +3626,6 @@ module.exports = function (name) {
       : createWellKnownSymbol('Symbol.' + name);
   } return WellKnownSymbolsStore[name];
 };
-
-
-/***/ },
-
-/***/ 6573
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var DESCRIPTORS = __webpack_require__(3724);
-var defineBuiltInAccessor = __webpack_require__(2106);
-var isDetached = __webpack_require__(3238);
-
-var ArrayBufferPrototype = ArrayBuffer.prototype;
-
-// `ArrayBuffer.prototype.detached` getter
-// https://tc39.es/ecma262/#sec-get-arraybuffer.prototype.detached
-if (DESCRIPTORS && !('detached' in ArrayBufferPrototype)) {
-  defineBuiltInAccessor(ArrayBufferPrototype, 'detached', {
-    configurable: true,
-    get: function detached() {
-      return isDetached(this);
-    }
-  });
-}
-
-
-/***/ },
-
-/***/ 7936
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var $ = __webpack_require__(6518);
-var $transfer = __webpack_require__(5636);
-
-// `ArrayBuffer.prototype.transferToFixedLength` method
-// https://tc39.es/ecma262/#sec-arraybuffer.prototype.transfertofixedlength
-if ($transfer) $({ target: 'ArrayBuffer', proto: true }, {
-  transferToFixedLength: function transferToFixedLength() {
-    return $transfer(this, arguments.length ? arguments[0] : undefined, false);
-  }
-});
-
-
-/***/ },
-
-/***/ 8100
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var $ = __webpack_require__(6518);
-var $transfer = __webpack_require__(5636);
-
-// `ArrayBuffer.prototype.transfer` method
-// https://tc39.es/ecma262/#sec-arraybuffer.prototype.transfer
-if ($transfer) $({ target: 'ArrayBuffer', proto: true }, {
-  transfer: function transfer() {
-    return $transfer(this, arguments.length ? arguments[0] : undefined, true);
-  }
-});
 
 
 /***/ },
@@ -4698,122 +4433,6 @@ if (Uint8Array) $({ target: 'Uint8Array', proto: true, forced: INCORRECT_BEHAVIO
 
 /***/ },
 
-/***/ 4603
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var defineBuiltIn = __webpack_require__(6840);
-var uncurryThis = __webpack_require__(9504);
-var toString = __webpack_require__(655);
-var validateArgumentsLength = __webpack_require__(2812);
-
-var $URLSearchParams = URLSearchParams;
-var URLSearchParamsPrototype = $URLSearchParams.prototype;
-var append = uncurryThis(URLSearchParamsPrototype.append);
-var $delete = uncurryThis(URLSearchParamsPrototype['delete']);
-var forEach = uncurryThis(URLSearchParamsPrototype.forEach);
-var push = uncurryThis([].push);
-var params = new $URLSearchParams('a=1&a=2&b=3');
-
-params['delete']('a', 1);
-// `undefined` case is a Chromium 117 bug
-// https://bugs.chromium.org/p/v8/issues/detail?id=14222
-params['delete']('b', undefined);
-
-if (params + '' !== 'a=2') {
-  defineBuiltIn(URLSearchParamsPrototype, 'delete', function (name /* , value */) {
-    var length = arguments.length;
-    var $value = length < 2 ? undefined : arguments[1];
-    if (length && $value === undefined) return $delete(this, name);
-    var entries = [];
-    forEach(this, function (v, k) { // also validates `this`
-      push(entries, { key: k, value: v });
-    });
-    validateArgumentsLength(length, 1);
-    var key = toString(name);
-    var value = toString($value);
-    var index = 0;
-    var entriesLength = entries.length;
-    var entry;
-    while (index < entriesLength) {
-      entry = entries[index];
-      $delete(this, entry.key);
-      index++;
-    }
-    index = 0;
-    while (index < entriesLength) {
-      entry = entries[index++];
-      if (!(entry.key === key && entry.value === value)) append(this, entry.key, entry.value);
-    }
-  }, { enumerable: true, unsafe: true });
-}
-
-
-/***/ },
-
-/***/ 7566
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var defineBuiltIn = __webpack_require__(6840);
-var uncurryThis = __webpack_require__(9504);
-var toString = __webpack_require__(655);
-var validateArgumentsLength = __webpack_require__(2812);
-
-var $URLSearchParams = URLSearchParams;
-var URLSearchParamsPrototype = $URLSearchParams.prototype;
-var getAll = uncurryThis(URLSearchParamsPrototype.getAll);
-var $has = uncurryThis(URLSearchParamsPrototype.has);
-var params = new $URLSearchParams('a=1');
-
-// `undefined` case is a Chromium 117 bug
-// https://bugs.chromium.org/p/v8/issues/detail?id=14222
-if (params.has('a', 2) || !params.has('a', undefined)) {
-  defineBuiltIn(URLSearchParamsPrototype, 'has', function has(name /* , value */) {
-    var length = arguments.length;
-    var $value = length < 2 ? undefined : arguments[1];
-    if (length && $value === undefined) return $has(this, name);
-    var values = getAll(this, name); // also validates `this`
-    validateArgumentsLength(length, 1);
-    var value = toString($value);
-    var index = 0;
-    while (index < values.length) {
-      if (values[index++] === value) return true;
-    } return false;
-  }, { enumerable: true, unsafe: true });
-}
-
-
-/***/ },
-
-/***/ 8721
-(__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
-
-
-var DESCRIPTORS = __webpack_require__(3724);
-var uncurryThis = __webpack_require__(9504);
-var defineBuiltInAccessor = __webpack_require__(2106);
-
-var URLSearchParamsPrototype = URLSearchParams.prototype;
-var forEach = uncurryThis(URLSearchParamsPrototype.forEach);
-
-// `URLSearchParams.prototype.size` getter
-// https://github.com/whatwg/url/pull/734
-if (DESCRIPTORS && !('size' in URLSearchParamsPrototype)) {
-  defineBuiltInAccessor(URLSearchParamsPrototype, 'size', {
-    get: function size() {
-      var count = 0;
-      forEach(this, function () { count++; });
-      return count;
-    },
-    configurable: true,
-    enumerable: true
-  });
-}
-
-
-/***/ },
-
 /***/ 5781
 (__unused_webpack_module, __unused_webpack_exports, __webpack_require__) {
 
@@ -4894,12 +4513,6 @@ $({ target: 'URL', stat: true, forced: !USE_NATIVE_URL }, {
 var es_array_includes = __webpack_require__(4423);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.array.push.js
 var es_array_push = __webpack_require__(4114);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array-buffer.detached.js
-var es_array_buffer_detached = __webpack_require__(6573);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array-buffer.transfer.js
-var es_array_buffer_transfer = __webpack_require__(8100);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/es.array-buffer.transfer-to-fixed-length.js
-var es_array_buffer_transfer_to_fixed_length = __webpack_require__(7936);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.iterator.constructor.js
 var es_iterator_constructor = __webpack_require__(8111);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.iterator.filter.js
@@ -4921,9 +4534,6 @@ var es_uint8_array_to_hex = __webpack_require__(456);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/web.url.parse.js
 var web_url_parse = __webpack_require__(5781);
 ;// ./src/shared/util.js
-
-
-
 
 
 
@@ -5048,11 +4658,19 @@ const AnnotationType = (/* unused pure expression or super */ null && ({
   TRAPNET: 23,
   WATERMARK: 24,
   THREED: 25,
-  REDACT: 26
+  REDACT: 26,
+  RICHMEDIA: 27
 }));
 const AnnotationReplyType = (/* unused pure expression or super */ null && ({
   GROUP: "Group",
   REPLY: "R"
+}));
+const AnnotationRenditionOperation = (/* unused pure expression or super */ null && ({
+  PLAY_OR_RESUME: 0,
+  STOP: 1,
+  PAUSE: 2,
+  RESUME: 3,
+  PLAY: 4
 }));
 const AnnotationFlag = (/* unused pure expression or super */ null && ({
   INVISIBLE: 0x01,
@@ -5437,6 +5055,9 @@ class FeatureTest {
     input.value = "#ff000080";
     return shadow(this, "isAlphaColorInputSupported", input.value !== "#ff0000");
   }
+  static get isBackdropFilterSupported() {
+    return shadow(this, "isBackdropFilterSupported", typeof CSS !== "undefined" && CSS.supports("backdrop-filter", "blur(1px)"));
+  }
 }
 class Util {
   static get hexNums() {
@@ -5704,19 +5325,7 @@ if (typeof Response.prototype.bytes !== "function") {
   };
 }
 
-// EXTERNAL MODULE: ./node_modules/core-js/modules/web.url-search-params.delete.js
-var web_url_search_params_delete = __webpack_require__(4603);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/web.url-search-params.has.js
-var web_url_search_params_has = __webpack_require__(7566);
-// EXTERNAL MODULE: ./node_modules/core-js/modules/web.url-search-params.size.js
-var web_url_search_params_size = __webpack_require__(8721);
 ;// ./external/jbig2/jbig2.js
-
-
-
-
-
-
 
 
 
@@ -6204,11 +5813,8 @@ class Dict {
         continue;
       }
       for (const [key, value] of dict.getRawEntries()) {
-        let property = properties.get(key);
-        if (property === undefined) {
-          property = [];
-          properties.set(key, property);
-        } else if (!mergeSubDicts || !(value instanceof Dict)) {
+        const property = properties.getOrInsertComputed(key, makeArr);
+        if (property.length && !(mergeSubDicts && value instanceof Dict)) {
           continue;
         }
         property.push(value);
@@ -6424,6 +6030,9 @@ class BaseStream {
   makeSubStream(start, length, dict = null) {
     unreachable("Abstract method `makeSubStream` called");
   }
+  clone() {
+    unreachable("Abstract method `clone` called");
+  }
   getBaseStreams() {
     return null;
   }
@@ -6528,9 +6137,6 @@ function stringToPDFString(str, keepEscapeSequence = false) {
 /* unused harmony import specifier */ var core_utils_isName;
 /* unused harmony import specifier */ var core_utils_BaseStream;
 /* unused harmony import specifier */ var core_utils_stringToPDFString;
-
-
-
 
 
 
@@ -6761,7 +6367,7 @@ function escapePDFName(str) {
     return str;
   }
   if (start < str.length) {
-    buffer.push(str.substring(start, str.length));
+    buffer.push(str.substring(start));
   }
   return buffer.join("");
 }
@@ -6895,7 +6501,7 @@ function encodeToXmlString(str) {
     return str;
   }
   if (start < str.length) {
-    buffer.push(str.substring(start, str.length));
+    buffer.push(str.substring(start));
   }
   return buffer.join("");
 }
@@ -7165,9 +6771,6 @@ function MathClamp(v, min, max) {
 }
 
 ;// ./src/core/colorspace.js
-
-
-
 
 
 
@@ -7874,9 +7477,6 @@ class LabCS extends ColorSpace {
 
 
 
-
-
-
 class QCMS {
   static #memoryArray = null;
   static _memory = null;
@@ -7939,12 +7539,6 @@ function make_cssRGB(ptr) {
 }
 
 ;// ./external/qcms/qcms.js
-
-
-
-
-
-
 
 
 
@@ -8151,9 +7745,6 @@ async function __wbg_init(module_or_path) {
 }
 
 ;// ./src/core/icc_colorspace.js
-
-
-
 
 
 
@@ -8535,9 +8126,6 @@ class ColorSpaceUtils {
 /* unused harmony import specifier */ var image_utils_FeatureTest;
 
 
-
-
-
 function convertToRGBA(params) {
   switch (params.kind) {
     case image_utils_ImageKind.GRAYSCALE_1BPP:
@@ -8647,9 +8235,6 @@ function grayToRGBA(src, dest) {
 }
 
 ;// ./src/core/jpg.js
-
-
-
 
 
 
@@ -9600,7 +9185,7 @@ class JpegImage {
     this.numComponents = this.components.length;
     return undefined;
   }
-  _getLinearizedBlockData(width, height, isSourcePDF = false) {
+  #getLinearizedBlockData(width, height, isSourcePDF) {
     const scaleX = this.width / width,
       scaleY = this.height / height;
     let component, componentScaleX, componentScaleY, blocksPerScanline;
@@ -9638,8 +9223,8 @@ class JpegImage {
       }
     }
     let transform = this._decodeTransform;
-    if (!isSourcePDF && numComponents === 4 && !transform) {
-      transform = new Int32Array([-256, 255, -256, 255, -256, 255, -256, 255]);
+    if (!isSourcePDF && numComponents === 4) {
+      transform ||= new Int32Array([-256, 255, -256, 255, -256, 255, -256, 255]);
     }
     if (transform) {
       for (i = 0; i < dataLength;) {
@@ -9669,7 +9254,7 @@ class JpegImage {
   }
   _convertYccToRgb(data) {
     let Y, Cb, Cr;
-    for (let i = 0, length = data.length; i < length; i += 3) {
+    for (let i = 0, ii = data.length; i < ii; i += 3) {
       Y = data[i];
       Cb = data[i + 1];
       Cr = data[i + 2];
@@ -9680,7 +9265,7 @@ class JpegImage {
     return data;
   }
   _convertYccToRgba(data, out) {
-    for (let i = 0, j = 0, length = data.length; i < length; i += 3, j += 4) {
+    for (let i = 0, j = 0, ii = data.length; i < ii; i += 3, j += 4) {
       const Y = data[i];
       const Cb = data[i + 1];
       const Cr = data[i + 2];
@@ -9701,7 +9286,7 @@ class JpegImage {
   }
   _convertYcckToCmyk(data) {
     let Y, Cb, Cr;
-    for (let i = 0, length = data.length; i < length; i += 4) {
+    for (let i = 0, ii = data.length; i < ii; i += 4) {
       Y = data[i];
       Cb = data[i + 1];
       Cr = data[i + 2];
@@ -9735,7 +9320,7 @@ class JpegImage {
     if (this.numComponents > 4) {
       throw new JpegError("Unsupported color mode");
     }
-    const data = this._getLinearizedBlockData(width, height, isSourcePDF);
+    const data = this.#getLinearizedBlockData(width, height, isSourcePDF);
     if (this.numComponents === 1 && (forceRGBA || forceRGB)) {
       const len = data.length * (forceRGBA ? 4 : 3);
       const rgbaData = new Uint8ClampedArray(len);
@@ -9776,12 +9361,6 @@ class JpegImage {
 }
 
 ;// ./external/openjpeg/openjpeg.js
-
-
-
-
-
-
 
 
 
@@ -10346,9 +9925,6 @@ async function OpenJPEG(moduleArg = {}) {
 
 
 
-
-
-
 class Stream extends BaseStream {
   constructor(arrayBuffer, start, length, dict) {
     super();
@@ -10371,19 +9947,10 @@ class Stream extends BaseStream {
     return this.bytes[this.pos++];
   }
   getBytes(length) {
-    const bytes = this.bytes;
     const pos = this.pos;
-    const strEnd = this.end;
-    if (!length) {
-      this.pos = strEnd;
-      return bytes.subarray(pos, strEnd);
-    }
-    let end = pos + length;
-    if (end > strEnd) {
-      end = strEnd;
-    }
-    this.pos = end;
-    return bytes.subarray(pos, end);
+    const endPos = !length ? this.end : Math.min(pos + length, this.end);
+    this.pos = endPos;
+    return this.bytes.subarray(pos, endPos);
   }
   getByteRange(begin, end) {
     if (begin < 0) {
@@ -10404,12 +9971,12 @@ class Stream extends BaseStream {
     return new Stream(this.bytes.buffer, start, length, dict);
   }
   clone() {
-    return new Stream(this.bytes.buffer, this.start, this.end - this.start, this.dict.clone());
+    return new Stream(this.bytes.buffer, this.start, this.length, this.dict?.clone());
   }
 }
 class StringStream extends Stream {
-  constructor(str) {
-    super(stringToBytes(str));
+  constructor(str, dict = null) {
+    super(stringToBytes(str), NaN, NaN, dict);
   }
 }
 class NullStream extends Stream {
@@ -10419,9 +9986,6 @@ class NullStream extends Stream {
 }
 
 ;// ./src/core/jpx.js
-
-
-
 
 
 

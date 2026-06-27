@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.0.227
- * pdfjsBuild = 241dbabbf
+ * pdfjsVersion = 6.1.200
+ * pdfjsBuild = 6353acefe
  */
 
 ;// ./src/shared/util.js
@@ -138,11 +138,19 @@ const AnnotationType = (/* unused pure expression or super */ null && ({
   TRAPNET: 23,
   WATERMARK: 24,
   THREED: 25,
-  REDACT: 26
+  REDACT: 26,
+  RICHMEDIA: 27
 }));
 const AnnotationReplyType = (/* unused pure expression or super */ null && ({
   GROUP: "Group",
   REPLY: "R"
+}));
+const AnnotationRenditionOperation = (/* unused pure expression or super */ null && ({
+  PLAY_OR_RESUME: 0,
+  STOP: 1,
+  PAUSE: 2,
+  RESUME: 3,
+  PLAY: 4
 }));
 const AnnotationFlag = (/* unused pure expression or super */ null && ({
   INVISIBLE: 0x01,
@@ -526,6 +534,9 @@ class FeatureTest {
     input.setAttribute("alpha", "");
     input.value = "#ff000080";
     return shadow(this, "isAlphaColorInputSupported", input.value !== "#ff0000");
+  }
+  static get isBackdropFilterSupported() {
+    return shadow(this, "isBackdropFilterSupported", typeof CSS !== "undefined" && CSS.supports("backdrop-filter", "blur(1px)"));
   }
 }
 class Util {
@@ -1236,11 +1247,8 @@ class Dict {
         continue;
       }
       for (const [key, value] of dict.getRawEntries()) {
-        let property = properties.get(key);
-        if (property === undefined) {
-          property = [];
-          properties.set(key, property);
-        } else if (!mergeSubDicts || !(value instanceof Dict)) {
+        const property = properties.getOrInsertComputed(key, makeArr);
+        if (property.length && !(mergeSubDicts && value instanceof Dict)) {
           continue;
         }
         property.push(value);
@@ -1455,6 +1463,9 @@ class BaseStream {
   }
   makeSubStream(start, length, dict = null) {
     unreachable("Abstract method `makeSubStream` called");
+  }
+  clone() {
+    unreachable("Abstract method `clone` called");
   }
   getBaseStreams() {
     return null;
@@ -1770,7 +1781,7 @@ function escapePDFName(str) {
     return str;
   }
   if (start < str.length) {
-    buffer.push(str.substring(start, str.length));
+    buffer.push(str.substring(start));
   }
   return buffer.join("");
 }
@@ -1904,7 +1915,7 @@ function encodeToXmlString(str) {
     return str;
   }
   if (start < str.length) {
-    buffer.push(str.substring(start, str.length));
+    buffer.push(str.substring(start));
   }
   return buffer.join("");
 }
@@ -4552,7 +4563,7 @@ class JpegImage {
     this.numComponents = this.components.length;
     return undefined;
   }
-  _getLinearizedBlockData(width, height, isSourcePDF = false) {
+  #getLinearizedBlockData(width, height, isSourcePDF) {
     const scaleX = this.width / width,
       scaleY = this.height / height;
     let component, componentScaleX, componentScaleY, blocksPerScanline;
@@ -4590,8 +4601,8 @@ class JpegImage {
       }
     }
     let transform = this._decodeTransform;
-    if (!isSourcePDF && numComponents === 4 && !transform) {
-      transform = new Int32Array([-256, 255, -256, 255, -256, 255, -256, 255]);
+    if (!isSourcePDF && numComponents === 4) {
+      transform ||= new Int32Array([-256, 255, -256, 255, -256, 255, -256, 255]);
     }
     if (transform) {
       for (i = 0; i < dataLength;) {
@@ -4621,7 +4632,7 @@ class JpegImage {
   }
   _convertYccToRgb(data) {
     let Y, Cb, Cr;
-    for (let i = 0, length = data.length; i < length; i += 3) {
+    for (let i = 0, ii = data.length; i < ii; i += 3) {
       Y = data[i];
       Cb = data[i + 1];
       Cr = data[i + 2];
@@ -4632,7 +4643,7 @@ class JpegImage {
     return data;
   }
   _convertYccToRgba(data, out) {
-    for (let i = 0, j = 0, length = data.length; i < length; i += 3, j += 4) {
+    for (let i = 0, j = 0, ii = data.length; i < ii; i += 3, j += 4) {
       const Y = data[i];
       const Cb = data[i + 1];
       const Cr = data[i + 2];
@@ -4653,7 +4664,7 @@ class JpegImage {
   }
   _convertYcckToCmyk(data) {
     let Y, Cb, Cr;
-    for (let i = 0, length = data.length; i < length; i += 4) {
+    for (let i = 0, ii = data.length; i < ii; i += 4) {
       Y = data[i];
       Cb = data[i + 1];
       Cr = data[i + 2];
@@ -4687,7 +4698,7 @@ class JpegImage {
     if (this.numComponents > 4) {
       throw new JpegError("Unsupported color mode");
     }
-    const data = this._getLinearizedBlockData(width, height, isSourcePDF);
+    const data = this.#getLinearizedBlockData(width, height, isSourcePDF);
     if (this.numComponents === 1 && (forceRGBA || forceRGB)) {
       const len = data.length * (forceRGBA ? 4 : 3);
       const rgbaData = new Uint8ClampedArray(len);
@@ -5303,19 +5314,10 @@ class Stream extends BaseStream {
     return this.bytes[this.pos++];
   }
   getBytes(length) {
-    const bytes = this.bytes;
     const pos = this.pos;
-    const strEnd = this.end;
-    if (!length) {
-      this.pos = strEnd;
-      return bytes.subarray(pos, strEnd);
-    }
-    let end = pos + length;
-    if (end > strEnd) {
-      end = strEnd;
-    }
-    this.pos = end;
-    return bytes.subarray(pos, end);
+    const endPos = !length ? this.end : Math.min(pos + length, this.end);
+    this.pos = endPos;
+    return this.bytes.subarray(pos, endPos);
   }
   getByteRange(begin, end) {
     if (begin < 0) {
@@ -5336,12 +5338,12 @@ class Stream extends BaseStream {
     return new Stream(this.bytes.buffer, start, length, dict);
   }
   clone() {
-    return new Stream(this.bytes.buffer, this.start, this.end - this.start, this.dict.clone());
+    return new Stream(this.bytes.buffer, this.start, this.length, this.dict?.clone());
   }
 }
 class StringStream extends Stream {
-  constructor(str) {
-    super(stringToBytes(str));
+  constructor(str, dict = null) {
+    super(stringToBytes(str), NaN, NaN, dict);
   }
 }
 class NullStream extends Stream {
