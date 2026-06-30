@@ -238,6 +238,10 @@
     "version": "2.9.4",
     "jsdelivr-dist": "fomantic-ui"
   },
+  "sienna-accessibility": {
+    "version": "2.2.333",
+    "jsdelivr-dist": ""
+  },
   "socket.io": {
     "version": "4.8.3",
     "jsdelivr-dist": "socket.io-client"
