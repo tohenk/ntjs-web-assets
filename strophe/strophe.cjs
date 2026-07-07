@@ -1,7 +1,9 @@
-const { JSDOM } = await import('jsdom');
-const { default: ws } = await import('ws');
+'use strict';
+
+const { JSDOM } = require('jsdom');
+const WebSocket = require('ws');
 const { window } = new JSDOM();
-globalThis.WebSocket = ws;
+globalThis.WebSocket = WebSocket;
 globalThis.XMLSerializer = window.XMLSerializer;
 globalThis.DOMParser = window.DOMParser;
 globalThis.document = window.document;
@@ -5962,5 +5964,18 @@ globalThis.stx = stx;
 const toStanza = Stanza.toElement;
 globalThis.toStanza = Stanza.toElement;
 
-export { $build, $iq, $msg, $pres, Builder, MemoryStorageBackend, Request, SessionStorageBackend, Stanza, StreamManagement, StreamManagementMirror, Strophe, stx, toStanza };
-//# sourceMappingURL=strophe.node.esm.js.map
+exports.$build = $build;
+exports.$iq = $iq;
+exports.$msg = $msg;
+exports.$pres = $pres;
+exports.Builder = Builder;
+exports.MemoryStorageBackend = MemoryStorageBackend;
+exports.Request = Request;
+exports.SessionStorageBackend = SessionStorageBackend;
+exports.Stanza = Stanza;
+exports.StreamManagement = StreamManagement;
+exports.StreamManagementMirror = StreamManagementMirror;
+exports.Strophe = Strophe;
+exports.stx = stx;
+exports.toStanza = toStanza;
+//# sourceMappingURL=strophe.cjs.map

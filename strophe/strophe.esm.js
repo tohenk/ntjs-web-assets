@@ -1,11 +1,3 @@
-const { JSDOM } = await import('jsdom');
-const { default: ws } = await import('ws');
-const { window } = new JSDOM();
-globalThis.WebSocket = ws;
-globalThis.XMLSerializer = window.XMLSerializer;
-globalThis.DOMParser = window.DOMParser;
-globalThis.document = window.document;
-
 const _NS = {
     AUTH: 'jabber:iq:auth',
     BIND: 'urn:ietf:params:xml:ns:xmpp-bind',
@@ -5963,4 +5955,4 @@ const toStanza = Stanza.toElement;
 globalThis.toStanza = Stanza.toElement;
 
 export { $build, $iq, $msg, $pres, Builder, MemoryStorageBackend, Request, SessionStorageBackend, Stanza, StreamManagement, StreamManagementMirror, Strophe, stx, toStanza };
-//# sourceMappingURL=strophe.node.esm.js.map
+//# sourceMappingURL=strophe.esm.js.map
