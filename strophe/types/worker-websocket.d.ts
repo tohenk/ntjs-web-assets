@@ -16,6 +16,17 @@ declare class WorkerWebsocket extends Websocket {
      */
     constructor(connection: Connection);
     /**
+     * (Re)create the SharedWorker. Called for every connection attempt: if
+     * the worker for this URL is still running, the browser just opens
+     * another port to it (the previous port is said goodbye to and closed),
+     * but if it terminated (it shuts itself down when it detects a page from
+     * a newer build, and the browser reclaims it when the last tab goes away
+     * or it crashes), a fresh worker running the *current* script is
+     * spawned. Ports to a dead worker fail silently, so re-creating per
+     * attempt is the only reliable way to recover from worker death.
+     */
+    private _initWorker;
+    /**
      * @private
      */
     _setSocket(): void;
@@ -87,8 +98,10 @@ declare class WorkerWebsocket extends Websocket {
      * flow — additionally restores the connection state and emits CONNECTED
      * (the same actions a non-worker connection applies on <resumed/>).
      * @param jid - The worker's boundJid.
+     * @param id - The SM-ID of the resumed session.
+     * @param max - The server's preferred maximum resumption time.
      */
-    _smResumed(jid: string): void;
+    _smResumed(jid: string, id?: string, max?: number): void;
     /**
      * Called by the worker when resumption failed: the primary falls back
      * to binding a resource on this same stream (the salvaged queue stays

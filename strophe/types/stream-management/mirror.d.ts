@@ -34,8 +34,10 @@ export declare class StreamManagementMirror implements StreamManagementControlle
     _onEnabled(id: string, max: number, boundJid: string): void;
     /**
      * @param boundJid - The worker's boundJid for the resumed session.
+     * @param id - The SM-ID of the resumed session.
+     * @param max - The server's preferred maximum resumption time.
      */
-    _onResumed(boundJid: string): void;
+    _onResumed(boundJid: string, id?: string, max?: number): void;
     _onFailed(): void;
 }
 //# sourceMappingURL=mirror.d.ts.map

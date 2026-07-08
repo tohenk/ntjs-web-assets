@@ -42,7 +42,7 @@
      * exchanged on _connect/_attach so that a mismatch fails loudly instead of
      * silently misbehaving.
      */
-    const SHARED_WORKER_PROTOCOL_VERSION = 2;
+    const SHARED_WORKER_PROTOCOL_VERSION = 3;
     /**
      * Contains allowed tags, tag attributes, and css properties.
      * Used in the {@link Strophe.createHtml} function to filter incoming html into the allowed XHTML-IM subset.
@@ -3048,6 +3048,23 @@
         constructor(connection) {
             super(connection);
             this._conn = connection;
+            this._initWorker();
+        }
+        /**
+         * (Re)create the SharedWorker. Called for every connection attempt: if
+         * the worker for this URL is still running, the browser just opens
+         * another port to it (the previous port is said goodbye to and closed),
+         * but if it terminated (it shuts itself down when it detects a page from
+         * a newer build, and the browser reclaims it when the last tab goes away
+         * or it crashes), a fresh worker running the *current* script is
+         * spawned. Ports to a dead worker fail silently, so re-creating per
+         * attempt is the only reliable way to recover from worker death.
+         */
+        _initWorker() {
+            if (this.worker) {
+                this.worker.port.postMessage(['_bye']);
+                this.worker.port.close();
+            }
             this.worker = new SharedWorker(this._conn.options.worker, 'Strophe XMPP Connection');
             this.worker.onerror = (e) => {
                 console === null || console === void 0 ? void 0 : console.error(e);
@@ -3069,6 +3086,7 @@
             };
         }
         _connect() {
+            this._initWorker();
             this._setSocket();
             this._messageHandler = (m) => this._onInitialMessage(m);
             this.worker.port.start();
@@ -3080,6 +3098,7 @@
          * @param callback
          */
         _attach(callback) {
+            this._initWorker();
             this._setSocket();
             this._messageHandler = (m) => this._onMessage(m);
             this._conn.connect_callback = callback;
@@ -3177,11 +3196,13 @@
          * flow — additionally restores the connection state and emits CONNECTED
          * (the same actions a non-worker connection applies on <resumed/>).
          * @param jid - The worker's boundJid.
+         * @param id - The SM-ID of the resumed session.
+         * @param max - The server's preferred maximum resumption time.
          */
-        _smResumed(jid) {
+        _smResumed(jid, id, max) {
             var _a;
             const conn = this._conn;
-            (_a = conn.sm) === null || _a === void 0 ? void 0 : _a._onResumed(jid);
+            (_a = conn.sm) === null || _a === void 0 ? void 0 : _a._onResumed(jid, id, max);
             conn.jid = jid;
             if (conn.role === 'primary') {
                 conn.do_bind = false;
@@ -3989,12 +4010,21 @@
         }
         /**
          * @param boundJid - The worker's boundJid for the resumed session.
+         * @param id - The SM-ID of the resumed session.
+         * @param max - The server's preferred maximum resumption time.
          */
-        _onResumed(boundJid) {
+        _onResumed(boundJid, id, max) {
             const s = this._state;
             s.resumed = true;
             s.enabled = true;
             s.boundJid = boundJid;
+            // Repopulate id/max too: the tab that drove the reconnect reset its
+            // mirror when the reconnect started, and _onResumed is the only SM
+            // message it receives.
+            if (id !== undefined)
+                s.id = id;
+            if (max !== undefined)
+                s.max = max;
             this.onResumed();
         }
         _onFailed() {
