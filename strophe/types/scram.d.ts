@@ -1,6 +1,10 @@
 import type Connection from './connection';
 declare const scram: {
     /**
+     * Whether the Web Crypto `SubtleCrypto` API that SCRAM relies on is available.
+     */
+    supported(): boolean;
+    /**
      * On success, sets
      * connection_sasl_data["server-signature"]
      * and

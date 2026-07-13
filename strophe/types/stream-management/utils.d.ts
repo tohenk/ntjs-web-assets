@@ -23,6 +23,16 @@ export declare function parseH(value: string): number;
  */
 export declare function isCountableStanza(name: string): boolean;
 /**
+ * Remove the `from` attribute from a serialized stanza's root element, so a
+ * re-sent stanza cannot carry a stale resource after a failed resumption. Only
+ * the root opening tag is touched; nested `from` attributes (forwarded stanzas,
+ * MUC addresses) are preserved. The server stamps the authoritative c2s `from`.
+ * DOM-free string surgery, mirroring stampDelay.
+ * @param serialized - The serialized stanza.
+ * @returns The stanza with the root `from` removed (unchanged if none).
+ */
+export declare function stripFrom(serialized: string): string;
+/**
  * Insert a XEP-0203 <delay/> child into a serialized stanza (DOM-free string
  * surgery). Used when re-sending salvaged stanzas after a failed resumption,
  * so the receiving client can show the original send time.

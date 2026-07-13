@@ -2440,6 +2440,12 @@ function generate_cnonce() {
 }
 const scram = {
     /**
+     * Whether the Web Crypto `SubtleCrypto` API that SCRAM relies on is available.
+     */
+    supported() {
+        return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
+    },
+    /**
      * On success, sets
      * connection_sasl_data["server-signature"]
      * and
@@ -2515,7 +2521,7 @@ class SASLSHA1 extends SASLMechanism {
         super(mechname, isClientFirst, priority);
     }
     test(connection) {
-        return connection.authcid !== null;
+        return connection.authcid !== null && scram.supported();
     }
     onChallenge(connection, challenge) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2532,7 +2538,7 @@ class SASLSHA256 extends SASLMechanism {
         super(mechname, isClientFirst, priority);
     }
     test(connection) {
-        return connection.authcid !== null;
+        return connection.authcid !== null && scram.supported();
     }
     onChallenge(connection, challenge) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2549,7 +2555,7 @@ class SASLSHA384 extends SASLMechanism {
         super(mechname, isClientFirst, priority);
     }
     test(connection) {
-        return connection.authcid !== null;
+        return connection.authcid !== null && scram.supported();
     }
     onChallenge(connection, challenge) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2566,7 +2572,7 @@ class SASLSHA512 extends SASLMechanism {
         super(mechname, isClientFirst, priority);
     }
     test(connection) {
-        return connection.authcid !== null;
+        return connection.authcid !== null && scram.supported();
     }
     onChallenge(connection, challenge) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -3417,6 +3423,28 @@ function isCountableStanza(name) {
     return COUNTABLE.includes(name);
 }
 /**
+ * Remove the `from` attribute from a serialized stanza's root element, so a
+ * re-sent stanza cannot carry a stale resource after a failed resumption. Only
+ * the root opening tag is touched; nested `from` attributes (forwarded stanzas,
+ * MUC addresses) are preserved. The server stamps the authoritative c2s `from`.
+ * DOM-free string surgery, mirroring stampDelay.
+ * @param serialized - The serialized stanza.
+ * @returns The stanza with the root `from` removed (unchanged if none).
+ */
+function stripFrom(serialized) {
+    const end = serialized.indexOf('>');
+    if (end === -1) {
+        return serialized;
+    }
+    const openTag = serialized.slice(0, end);
+    const rest = serialized.slice(end);
+    // Values cannot contain their own delimiter quote (the serializer escapes it),
+    // so a non-greedy match to the matching quote is safe. The leading \s is
+    // consumed too, leaving no double space. Only the first (root) from is removed.
+    const stripped = openTag.replace(/\sfrom=(["'])[\s\S]*?\1/, '');
+    return stripped === openTag ? serialized : stripped + rest;
+}
+/**
  * Insert a XEP-0203 <delay/> child into a serialized stanza (DOM-free string
  * surgery). Used when re-sending salvaged stanzas after a failed resumption,
  * so the receiving client can show the original send time.
@@ -3849,10 +3877,11 @@ class StreamManagement {
         }
         s.sinceLastAck = 0;
         // Re-send whatever the server didn't acknowledge (a MUST, XEP-0198
-        // §5). The entries stay in `unacked` — they're still unacknowledged —
-        // and are not re-tracked.
+        // §5).The root `from` is stripped for symmetry with the failed-resume path;
+        // on a resume the resource is unchanged, so this is a no-op for a valid
+        // `from`. No delay stamp here since these go out on the same live session.
         for (const entry of s.unacked) {
-            this._sendRaw(entry.stanza);
+            this._sendRaw(stripFrom(entry.stanza));
         }
         if (s.unacked.length) {
             this.requestAck();
@@ -3904,7 +3933,11 @@ class StreamManagement {
         this._pendingResend = [];
         const s = this._state;
         for (const entry of pending) {
-            const stanza = entry.name === 'message' ? stampDelay(entry.stanza, entry.name, entry.queuedAt) : entry.stanza;
+            // Strip the root `from` first: the salvaged strings still carry the
+            // dead session's resource, which the freshly bound session would
+            // reject as invalid-from. Then apply the message delay stamp.
+            const stripped = stripFrom(entry.stanza);
+            const stanza = entry.name === 'message' ? stampDelay(stripped, entry.name, entry.queuedAt) : stripped;
             this._sendRaw(stanza);
             s.unacked.push(Object.assign(Object.assign({}, entry), { stanza }));
             s.sinceLastAck += 1;
@@ -5002,9 +5035,7 @@ class Connection {
      * @param condition - the error condition
      */
     _doDisconnect(condition) {
-        if (typeof this._idleTimeout === 'number') {
-            clearTimeout(this._idleTimeout);
-        }
+        clearTimeout(this._idleTimeout);
         // Cancel Disconnect Timeout
         if (this._disconnectTimeout !== null) {
             this.deleteTimedHandler(this._disconnectTimeout);

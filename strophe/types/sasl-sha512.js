@@ -14,7 +14,7 @@ class SASLSHA512 extends SASLMechanism {
         super(mechname, isClientFirst, priority);
     }
     test(connection) {
-        return connection.authcid !== null;
+        return connection.authcid !== null && scram.supported();
     }
     onChallenge(connection, challenge) {
         return __awaiter(this, void 0, void 0, function* () {

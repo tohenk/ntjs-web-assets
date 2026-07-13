@@ -16,7 +16,7 @@
  */
 import log from '../log';
 import { NS } from '../constants';
-import { H_WRAP, freshState, isCountableStanza, parseH, stampDelay, xmlEscape } from './utils';
+import { H_WRAP, freshState, isCountableStanza, parseH, stampDelay, stripFrom, xmlEscape } from './utils';
 import { MemoryStorageBackend } from './storage';
 /**
  * The XEP-0198 Stream Management engine.
@@ -332,10 +332,11 @@ class StreamManagement {
         }
         s.sinceLastAck = 0;
         // Re-send whatever the server didn't acknowledge (a MUST, XEP-0198
-        // §5). The entries stay in `unacked` — they're still unacknowledged —
-        // and are not re-tracked.
+        // §5).The root `from` is stripped for symmetry with the failed-resume path;
+        // on a resume the resource is unchanged, so this is a no-op for a valid
+        // `from`. No delay stamp here since these go out on the same live session.
         for (const entry of s.unacked) {
-            this._sendRaw(entry.stanza);
+            this._sendRaw(stripFrom(entry.stanza));
         }
         if (s.unacked.length) {
             this.requestAck();
@@ -387,7 +388,11 @@ class StreamManagement {
         this._pendingResend = [];
         const s = this._state;
         for (const entry of pending) {
-            const stanza = entry.name === 'message' ? stampDelay(entry.stanza, entry.name, entry.queuedAt) : entry.stanza;
+            // Strip the root `from` first: the salvaged strings still carry the
+            // dead session's resource, which the freshly bound session would
+            // reject as invalid-from. Then apply the message delay stamp.
+            const stripped = stripFrom(entry.stanza);
+            const stanza = entry.name === 'message' ? stampDelay(stripped, entry.name, entry.queuedAt) : stripped;
             this._sendRaw(stanza);
             s.unacked.push(Object.assign(Object.assign({}, entry), { stanza }));
             s.sinceLastAck += 1;

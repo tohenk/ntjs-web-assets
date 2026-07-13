@@ -978,9 +978,7 @@ class Connection {
      * @param condition - the error condition
      */
     _doDisconnect(condition) {
-        if (typeof this._idleTimeout === 'number') {
-            clearTimeout(this._idleTimeout);
-        }
+        clearTimeout(this._idleTimeout);
         // Cancel Disconnect Timeout
         if (this._disconnectTimeout !== null) {
             this.deleteTimedHandler(this._disconnectTimeout);

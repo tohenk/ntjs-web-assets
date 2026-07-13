@@ -103,6 +103,12 @@ function generate_cnonce() {
 }
 const scram = {
     /**
+     * Whether the Web Crypto `SubtleCrypto` API that SCRAM relies on is available.
+     */
+    supported() {
+        return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
+    },
+    /**
      * On success, sets
      * connection_sasl_data["server-signature"]
      * and
