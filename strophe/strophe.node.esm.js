@@ -1,16 +1,16 @@
-const { JSDOM } = await import('jsdom');
-const { default: ws } = await import('ws');
-const { window } = new JSDOM();
-globalThis.WebSocket = ws;
-globalThis.XMLSerializer = window.XMLSerializer;
-globalThis.DOMParser = window.DOMParser;
-globalThis.document = window.document;
+import ws from 'ws';
+import { DOMImplementation, XMLSerializer as XMLSerializer$1, DOMParser as DOMParser$2 } from '@xmldom/xmldom';
+import { connect } from 'node:net';
+import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { StringDecoder } from 'node:string_decoder';
 
 const _NS = {
     AUTH: 'jabber:iq:auth',
     BIND: 'urn:ietf:params:xml:ns:xmpp-bind',
     BOSH: 'urn:xmpp:xbosh',
     CLIENT: 'jabber:client',
+    COMPONENT: 'jabber:component:accept' /** XEP-0114 */,
     DISCO_INFO: 'http://jabber.org/protocol/disco#info',
     DISCO_ITEMS: 'http://jabber.org/protocol/disco#items',
     DELAY: 'urn:xmpp:delay' /** XEP-0203 */,
@@ -127,6 +127,169 @@ const ElementType = {
     TEXT: 3,
     CDATA: 4,
     FRAGMENT: 11,
+};
+
+/**
+ * Node.js DOM shim.
+ *
+ * Browsers provide `DOMParser`, `XMLSerializer` and a `document` natively;
+ * Node.js does not. The Node build therefore wires up `@xmldom/xmldom`, a
+ * small, pure-JS, XML-only W3C DOM, together with the `ws` WebSocket.
+ *
+ * It is imported for its side effects by the Node entry point (see
+ * `index-node.ts`) before any Connection is created, and is never part of the
+ * browser build.
+ *
+ * Two thin compatibility shims bridge the gaps between `@xmldom/xmldom` and the
+ * browser DOM that Strophe's shared code assumes:
+ *
+ *  - `firstElementChild`: `@xmldom/xmldom` does not implement this `ParentNode`
+ *    getter, so it is polyfilled from the child nodes.
+ *  - parse errors: browsers return a document whose root is a `<parsererror>`
+ *    element for malformed input, whereas `@xmldom/xmldom` throws. `DOMParser`
+ *    is wrapped to restore the browser behaviour, which is what
+ *    {@link getParserError} and the BOSH/WebSocket parse paths expect.
+ */
+const domImplementation = new DOMImplementation();
+globalThis.WebSocket = ws;
+globalThis.XMLSerializer = XMLSerializer$1;
+// `xmlGenerator()` only ever calls `document.implementation.createDocument(...)`,
+// so an empty document is the entire global `document` surface Strophe needs.
+globalThis.document = domImplementation.createDocument(null, null, null);
+// --- DOM API polyfills -----------------------------------------------------
+// `@xmldom/xmldom` omits a couple of browser DOM APIs that Strophe's shared code
+// assumes. Add them to xmldom's Element/Document prototypes, grabbed off a
+// sample tree, so the rest of the library stays browser-idiomatic.
+const sample = domImplementation.createDocument(null, 'sample', null);
+const elementProto = Object.getPrototypeOf(sample.documentElement);
+const documentProto = Object.getPrototypeOf(sample);
+// `ParentNode.firstElementChild`: the first child whose nodeType is ELEMENT_NODE.
+for (const proto of [elementProto, documentProto]) {
+    if (proto && !('firstElementChild' in proto)) {
+        Object.defineProperty(proto, 'firstElementChild', {
+            configurable: true,
+            get() {
+                var _a;
+                let node = this.firstChild;
+                while (node && node.nodeType !== 1) {
+                    node = node.nextSibling;
+                }
+                return (_a = node) !== null && _a !== void 0 ? _a : null;
+            },
+        });
+    }
+}
+// `Element.innerHTML`: used by Builder.h() for XHTML-IM. jsdom parsed this as
+// HTML; a lightweight XML DOM cannot, but XHTML-IM payloads are well-formed XML
+// by definition, so parse the assigned markup as XML. Malformed input leaves the
+// element empty rather than throwing (Builder.h() then produces no XHTML body).
+// The getter serialises the children back, escaping text as XML.
+if (elementProto && !('innerHTML' in elementProto)) {
+    Object.defineProperty(elementProto, 'innerHTML', {
+        configurable: true,
+        get() {
+            const serializer = new XMLSerializer$1();
+            let out = '';
+            for (let i = 0; i < this.childNodes.length; i++) {
+                out += serializer.serializeToString(this.childNodes[i]);
+            }
+            return out;
+        },
+        set(html) {
+            while (this.firstChild) {
+                this.removeChild(this.firstChild);
+            }
+            let root;
+            try {
+                const doc = new DOMParser$2({
+                    onError: (level, message) => {
+                        if (level === 'fatalError') {
+                            throw new Error(typeof message === 'string' ? message : String(message));
+                        }
+                    },
+                }).parseFromString(`<xhtml>${html}</xhtml>`, 'text/xml');
+                root = doc.documentElement;
+            }
+            catch (_a) {
+                return;
+            }
+            if (root) {
+                while (root.firstChild) {
+                    this.appendChild(root.firstChild);
+                }
+            }
+        },
+    });
+}
+// --- DOMParser parse-error compatibility -----------------------------------
+// Browsers return a document rooted at a `<parsererror>` element on malformed
+// XML; `@xmldom/xmldom` throws instead. Wrap it so downstream code keeps seeing
+// the browser shape.
+let DOMParser$1 = class DOMParser {
+    parseFromString(source, mimeType) {
+        var _a;
+        try {
+            const parser = new DOMParser$2({
+                onError: (level, message) => {
+                    if (level === 'fatalError') {
+                        throw new Error(typeof message === 'string' ? message : String(message));
+                    }
+                },
+            });
+            return parser.parseFromString(source, mimeType);
+        }
+        catch (e) {
+            const doc = domImplementation.createDocument(PARSE_ERROR_NS, 'parsererror', null);
+            (_a = doc.documentElement) === null || _a === void 0 ? void 0 : _a.appendChild(doc.createTextNode(e.message));
+            return doc;
+        }
+    }
+};
+globalThis.DOMParser = DOMParser$1;
+
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
+
+
+function __awaiter(thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+}
+
+function __classPrivateFieldGet(receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+}
+
+function __classPrivateFieldSet(receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+}
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+    var e = new Error(message);
+    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
 };
 
 let logLevel = LOG_LEVELS.DEBUG;
@@ -697,6 +860,32 @@ function isTagEqual(el, name) {
     return el.tagName === name;
 }
 /**
+ * Return the XML namespace of an element.
+ *
+ * Prefers the serialized `xmlns` attribute and falls back to the DOM
+ * `namespaceURI`, because the two diverge depending on how the element was
+ * built and neither is reliable on its own:
+ *
+ *  - Locally-built stanzas (`$iq`, `stx`, {@link Builder}) are created with
+ *    `createElement` and carry their namespace only in the `xmlns` attribute;
+ *    their `namespaceURI` is null.
+ *  - Stanzas received over the XEP-0114 component transport are built with
+ *    `createElementNS` and carry their namespace only on `namespaceURI`; the
+ *    redundant `xmlns` attribute is omitted.
+ *  - WebSocket / BOSH stanzas parsed by `DOMParser` carry both, except on
+ *    child elements that inherit the default namespace without redeclaring it
+ *    (those have only `namespaceURI`).
+ *
+ * Checking both is the transport-agnostic way to read an element's namespace.
+ *
+ * @method Strophe.getNamespace
+ * @param elem - The element whose namespace is wanted.
+ * @returns The namespace URI, or null if the element has none.
+ */
+function getNamespace(elem) {
+    return elem.getAttribute('xmlns') || elem.namespaceURI;
+}
+/**
  * Get the concatenation of all text children of an element.
  * @method Strophe.getText
  * @param elem - A DOM element.
@@ -838,6 +1027,7 @@ var utils$1 = /*#__PURE__*/Object.freeze({
     getBareJidFromJid: getBareJidFromJid,
     getDomainFromJid: getDomainFromJid,
     getFirstElementChild: getFirstElementChild,
+    getNamespace: getNamespace,
     getNodeFromJid: getNodeFromJid,
     getParserError: getParserError,
     getResourceFromJid: getResourceFromJid,
@@ -861,50 +1051,182 @@ var utils$1 = /*#__PURE__*/Object.freeze({
     xorArrayBuffers: xorArrayBuffers
 });
 
-/******************************************************************************
-Copyright (c) Microsoft Corporation.
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-***************************************************************************** */
-/* global Reflect, Promise, SuppressedError, Symbol, Iterator */
-
-
-function __awaiter(thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
+/**
+ * _Private_ helper class for managing stanza handlers.
+ *
+ * A Handler encapsulates a user provided callback function to be
+ * executed when matching stanzas are received by the connection.
+ * Handlers can be either one-off or persistant depending on their
+ * return value. Returning true will cause a Handler to remain active, and
+ * returning false will remove the Handler.
+ *
+ * Users will not use Handler objects directly, but instead they
+ * will use {@link Connection.addHandler} and
+ * {@link Connection.deleteHandler}.
+ */
+class Handler {
+    /**
+     * Create and initialize a new Handler.
+     *
+     * @param handler - A function to be executed when the handler is run.
+     * @param ns - The namespace to match.
+     * @param name - The element name to match.
+     * @param type - The stanza type (or types if an array) to match.
+     * @param id - The element id attribute to match.
+     * @param from - The element from attribute to match.
+     * @param options - Handler options
+     */
+    constructor(handler, ns, name, type, id, from, options) {
+        this.handler = handler;
+        this.ns = ns;
+        this.name = name;
+        this.type = type;
+        this.id = id;
+        this.options = options || { matchBareFromJid: false, ignoreNamespaceFragment: false };
+        if (this.options.matchBareFromJid) {
+            this.from = from ? getBareJidFromJid(from) : null;
+        }
+        else {
+            this.from = from;
+        }
+        this.user = true;
+    }
+    /**
+     * Returns the XML namespace of an element.
+     * Resolved via {@link Strophe.getNamespace}, which reads the `xmlns`
+     * attribute and falls back to `namespaceURI` so matching works regardless
+     * of how the stanza's DOM was built (locally, via DOMParser, or via the
+     * component transport's `createElementNS`).
+     * If `ignoreNamespaceFragment` was passed in for this handler, then the
+     * URL fragment will be stripped.
+     * @param elem - The XML element with the namespace.
+     * @returns The namespace, with optionally the fragment stripped.
+     */
+    getNamespace(elem) {
+        let elNamespace = getNamespace(elem);
+        if (elNamespace && this.options.ignoreNamespaceFragment) {
+            elNamespace = elNamespace.split('#')[0];
+        }
+        return elNamespace;
+    }
+    /**
+     * Tests if a stanza element (or any of its children) matches the
+     * namespace set for this Handler.
+     * @param elem - The XML element to test.
+     * @returns true if the stanza matches and false otherwise.
+     */
+    namespaceMatch(elem) {
+        var _a;
+        if (!this.ns || this.getNamespace(elem) === this.ns) {
+            return true;
+        }
+        for (const child of (_a = elem.children) !== null && _a !== void 0 ? _a : []) {
+            if (this.getNamespace(child) === this.ns) {
+                return true;
+            }
+            else if (this.namespaceMatch(child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    /**
+     * Tests if a stanza matches the Handler.
+     * @param elem - The XML element to test.
+     * @returns true if the stanza matches and false otherwise.
+     */
+    isMatch(elem) {
+        let from = elem.getAttribute('from');
+        if (this.options.matchBareFromJid) {
+            from = getBareJidFromJid(from);
+        }
+        const elem_type = elem.getAttribute('type');
+        if (this.namespaceMatch(elem) &&
+            (!this.name || isTagEqual(elem, this.name)) &&
+            (!this.type ||
+                (Array.isArray(this.type) ? this.type.indexOf(elem_type !== null && elem_type !== void 0 ? elem_type : '') !== -1 : elem_type === this.type)) &&
+            (!this.id || elem.getAttribute('id') === this.id) &&
+            (!this.from || from === this.from)) {
+            return true;
+        }
+        return false;
+    }
+    /**
+     * Run the callback on a matching stanza.
+     * @param elem - The DOM element that triggered the Handler.
+     * @returns A boolean indicating if the handler should remain active.
+     */
+    run(elem) {
+        let result = null;
+        try {
+            result = this.handler(elem);
+        }
+        catch (e) {
+            handleError(e);
+            throw e;
+        }
+        return result;
+    }
+    /**
+     * Get a String representation of the Handler object.
+     */
+    toString() {
+        return '{Handler: ' + this.handler + '(' + this.name + ',' + this.id + ',' + this.ns + ')}';
+    }
 }
 
-function __classPrivateFieldGet(receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+/**
+ * _Private_ helper class for managing timed handlers.
+ *
+ * A Strophe.TimedHandler encapsulates a user provided callback that
+ * should be called after a certain period of time or at regular
+ * intervals.  The return value of the callback determines whether the
+ * Strophe.TimedHandler will continue to fire.
+ *
+ * Users will not use Strophe.TimedHandler objects directly, but instead
+ * they will use {@link Strophe.Connection#addTimedHandler|addTimedHandler()} and
+ * {@link Strophe.Connection#deleteTimedHandler|deleteTimedHandler()}.
+ *
+ * @memberof Strophe
+ */
+class TimedHandler {
+    /**
+     * Create and initialize a new Strophe.TimedHandler object.
+     * @param period - The number of milliseconds to wait before the
+     *     handler is called.
+     * @param handler - The callback to run when the handler fires.  This
+     *     function should take no arguments.
+     */
+    constructor(period, handler) {
+        this.period = period;
+        this.handler = handler;
+        this.lastCalled = new Date().getTime();
+        this.user = true;
+    }
+    /**
+     * Run the callback for the Strophe.TimedHandler.
+     *
+     * @returns Returns the result of running the handler,
+     *  which is `true` if the Strophe.TimedHandler should be called again,
+     *  and `false` otherwise.
+     */
+    run() {
+        this.lastCalled = new Date().getTime();
+        return this.handler();
+    }
+    /**
+     * Reset the last called time for the Strophe.TimedHandler.
+     */
+    reset() {
+        this.lastCalled = new Date().getTime();
+    }
+    /**
+     * Get a string representation of the Strophe.TimedHandler object.
+     */
+    toString() {
+        return '{TimedHandler: ' + this.handler + '(' + this.period + ')}';
+    }
 }
-
-function __classPrivateFieldSet(receiver, state, value, kind, f) {
-    if (kind === "m") throw new TypeError("Private method is not writable");
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
-}
-
-typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
-    var e = new Error(message);
-    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
-};
 
 var _Builder_nodeTree, _Builder_node, _Builder_name, _Builder_attrs;
 /**
@@ -1214,6 +1536,425 @@ class Builder {
     }
 }
 _Builder_nodeTree = new WeakMap(), _Builder_node = new WeakMap(), _Builder_name = new WeakMap(), _Builder_attrs = new WeakMap();
+
+/**
+ * Encapsulates an SASL authentication mechanism.
+ *
+ * User code may override the priority for each mechanism or disable it completely.
+ * See <priority> for information about changing priority and <test> for informatian on
+ * how to disable a mechanism.
+ *
+ * By default, all mechanisms are enabled and t_he priorities are
+ *
+ *     SCRAM-SHA-512 - 72
+ *     SCRAM-SHA-384 - 71
+ *     SCRAM-SHA-256 - 70
+ *     SCRAM-SHA-1   - 60
+ *     PLAIN         - 50
+ *     OAUTHBEARER   - 40
+ *     X-OAUTH2      - 30
+ *     ANONYMOUS     - 20
+ *     EXTERNAL      - 10
+ *
+ * See: {@link Strophe.Connection#registerSASLMechanisms}
+ */
+class SASLMechanism {
+    /**
+     * PrivateConstructor: Strophe.SASLMechanism
+     * SASL auth mechanism abstraction.
+     * @param name - SASL Mechanism name.
+     * @param isClientFirst - If client should send response first without challenge.
+     * @param priority - Priority.
+     */
+    constructor(name, isClientFirst, priority) {
+        this.mechname = name;
+        this.isClientFirst = isClientFirst;
+        this.priority = priority;
+        this._connection = null;
+    }
+    /**
+     * Checks if mechanism able to run.
+     * To disable a mechanism, make this return false;
+     *
+     * To disable plain authentication run
+     * > Strophe.SASLPlain.test = function() {
+     * >   return false;
+     * > }
+     *
+     * See <SASL mechanisms> for a list of available mechanisms.
+     * @param _connection - Target Connection.
+     * @returns If mechanism was able to run.
+     */
+    test(_connection) {
+        return true;
+    }
+    /**
+     * Called before starting mechanism on some connection.
+     * @param connection - Target Connection.
+     */
+    onStart(connection) {
+        this._connection = connection;
+    }
+    /**
+     * Called by protocol implementation on incoming challenge.
+     *
+     * By deafult, if the client is expected to send data first (isClientFirst === true),
+     * this method is called with `challenge` as null on the first call,
+     * unless `clientChallenge` is overridden in the relevant subclass.
+     * @param _connection - Target Connection.
+     * @param _challenge - current challenge to handle.
+     * @returns Mechanism response.
+     */
+    onChallenge(_connection, _challenge) {
+        throw new Error('You should implement challenge handling!');
+    }
+    /**
+     * Called by the protocol implementation if the client is expected to send
+     * data first in the authentication exchange (i.e. isClientFirst === true).
+     * @param connection - Target Connection.
+     * @returns Mechanism response.
+     */
+    clientChallenge(connection) {
+        if (!this.isClientFirst) {
+            throw new Error('clientChallenge should not be called if isClientFirst is false!');
+        }
+        return this.onChallenge(connection);
+    }
+    /**
+     * Protocol informs mechanism implementation about SASL failure.
+     */
+    onFailure() {
+        this._connection = null;
+    }
+    /**
+     * Protocol informs mechanism implementation about SASL success.
+     */
+    onSuccess() {
+        this._connection = null;
+    }
+}
+
+class SASLAnonymous extends SASLMechanism {
+    constructor(mechname = 'ANONYMOUS', isClientFirst = false, priority = 20) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.authcid === null;
+    }
+}
+
+class SASLExternal extends SASLMechanism {
+    constructor(mechname = 'EXTERNAL', isClientFirst = true, priority = 10) {
+        super(mechname, isClientFirst, priority);
+    }
+    onChallenge(connection) {
+        return connection.authcid === connection.authzid ? '' : connection.authzid;
+    }
+}
+
+class SASLOAuthBearer extends SASLMechanism {
+    constructor(mechname = 'OAUTHBEARER', isClientFirst = true, priority = 40) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.pass !== null;
+    }
+    onChallenge(connection) {
+        let auth_str = 'n,';
+        if (connection.authcid !== null) {
+            auth_str = auth_str + 'a=' + connection.authzid;
+        }
+        auth_str = auth_str + ',';
+        auth_str = auth_str + '\u0001';
+        auth_str = auth_str + 'auth=Bearer ';
+        auth_str = auth_str + connection.pass;
+        auth_str = auth_str + '\u0001';
+        auth_str = auth_str + '\u0001';
+        return utils.utf16to8(auth_str);
+    }
+}
+
+class SASLPlain extends SASLMechanism {
+    constructor(mechname = 'PLAIN', isClientFirst = true, priority = 50) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.authcid !== null;
+    }
+    onChallenge(connection) {
+        const { authcid, authzid, domain, pass } = connection;
+        if (!domain) {
+            throw new Error('SASLPlain onChallenge: domain is not defined!');
+        }
+        let auth_str = authzid !== `${authcid}@${domain}` ? authzid : '';
+        auth_str = auth_str + '\u0000';
+        auth_str = auth_str + authcid;
+        auth_str = auth_str + '\u0000';
+        auth_str = auth_str + pass;
+        return utils.utf16to8(auth_str);
+    }
+}
+
+/**
+ * @param authMessage
+ * @param clientKey
+ * @param hashName
+ */
+function scramClientProof(authMessage, clientKey, hashName) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const storedKey = yield crypto.subtle.importKey('raw', yield crypto.subtle.digest(hashName, clientKey), { name: 'HMAC', hash: hashName }, false, ['sign']);
+        const clientSignature = yield crypto.subtle.sign('HMAC', storedKey, utils.stringToArrayBuf(authMessage));
+        return utils.xorArrayBuffers(clientKey, clientSignature);
+    });
+}
+/**
+ * This function parses the information in a SASL SCRAM challenge response,
+ * into an object of the form
+ * { nonce: String,
+ *   salt:  ArrayBuffer,
+ *   iter:  Int
+ * }
+ * Returns undefined on failure.
+ * @param challenge
+ */
+function scramParseChallenge(challenge) {
+    let nonce, salt, iter;
+    const attribMatch = /([a-z]+)=([^,]+)(,|$)/;
+    while (challenge.match(attribMatch)) {
+        const matches = challenge.match(attribMatch);
+        challenge = challenge.replace(matches[0], '');
+        switch (matches[1]) {
+            case 'r':
+                nonce = matches[2];
+                break;
+            case 's':
+                salt = utils.base64ToArrayBuf(matches[2]);
+                break;
+            case 'i':
+                iter = parseInt(matches[2], 10);
+                break;
+            case 'm':
+                return undefined;
+        }
+    }
+    if (isNaN(iter) || iter < 4096) {
+        log.warn('Failing SCRAM authentication because server supplied iteration count < 4096.');
+        return undefined;
+    }
+    if (!salt) {
+        log.warn('Failing SCRAM authentication because server supplied incorrect salt.');
+        return undefined;
+    }
+    return { nonce, salt, iter };
+}
+/**
+ * Derive the client and server keys given a string password,
+ * a hash name, and a bit length.
+ * @param password
+ * @param salt
+ * @param iter
+ * @param hashName
+ * @param hashBits
+ */
+function scramDeriveKeys(password, salt, iter, hashName, hashBits) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const saltedPasswordBits = yield crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: iter, hash: { name: hashName } }, yield crypto.subtle.importKey('raw', utils.stringToArrayBuf(password), 'PBKDF2', false, ['deriveBits']), hashBits);
+        const saltedPassword = yield crypto.subtle.importKey('raw', saltedPasswordBits, { name: 'HMAC', hash: hashName }, false, ['sign']);
+        return {
+            ck: yield crypto.subtle.sign('HMAC', saltedPassword, utils.stringToArrayBuf('Client Key')),
+            sk: yield crypto.subtle.sign('HMAC', saltedPassword, utils.stringToArrayBuf('Server Key')),
+        };
+    });
+}
+/**
+ * @param authMessage
+ * @param sk
+ * @param hashName
+ */
+function scramServerSign(authMessage, sk, hashName) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const serverKey = yield crypto.subtle.importKey('raw', sk, { name: 'HMAC', hash: hashName }, false, ['sign']);
+        return crypto.subtle.sign('HMAC', serverKey, utils.stringToArrayBuf(authMessage));
+    });
+}
+/**
+ * Generate an ASCII nonce (not containing the ',' character)
+ * @returns
+ */
+function generate_cnonce() {
+    const bytes = new Uint8Array(16);
+    return utils.arrayBufToBase64(crypto.getRandomValues(bytes).buffer);
+}
+const scram = {
+    /**
+     * Whether the Web Crypto `SubtleCrypto` API that SCRAM relies on is available.
+     */
+    supported() {
+        return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
+    },
+    /**
+     * On success, sets
+     * connection_sasl_data["server-signature"]
+     * and
+     * connection._sasl_data.keys
+     *
+     * The server signature should be verified after this function completes..
+     *
+     * On failure, returns connection._sasl_failure_cb();
+     * @param connection
+     * @param challenge
+     * @param hashName
+     * @param hashBits
+     */
+    scramResponse(connection, challenge, hashName, hashBits) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const cnonce = connection._sasl_data.cnonce;
+            const challengeData = scramParseChallenge(challenge);
+            if (!challengeData || challengeData.nonce.slice(0, cnonce.length) !== cnonce) {
+                log.warn('Failing SCRAM authentication because server supplied incorrect nonce.');
+                connection._sasl_data = {};
+                return connection._sasl_failure_cb(null);
+            }
+            let clientKey, serverKey;
+            const { pass } = connection;
+            if (typeof connection.pass === 'string' || connection.pass instanceof String) {
+                const keys = yield scramDeriveKeys(pass, challengeData.salt, challengeData.iter, hashName, hashBits);
+                clientKey = keys.ck;
+                serverKey = keys.sk;
+            }
+            else if ((pass === null || pass === void 0 ? void 0 : pass.name) === hashName &&
+                (pass === null || pass === void 0 ? void 0 : pass.salt) === utils.arrayBufToBase64(challengeData.salt) &&
+                (pass === null || pass === void 0 ? void 0 : pass.iter) === challengeData.iter) {
+                const { ck, sk } = pass;
+                clientKey = utils.base64ToArrayBuf(ck);
+                serverKey = utils.base64ToArrayBuf(sk);
+            }
+            else {
+                return connection._sasl_failure_cb(null);
+            }
+            const clientFirstMessageBare = connection._sasl_data['client-first-message-bare'];
+            const serverFirstMessage = challenge;
+            const clientFinalMessageBare = `c=biws,r=${challengeData.nonce}`;
+            const authMessage = `${clientFirstMessageBare},${serverFirstMessage},${clientFinalMessageBare}`;
+            const clientProof = yield scramClientProof(authMessage, clientKey, hashName);
+            const serverSignature = yield scramServerSign(authMessage, serverKey, hashName);
+            connection._sasl_data['server-signature'] = utils.arrayBufToBase64(serverSignature);
+            connection._sasl_data.keys = {
+                name: hashName,
+                iter: challengeData.iter,
+                salt: utils.arrayBufToBase64(challengeData.salt),
+                ck: utils.arrayBufToBase64(clientKey),
+                sk: utils.arrayBufToBase64(serverKey),
+            };
+            return `${clientFinalMessageBare},p=${utils.arrayBufToBase64(clientProof)}`;
+        });
+    },
+    /**
+     * Returns a string containing the client first message
+     * @param connection
+     * @param test_cnonce
+     */
+    clientChallenge(connection, test_cnonce) {
+        const cnonce = test_cnonce || generate_cnonce();
+        const client_first_message_bare = `n=${connection.authcid},r=${cnonce}`;
+        connection._sasl_data.cnonce = cnonce;
+        connection._sasl_data['client-first-message-bare'] = client_first_message_bare;
+        return utils.utf16to8(`n,,${client_first_message_bare}`);
+    },
+};
+
+class SASLSHA1 extends SASLMechanism {
+    constructor(mechname = 'SCRAM-SHA-1', isClientFirst = true, priority = 60) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.authcid !== null && scram.supported();
+    }
+    onChallenge(connection, challenge) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield scram.scramResponse(connection, challenge, 'SHA-1', 160);
+        });
+    }
+    clientChallenge(connection, test_cnonce) {
+        return scram.clientChallenge(connection, test_cnonce);
+    }
+}
+
+class SASLSHA256 extends SASLMechanism {
+    constructor(mechname = 'SCRAM-SHA-256', isClientFirst = true, priority = 70) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.authcid !== null && scram.supported();
+    }
+    onChallenge(connection, challenge) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield scram.scramResponse(connection, challenge, 'SHA-256', 256);
+        });
+    }
+    clientChallenge(connection, test_cnonce) {
+        return scram.clientChallenge(connection, test_cnonce);
+    }
+}
+
+class SASLSHA384 extends SASLMechanism {
+    constructor(mechname = 'SCRAM-SHA-384', isClientFirst = true, priority = 71) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.authcid !== null && scram.supported();
+    }
+    onChallenge(connection, challenge) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield scram.scramResponse(connection, challenge, 'SHA-384', 384);
+        });
+    }
+    clientChallenge(connection, test_cnonce) {
+        return scram.clientChallenge(connection, test_cnonce);
+    }
+}
+
+class SASLSHA512 extends SASLMechanism {
+    constructor(mechname = 'SCRAM-SHA-512', isClientFirst = true, priority = 72) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.authcid !== null && scram.supported();
+    }
+    onChallenge(connection, challenge) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield scram.scramResponse(connection, challenge, 'SHA-512', 512);
+        });
+    }
+    clientChallenge(connection, test_cnonce) {
+        return scram.clientChallenge(connection, test_cnonce);
+    }
+}
+
+class SASLXOAuth2 extends SASLMechanism {
+    constructor(mechname = 'X-OAUTH2', isClientFirst = true, priority = 30) {
+        super(mechname, isClientFirst, priority);
+    }
+    test(connection) {
+        return connection.pass !== null;
+    }
+    onChallenge(connection) {
+        let auth_str = '\u0000';
+        if (connection.authcid !== null) {
+            auth_str = auth_str + connection.authzid;
+        }
+        auth_str = auth_str + '\u0000';
+        auth_str = auth_str + connection.pass;
+        return utils.utf16to8(auth_str);
+    }
+}
+
+class SessionError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'StropheSessionError';
+    }
+}
 
 /**
  * _Private_ variable that keeps track of the request ids for connections.
@@ -2014,598 +2755,6 @@ class Bosh {
         if (this._requests.length > 1 && Math.abs(this._requests[0].rid - this._requests[1].rid) < this.window) {
             this._processRequest(1);
         }
-    }
-}
-
-/**
- * _Private_ helper class for managing stanza handlers.
- *
- * A Handler encapsulates a user provided callback function to be
- * executed when matching stanzas are received by the connection.
- * Handlers can be either one-off or persistant depending on their
- * return value. Returning true will cause a Handler to remain active, and
- * returning false will remove the Handler.
- *
- * Users will not use Handler objects directly, but instead they
- * will use {@link Connection.addHandler} and
- * {@link Connection.deleteHandler}.
- */
-class Handler {
-    /**
-     * Create and initialize a new Handler.
-     *
-     * @param handler - A function to be executed when the handler is run.
-     * @param ns - The namespace to match.
-     * @param name - The element name to match.
-     * @param type - The stanza type (or types if an array) to match.
-     * @param id - The element id attribute to match.
-     * @param from - The element from attribute to match.
-     * @param options - Handler options
-     */
-    constructor(handler, ns, name, type, id, from, options) {
-        this.handler = handler;
-        this.ns = ns;
-        this.name = name;
-        this.type = type;
-        this.id = id;
-        this.options = options || { matchBareFromJid: false, ignoreNamespaceFragment: false };
-        if (this.options.matchBareFromJid) {
-            this.from = from ? getBareJidFromJid(from) : null;
-        }
-        else {
-            this.from = from;
-        }
-        this.user = true;
-    }
-    /**
-     * Returns the XML namespace attribute on an element.
-     * If `ignoreNamespaceFragment` was passed in for this handler, then the
-     * URL fragment will be stripped.
-     * @param elem - The XML element with the namespace.
-     * @returns The namespace, with optionally the fragment stripped.
-     */
-    getNamespace(elem) {
-        let elNamespace = elem.getAttribute('xmlns');
-        if (elNamespace && this.options.ignoreNamespaceFragment) {
-            elNamespace = elNamespace.split('#')[0];
-        }
-        return elNamespace;
-    }
-    /**
-     * Tests if a stanza element (or any of its children) matches the
-     * namespace set for this Handler.
-     * @param elem - The XML element to test.
-     * @returns true if the stanza matches and false otherwise.
-     */
-    namespaceMatch(elem) {
-        var _a;
-        if (!this.ns || this.getNamespace(elem) === this.ns) {
-            return true;
-        }
-        for (const child of (_a = elem.children) !== null && _a !== void 0 ? _a : []) {
-            if (this.getNamespace(child) === this.ns) {
-                return true;
-            }
-            else if (this.namespaceMatch(child)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    /**
-     * Tests if a stanza matches the Handler.
-     * @param elem - The XML element to test.
-     * @returns true if the stanza matches and false otherwise.
-     */
-    isMatch(elem) {
-        let from = elem.getAttribute('from');
-        if (this.options.matchBareFromJid) {
-            from = getBareJidFromJid(from);
-        }
-        const elem_type = elem.getAttribute('type');
-        if (this.namespaceMatch(elem) &&
-            (!this.name || isTagEqual(elem, this.name)) &&
-            (!this.type ||
-                (Array.isArray(this.type) ? this.type.indexOf(elem_type !== null && elem_type !== void 0 ? elem_type : '') !== -1 : elem_type === this.type)) &&
-            (!this.id || elem.getAttribute('id') === this.id) &&
-            (!this.from || from === this.from)) {
-            return true;
-        }
-        return false;
-    }
-    /**
-     * Run the callback on a matching stanza.
-     * @param elem - The DOM element that triggered the Handler.
-     * @returns A boolean indicating if the handler should remain active.
-     */
-    run(elem) {
-        let result = null;
-        try {
-            result = this.handler(elem);
-        }
-        catch (e) {
-            handleError(e);
-            throw e;
-        }
-        return result;
-    }
-    /**
-     * Get a String representation of the Handler object.
-     */
-    toString() {
-        return '{Handler: ' + this.handler + '(' + this.name + ',' + this.id + ',' + this.ns + ')}';
-    }
-}
-
-/**
- * _Private_ helper class for managing timed handlers.
- *
- * A Strophe.TimedHandler encapsulates a user provided callback that
- * should be called after a certain period of time or at regular
- * intervals.  The return value of the callback determines whether the
- * Strophe.TimedHandler will continue to fire.
- *
- * Users will not use Strophe.TimedHandler objects directly, but instead
- * they will use {@link Strophe.Connection#addTimedHandler|addTimedHandler()} and
- * {@link Strophe.Connection#deleteTimedHandler|deleteTimedHandler()}.
- *
- * @memberof Strophe
- */
-class TimedHandler {
-    /**
-     * Create and initialize a new Strophe.TimedHandler object.
-     * @param period - The number of milliseconds to wait before the
-     *     handler is called.
-     * @param handler - The callback to run when the handler fires.  This
-     *     function should take no arguments.
-     */
-    constructor(period, handler) {
-        this.period = period;
-        this.handler = handler;
-        this.lastCalled = new Date().getTime();
-        this.user = true;
-    }
-    /**
-     * Run the callback for the Strophe.TimedHandler.
-     *
-     * @returns Returns the result of running the handler,
-     *  which is `true` if the Strophe.TimedHandler should be called again,
-     *  and `false` otherwise.
-     */
-    run() {
-        this.lastCalled = new Date().getTime();
-        return this.handler();
-    }
-    /**
-     * Reset the last called time for the Strophe.TimedHandler.
-     */
-    reset() {
-        this.lastCalled = new Date().getTime();
-    }
-    /**
-     * Get a string representation of the Strophe.TimedHandler object.
-     */
-    toString() {
-        return '{TimedHandler: ' + this.handler + '(' + this.period + ')}';
-    }
-}
-
-/**
- * Encapsulates an SASL authentication mechanism.
- *
- * User code may override the priority for each mechanism or disable it completely.
- * See <priority> for information about changing priority and <test> for informatian on
- * how to disable a mechanism.
- *
- * By default, all mechanisms are enabled and t_he priorities are
- *
- *     SCRAM-SHA-512 - 72
- *     SCRAM-SHA-384 - 71
- *     SCRAM-SHA-256 - 70
- *     SCRAM-SHA-1   - 60
- *     PLAIN         - 50
- *     OAUTHBEARER   - 40
- *     X-OAUTH2      - 30
- *     ANONYMOUS     - 20
- *     EXTERNAL      - 10
- *
- * See: {@link Strophe.Connection#registerSASLMechanisms}
- */
-class SASLMechanism {
-    /**
-     * PrivateConstructor: Strophe.SASLMechanism
-     * SASL auth mechanism abstraction.
-     * @param name - SASL Mechanism name.
-     * @param isClientFirst - If client should send response first without challenge.
-     * @param priority - Priority.
-     */
-    constructor(name, isClientFirst, priority) {
-        this.mechname = name;
-        this.isClientFirst = isClientFirst;
-        this.priority = priority;
-        this._connection = null;
-    }
-    /**
-     * Checks if mechanism able to run.
-     * To disable a mechanism, make this return false;
-     *
-     * To disable plain authentication run
-     * > Strophe.SASLPlain.test = function() {
-     * >   return false;
-     * > }
-     *
-     * See <SASL mechanisms> for a list of available mechanisms.
-     * @param _connection - Target Connection.
-     * @returns If mechanism was able to run.
-     */
-    test(_connection) {
-        return true;
-    }
-    /**
-     * Called before starting mechanism on some connection.
-     * @param connection - Target Connection.
-     */
-    onStart(connection) {
-        this._connection = connection;
-    }
-    /**
-     * Called by protocol implementation on incoming challenge.
-     *
-     * By deafult, if the client is expected to send data first (isClientFirst === true),
-     * this method is called with `challenge` as null on the first call,
-     * unless `clientChallenge` is overridden in the relevant subclass.
-     * @param _connection - Target Connection.
-     * @param _challenge - current challenge to handle.
-     * @returns Mechanism response.
-     */
-    onChallenge(_connection, _challenge) {
-        throw new Error('You should implement challenge handling!');
-    }
-    /**
-     * Called by the protocol implementation if the client is expected to send
-     * data first in the authentication exchange (i.e. isClientFirst === true).
-     * @param connection - Target Connection.
-     * @returns Mechanism response.
-     */
-    clientChallenge(connection) {
-        if (!this.isClientFirst) {
-            throw new Error('clientChallenge should not be called if isClientFirst is false!');
-        }
-        return this.onChallenge(connection);
-    }
-    /**
-     * Protocol informs mechanism implementation about SASL failure.
-     */
-    onFailure() {
-        this._connection = null;
-    }
-    /**
-     * Protocol informs mechanism implementation about SASL success.
-     */
-    onSuccess() {
-        this._connection = null;
-    }
-}
-
-class SASLAnonymous extends SASLMechanism {
-    constructor(mechname = 'ANONYMOUS', isClientFirst = false, priority = 20) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.authcid === null;
-    }
-}
-
-class SASLExternal extends SASLMechanism {
-    constructor(mechname = 'EXTERNAL', isClientFirst = true, priority = 10) {
-        super(mechname, isClientFirst, priority);
-    }
-    onChallenge(connection) {
-        return connection.authcid === connection.authzid ? '' : connection.authzid;
-    }
-}
-
-class SASLOAuthBearer extends SASLMechanism {
-    constructor(mechname = 'OAUTHBEARER', isClientFirst = true, priority = 40) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.pass !== null;
-    }
-    onChallenge(connection) {
-        let auth_str = 'n,';
-        if (connection.authcid !== null) {
-            auth_str = auth_str + 'a=' + connection.authzid;
-        }
-        auth_str = auth_str + ',';
-        auth_str = auth_str + '\u0001';
-        auth_str = auth_str + 'auth=Bearer ';
-        auth_str = auth_str + connection.pass;
-        auth_str = auth_str + '\u0001';
-        auth_str = auth_str + '\u0001';
-        return utils.utf16to8(auth_str);
-    }
-}
-
-class SASLPlain extends SASLMechanism {
-    constructor(mechname = 'PLAIN', isClientFirst = true, priority = 50) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.authcid !== null;
-    }
-    onChallenge(connection) {
-        const { authcid, authzid, domain, pass } = connection;
-        if (!domain) {
-            throw new Error('SASLPlain onChallenge: domain is not defined!');
-        }
-        let auth_str = authzid !== `${authcid}@${domain}` ? authzid : '';
-        auth_str = auth_str + '\u0000';
-        auth_str = auth_str + authcid;
-        auth_str = auth_str + '\u0000';
-        auth_str = auth_str + pass;
-        return utils.utf16to8(auth_str);
-    }
-}
-
-/**
- * @param authMessage
- * @param clientKey
- * @param hashName
- */
-function scramClientProof(authMessage, clientKey, hashName) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const storedKey = yield crypto.subtle.importKey('raw', yield crypto.subtle.digest(hashName, clientKey), { name: 'HMAC', hash: hashName }, false, ['sign']);
-        const clientSignature = yield crypto.subtle.sign('HMAC', storedKey, utils.stringToArrayBuf(authMessage));
-        return utils.xorArrayBuffers(clientKey, clientSignature);
-    });
-}
-/**
- * This function parses the information in a SASL SCRAM challenge response,
- * into an object of the form
- * { nonce: String,
- *   salt:  ArrayBuffer,
- *   iter:  Int
- * }
- * Returns undefined on failure.
- * @param challenge
- */
-function scramParseChallenge(challenge) {
-    let nonce, salt, iter;
-    const attribMatch = /([a-z]+)=([^,]+)(,|$)/;
-    while (challenge.match(attribMatch)) {
-        const matches = challenge.match(attribMatch);
-        challenge = challenge.replace(matches[0], '');
-        switch (matches[1]) {
-            case 'r':
-                nonce = matches[2];
-                break;
-            case 's':
-                salt = utils.base64ToArrayBuf(matches[2]);
-                break;
-            case 'i':
-                iter = parseInt(matches[2], 10);
-                break;
-            case 'm':
-                return undefined;
-        }
-    }
-    if (isNaN(iter) || iter < 4096) {
-        log.warn('Failing SCRAM authentication because server supplied iteration count < 4096.');
-        return undefined;
-    }
-    if (!salt) {
-        log.warn('Failing SCRAM authentication because server supplied incorrect salt.');
-        return undefined;
-    }
-    return { nonce, salt, iter };
-}
-/**
- * Derive the client and server keys given a string password,
- * a hash name, and a bit length.
- * @param password
- * @param salt
- * @param iter
- * @param hashName
- * @param hashBits
- */
-function scramDeriveKeys(password, salt, iter, hashName, hashBits) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const saltedPasswordBits = yield crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: iter, hash: { name: hashName } }, yield crypto.subtle.importKey('raw', utils.stringToArrayBuf(password), 'PBKDF2', false, ['deriveBits']), hashBits);
-        const saltedPassword = yield crypto.subtle.importKey('raw', saltedPasswordBits, { name: 'HMAC', hash: hashName }, false, ['sign']);
-        return {
-            ck: yield crypto.subtle.sign('HMAC', saltedPassword, utils.stringToArrayBuf('Client Key')),
-            sk: yield crypto.subtle.sign('HMAC', saltedPassword, utils.stringToArrayBuf('Server Key')),
-        };
-    });
-}
-/**
- * @param authMessage
- * @param sk
- * @param hashName
- */
-function scramServerSign(authMessage, sk, hashName) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const serverKey = yield crypto.subtle.importKey('raw', sk, { name: 'HMAC', hash: hashName }, false, ['sign']);
-        return crypto.subtle.sign('HMAC', serverKey, utils.stringToArrayBuf(authMessage));
-    });
-}
-/**
- * Generate an ASCII nonce (not containing the ',' character)
- * @returns
- */
-function generate_cnonce() {
-    const bytes = new Uint8Array(16);
-    return utils.arrayBufToBase64(crypto.getRandomValues(bytes).buffer);
-}
-const scram = {
-    /**
-     * Whether the Web Crypto `SubtleCrypto` API that SCRAM relies on is available.
-     */
-    supported() {
-        return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
-    },
-    /**
-     * On success, sets
-     * connection_sasl_data["server-signature"]
-     * and
-     * connection._sasl_data.keys
-     *
-     * The server signature should be verified after this function completes..
-     *
-     * On failure, returns connection._sasl_failure_cb();
-     * @param connection
-     * @param challenge
-     * @param hashName
-     * @param hashBits
-     */
-    scramResponse(connection, challenge, hashName, hashBits) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const cnonce = connection._sasl_data.cnonce;
-            const challengeData = scramParseChallenge(challenge);
-            if (!challengeData || challengeData.nonce.slice(0, cnonce.length) !== cnonce) {
-                log.warn('Failing SCRAM authentication because server supplied incorrect nonce.');
-                connection._sasl_data = {};
-                return connection._sasl_failure_cb(null);
-            }
-            let clientKey, serverKey;
-            const { pass } = connection;
-            if (typeof connection.pass === 'string' || connection.pass instanceof String) {
-                const keys = yield scramDeriveKeys(pass, challengeData.salt, challengeData.iter, hashName, hashBits);
-                clientKey = keys.ck;
-                serverKey = keys.sk;
-            }
-            else if ((pass === null || pass === void 0 ? void 0 : pass.name) === hashName &&
-                (pass === null || pass === void 0 ? void 0 : pass.salt) === utils.arrayBufToBase64(challengeData.salt) &&
-                (pass === null || pass === void 0 ? void 0 : pass.iter) === challengeData.iter) {
-                const { ck, sk } = pass;
-                clientKey = utils.base64ToArrayBuf(ck);
-                serverKey = utils.base64ToArrayBuf(sk);
-            }
-            else {
-                return connection._sasl_failure_cb(null);
-            }
-            const clientFirstMessageBare = connection._sasl_data['client-first-message-bare'];
-            const serverFirstMessage = challenge;
-            const clientFinalMessageBare = `c=biws,r=${challengeData.nonce}`;
-            const authMessage = `${clientFirstMessageBare},${serverFirstMessage},${clientFinalMessageBare}`;
-            const clientProof = yield scramClientProof(authMessage, clientKey, hashName);
-            const serverSignature = yield scramServerSign(authMessage, serverKey, hashName);
-            connection._sasl_data['server-signature'] = utils.arrayBufToBase64(serverSignature);
-            connection._sasl_data.keys = {
-                name: hashName,
-                iter: challengeData.iter,
-                salt: utils.arrayBufToBase64(challengeData.salt),
-                ck: utils.arrayBufToBase64(clientKey),
-                sk: utils.arrayBufToBase64(serverKey),
-            };
-            return `${clientFinalMessageBare},p=${utils.arrayBufToBase64(clientProof)}`;
-        });
-    },
-    /**
-     * Returns a string containing the client first message
-     * @param connection
-     * @param test_cnonce
-     */
-    clientChallenge(connection, test_cnonce) {
-        const cnonce = test_cnonce || generate_cnonce();
-        const client_first_message_bare = `n=${connection.authcid},r=${cnonce}`;
-        connection._sasl_data.cnonce = cnonce;
-        connection._sasl_data['client-first-message-bare'] = client_first_message_bare;
-        return utils.utf16to8(`n,,${client_first_message_bare}`);
-    },
-};
-
-class SASLSHA1 extends SASLMechanism {
-    constructor(mechname = 'SCRAM-SHA-1', isClientFirst = true, priority = 60) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.authcid !== null && scram.supported();
-    }
-    onChallenge(connection, challenge) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield scram.scramResponse(connection, challenge, 'SHA-1', 160);
-        });
-    }
-    clientChallenge(connection, test_cnonce) {
-        return scram.clientChallenge(connection, test_cnonce);
-    }
-}
-
-class SASLSHA256 extends SASLMechanism {
-    constructor(mechname = 'SCRAM-SHA-256', isClientFirst = true, priority = 70) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.authcid !== null && scram.supported();
-    }
-    onChallenge(connection, challenge) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield scram.scramResponse(connection, challenge, 'SHA-256', 256);
-        });
-    }
-    clientChallenge(connection, test_cnonce) {
-        return scram.clientChallenge(connection, test_cnonce);
-    }
-}
-
-class SASLSHA384 extends SASLMechanism {
-    constructor(mechname = 'SCRAM-SHA-384', isClientFirst = true, priority = 71) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.authcid !== null && scram.supported();
-    }
-    onChallenge(connection, challenge) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield scram.scramResponse(connection, challenge, 'SHA-384', 384);
-        });
-    }
-    clientChallenge(connection, test_cnonce) {
-        return scram.clientChallenge(connection, test_cnonce);
-    }
-}
-
-class SASLSHA512 extends SASLMechanism {
-    constructor(mechname = 'SCRAM-SHA-512', isClientFirst = true, priority = 72) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.authcid !== null && scram.supported();
-    }
-    onChallenge(connection, challenge) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield scram.scramResponse(connection, challenge, 'SHA-512', 512);
-        });
-    }
-    clientChallenge(connection, test_cnonce) {
-        return scram.clientChallenge(connection, test_cnonce);
-    }
-}
-
-class SASLXOAuth2 extends SASLMechanism {
-    constructor(mechname = 'X-OAUTH2', isClientFirst = true, priority = 30) {
-        super(mechname, isClientFirst, priority);
-    }
-    test(connection) {
-        return connection.pass !== null;
-    }
-    onChallenge(connection) {
-        let auth_str = '\u0000';
-        if (connection.authcid !== null) {
-            auth_str = auth_str + connection.authzid;
-        }
-        auth_str = auth_str + '\u0000';
-        auth_str = auth_str + connection.pass;
-        return utils.utf16to8(auth_str);
-    }
-}
-
-class SessionError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = 'StropheSessionError';
     }
 }
 
@@ -4090,6 +4239,13 @@ function toStanzaView(el) {
  */
 const connectionPlugins = {};
 /**
+ * _Private_ registry of optional, environment-specific transports keyed by the
+ * `protocol` option that selects them. The Node-only XEP-0114 component
+ * transport registers itself here (see the Node entry point) so that its
+ * Node-only dependencies never reach the browser bundle.
+ */
+const transportProtocols = {};
+/**
  * **XMPP Connection manager**
  *
  * This class is the main part of Strophe.  It manages a BOSH or websocket
@@ -4202,7 +4358,7 @@ class Connection {
         // Max retries before disconnecting
         this.maxRetries = 5;
         // Call onIdle callback every 1/10th of a second
-        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
+        this._scheduleIdle();
         addCookies(this.options.cookies);
         this.registerSASLMechanisms(this.options.mechanisms);
         // A client must always respond to incoming IQ "set" and "get" stanzas.
@@ -4237,17 +4393,36 @@ class Connection {
         connectionPlugins[name] = ptype;
     }
     /**
+     * Register an optional transport, selectable via the `protocol` connection
+     * option. Used to plug in environment-specific transports (such as the
+     * Node-only XEP-0114 component transport) without the core browser build
+     * depending on them.
+     * @param name - The `protocol` option value that selects this transport.
+     * @param manager - The transport (protocol-manager) constructor.
+     */
+    static addProtocol(name, manager) {
+        transportProtocols[name] = manager;
+    }
+    /**
      * Select protocal based on this.options or this.service
      */
     setProtocol() {
         const proto = this.options.protocol || '';
-        if (this.options.worker) {
+        const RegisteredTransport = transportProtocols[proto];
+        if (RegisteredTransport) {
+            this._proto = new RegisteredTransport(this);
+        }
+        else if (this.options.worker) {
             this._proto = new WorkerWebsocket(this);
         }
         else if (this.service.indexOf('ws:') === 0 ||
             this.service.indexOf('wss:') === 0 ||
             proto.indexOf('ws') === 0) {
             this._proto = new Websocket(this);
+        }
+        else if (proto) {
+            throw new Error(`Strophe: unknown connection protocol "${proto}". Valid values are "ws" and "wss"; ` +
+                `other transports must first be registered with Connection.addProtocol().`);
         }
         else {
             this._proto = new Bosh(this);
@@ -4792,7 +4967,7 @@ class Connection {
     _sendRestart() {
         this._data.push('restart');
         this._proto._sendRestart();
-        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
+        this._scheduleIdle();
     }
     /**
      * Add a timed handler to the connection.
@@ -5068,7 +5243,7 @@ class Connection {
      * @param raw - The stanza as raw string.
      */
     _dataRecv(req, raw) {
-        const elem = ('_reqToData' in this._proto ? this._proto._reqToData(req) : req);
+        const elem = (this._proto instanceof Bosh ? this._proto._reqToData(req) : req);
         if (elem === null) {
             return;
         }
@@ -5179,7 +5354,7 @@ class Connection {
         this.connected = true;
         let bodyWrap;
         try {
-            bodyWrap = ('_reqToData' in this._proto ? this._proto._reqToData(req) : req);
+            bodyWrap = (this._proto instanceof Bosh ? this._proto._reqToData(req) : req);
         }
         catch (e) {
             if (e.name !== ErrorCondition.BAD_FORMAT) {
@@ -5799,6 +5974,20 @@ class Connection {
         return false;
     }
     /**
+     * (Re)arm the idle loop.
+     *
+     * Cancels any pending idle tick and schedules the next call to
+     * {@link Connection#_onIdle}. `_onIdle` re-arms itself while connected, so
+     * this only needs to be called to (re)start the loop: at construction, on a
+     * stream restart, or when a transport becomes connected without having gone
+     * through the send path (e.g. a receive-only component after its handshake).
+     * @private
+     */
+    _scheduleIdle() {
+        clearTimeout(this._idleTimeout);
+        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
+    }
+    /**
      * _Private_ handler to process events during idle cycle.
      *
      * This handler is called every 100ms to fire timed handlers that
@@ -5967,6 +6156,603 @@ function stx(strings, ...values) {
     return new Stanza(strings, values);
 }
 
+/** Cached `saxes` constructor, resolved by {@link getSaxesParser} on first use. */
+let SaxesParserCtor;
+/**
+ * Resolve the `saxes` parser constructor, loading the package on first use.
+ *
+ * `saxes` is an optional peer dependency needed only by this transport, so it is
+ * deliberately *not* imported at module load.
+ *
+ * The load is synchronous because {@link Component} builds its parser in its
+ * constructor.
+ */
+function getSaxesParser() {
+    if (!SaxesParserCtor) {
+        try {
+            SaxesParserCtor = createRequire(import.meta.url)('saxes').SaxesParser;
+        }
+        catch (_a) {
+            throw new Error('Strophe: the XEP-0114 component transport requires the "saxes" package, ' +
+                'which is an optional peer dependency. Install it with `npm install saxes`.');
+        }
+    }
+    return SaxesParserCtor;
+}
+/**
+ * Incrementally parses an XMPP component stream.
+ *
+ * Feed it raw socket chunks via {@link ComponentParser#write}; it emits
+ * stream-start, per-stanza and stream-end events through the handlers passed to
+ * the constructor. Robust to a stanza (or a single multi-byte character) being
+ * split across arbitrary chunk boundaries.
+ */
+class ComponentParser {
+    constructor(handlers) {
+        this._handlers = handlers;
+        this.reset();
+    }
+    /**
+     * Discard all parser state and start afresh. Called when a (re)connection
+     * begins so a new stream is parsed from a clean slate.
+     */
+    reset() {
+        this._decoder = new StringDecoder('utf8');
+        this._stack = [];
+        this._streamOpened = false;
+        this._errored = false;
+        const SaxesParserClass = getSaxesParser();
+        this._parser = new SaxesParserClass({ xmlns: true });
+        this._parser.on('opentag', (tag) => this._onOpenTag(tag));
+        this._parser.on('closetag', () => this._onCloseTag());
+        this._parser.on('text', (text) => this._onText(text));
+        this._parser.on('cdata', (cdata) => this._onText(cdata));
+        this._parser.on('error', (err) => this._fail(err));
+    }
+    /**
+     * Feed a chunk of raw stream data into the parser.
+     *
+     * Accepts a `Buffer` (as delivered by a `node:net` socket) or an already
+     * decoded string. Buffers are run through a {@link StringDecoder} so that a
+     * multi-byte UTF-8 character split across two chunks is reassembled instead
+     * of corrupted.
+     * @param chunk - The bytes (or string) received from the socket.
+     */
+    write(chunk) {
+        if (this._errored) {
+            return;
+        }
+        const str = typeof chunk === 'string' ? chunk : this._decoder.write(chunk);
+        if (str === '') {
+            return;
+        }
+        try {
+            this._parser.write(str);
+        }
+        catch (e) {
+            this._fail(e);
+        }
+    }
+    _fail(error) {
+        if (this._errored) {
+            return;
+        }
+        this._errored = true;
+        this._handlers.onError(error);
+    }
+    _onOpenTag(tag) {
+        if (!this._streamOpened) {
+            // The depth-0 element is the stream root. Capture its attributes and
+            // treat it as the stream-start event; it won't close until the
+            // stream ends.
+            this._streamOpened = true;
+            this._handlers.onStreamStart(this._flattenAttributes(tag));
+            return;
+        }
+        const el = this._createElement(tag);
+        if (this._stack.length) {
+            this._stack[this._stack.length - 1].appendChild(el);
+        }
+        this._stack.push(el);
+    }
+    _onText(text) {
+        // Text (and whitespace keepalives) directly under the stream root, i.e.
+        // in between stanzas, is ignored.
+        if (this._stack.length) {
+            this._stack[this._stack.length - 1].appendChild(xmlGenerator().createTextNode(text));
+        }
+    }
+    _onCloseTag() {
+        if (!this._stack.length) {
+            // Nothing is being built, so this closes the stream root.
+            this._streamOpened = false;
+            this._handlers.onStreamEnd();
+            return;
+        }
+        const el = this._stack.pop();
+        if (!this._stack.length) {
+            // A complete top-level stanza has been assembled.
+            this._handlers.onStanza(el);
+        }
+    }
+    _createElement(tag) {
+        const el = xmlGenerator().createElementNS(tag.uri || null, tag.name);
+        for (const key of Object.keys(tag.attributes)) {
+            const attr = tag.attributes[key];
+            // Namespace declarations are skipped: createElementNS already
+            // carries the resolved URI, so re-adding xmlns/xmlns:* would only
+            // duplicate them on serialisation.
+            if (attr.name === 'xmlns' || attr.prefix === 'xmlns') {
+                continue;
+            }
+            if (attr.uri) {
+                el.setAttributeNS(attr.uri, attr.name, attr.value);
+            }
+            else {
+                el.setAttribute(attr.name, attr.value);
+            }
+        }
+        return el;
+    }
+    _flattenAttributes(tag) {
+        const attrs = {};
+        for (const key of Object.keys(tag.attributes)) {
+            attrs[key] = tag.attributes[key].value;
+        }
+        return attrs;
+    }
+}
+
+const DEFAULT_COMPONENT_PORT = 5347;
+/**
+ * Extract the defined condition and optional descriptive text from a
+ * `<stream:error/>` element (RFC 6120 §4.9). `condition` is the name of the
+ * first child element other than `<text/>`; `text` is the content of a
+ * `<text/>` child if present. Both default to an empty string so each caller
+ * can apply its own fallback condition.
+ * @param streamError - The `<stream:error/>` element.
+ */
+function parseStreamError(streamError) {
+    let condition = '';
+    let text = '';
+    for (let i = 0; i < streamError.childNodes.length; i++) {
+        const child = streamError.childNodes[i];
+        if (child.nodeType !== child.ELEMENT_NODE) {
+            continue;
+        }
+        if (child.nodeName === 'text') {
+            text = child.textContent || '';
+        }
+        else if (!condition) {
+            condition = child.nodeName;
+        }
+    }
+    return { condition, text };
+}
+/**
+ * Helper class that handles XEP-0114 external component connections.
+ *
+ * Like {@link Websocket} it is used internally by {@link Connection} to
+ * encapsulate a session and is not meant to be used from user code. Select it
+ * with the `protocol: 'component'` connection option and a `tcp://host:port`
+ * service URL.
+ */
+class Component {
+    /**
+     * Create and initialize a Component object.
+     * @param connection - The Connection that will use this component transport.
+     */
+    constructor(connection) {
+        this._conn = connection;
+        // Complete stanzas are handed to _dataRecv wrapped in a <wrapper/>, the
+        // same convention the WebSocket transport uses, so downstream handling
+        // is identical.
+        this.strip = 'wrapper';
+        this.socket = null;
+        this._streamId = null;
+        this._authenticated = false;
+        this._disconnected = false;
+        this._parser = new ComponentParser({
+            onStreamStart: (attrs) => this._onStreamStart(attrs),
+            onStanza: (stanza) => this._onStanza(stanza),
+            onStreamEnd: () => this._onStreamEnd(),
+            onError: (err) => this._onParseError(err),
+        });
+    }
+    /**
+     * Parse the component service URL into a host and port.
+     *
+     * Accepts `tcp://host:port` (the recommended plaintext form) and tolerates a
+     * bare `host:port`. The port defaults to 5347, the conventional component
+     * listener port.
+     */
+    _serviceUrl() {
+        const service = this._conn.service;
+        const url = new URL(service.includes('://') ? service : `tcp://${service}`);
+        return {
+            host: url.hostname || 'localhost',
+            port: url.port ? parseInt(url.port, 10) : DEFAULT_COMPONENT_PORT,
+        };
+    }
+    /**
+     * Reset the transport. Called by {@link Connection#reset}.
+     */
+    _reset() {
+        this._parser.reset();
+        this._streamId = null;
+        this._authenticated = false;
+        this._disconnected = false;
+    }
+    /**
+     * _Private_ function called by Connection.connect
+     *
+     * Opens a TCP socket to the component listener and wires up its callbacks.
+     */
+    _connect() {
+        this._closeSocket();
+        this._reset();
+        const { host, port } = this._serviceUrl();
+        log.debug(`Component connecting to ${host}:${port}`);
+        const socket = connect({ host, port });
+        this.socket = socket;
+        socket.on('connect', () => this._onOpen());
+        socket.on('data', (chunk) => this._onData(chunk));
+        socket.on('error', (e) => this._onError(e));
+        socket.on('close', () => this._onClose());
+    }
+    /**
+     * _Private_ function called by Connection._connect_cb
+     *
+     * The component protocol has no <stream:features> to inspect, so there is
+     * nothing to check here. Kept for interface parity with the other
+     * transports.
+     */
+    _connect_cb(_bodyWrap) { }
+    /**
+     * _Private_ function to handle a successful TCP connection.
+     * Sends the component stream header (XEP-0114 §2).
+     */
+    _onOpen() {
+        var _a;
+        log.debug('Component TCP socket connected');
+        const header = this._streamHeader();
+        this._conn.xmlOutput(this._streamOpenElement());
+        this._conn.rawOutput(header);
+        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.write(header);
+    }
+    /**
+     * The opening `<stream:stream>` header sent to the server. `to` is the
+     * component's own domain, per XEP-0114.
+     */
+    _streamHeader() {
+        return ("<?xml version='1.0'?>" +
+            `<stream:stream xmlns='${NS.COMPONENT}' ` +
+            `xmlns:stream='${NS.STREAM}' ` +
+            `to='${xmlescape(this._conn.domain)}'>`);
+    }
+    /**
+     * A self-closed representation of the stream header, purely for the
+     * `xmlOutput` debug hook (the real header sent on the wire never closes).
+     */
+    _streamOpenElement() {
+        return stx `<stream:stream xmlns="${NS.COMPONENT}" xmlns:stream="${NS.STREAM}" to="${this._conn.domain}"/>`.tree();
+    }
+    /**
+     * _Private_ function called when raw bytes arrive on the socket.
+     * Feeds them into the incremental stream parser.
+     * @param chunk - The bytes received from the socket.
+     */
+    _onData(chunk) {
+        this._parser.write(chunk);
+    }
+    /**
+     * Handle the server's opening stream header. Captures the stream id and
+     * replies with the SHA-1 handshake (XEP-0114 §3).
+     * @param attrs - The attributes of the server's <stream:stream> header.
+     */
+    _onStreamStart(attrs) {
+        const streamId = attrs.id;
+        if (!streamId) {
+            log.error('Component stream header is missing a stream id');
+            this._teardown(Status.CONNFAIL, 'Missing stream id in component stream header');
+            return;
+        }
+        this._streamId = streamId;
+        this._sendHandshake(streamId);
+    }
+    /**
+     * Compute and send the XEP-0114 handshake digest,
+     * `hex( SHA1( STREAM_ID + SHARED_SECRET ) )` in lowercase.
+     * @param streamId - The stream id from the server's stream header.
+     */
+    _sendHandshake(streamId) {
+        var _a;
+        const secret = typeof this._conn.pass === 'string' ? this._conn.pass : '';
+        const digest = createHash('sha1')
+            .update(streamId + secret, 'utf8')
+            .digest('hex');
+        const handshake = stx `<handshake>${digest}</handshake>`;
+        const raw = handshake.toString();
+        this._conn.xmlOutput(handshake.tree());
+        this._conn.rawOutput(raw);
+        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.write(raw);
+    }
+    /**
+     * Route a complete inbound stanza. Before the handshake completes this is
+     * the handshake result; afterwards it's ordinary traffic.
+     * @param stanza - A complete top-level stanza element.
+     */
+    _onStanza(stanza) {
+        if (this._authenticated) {
+            this._onMessage(stanza);
+        }
+        else {
+            this._handleHandshakeResult(stanza);
+        }
+    }
+    /**
+     * Inspect the server's reply to our handshake. An empty `<handshake/>`
+     * means success and the component is CONNECTED; a `<stream:error/>` (e.g.
+     * `<not-authorized/>`) means the shared secret was wrong.
+     * @param stanza - The first stanza received after sending the handshake.
+     */
+    _handleHandshakeResult(stanza) {
+        if (stanza.nodeName === 'handshake') {
+            log.debug('Component handshake succeeded');
+            this._authenticated = true;
+            this._conn.connected = true;
+            this._conn.authenticated = true;
+            // The handshake reply arrives without us having flushed the send
+            // queue, so the idle loop may have stopped while we were still
+            // unconnected. Restart it so timed handlers and queued stanzas keep
+            // flowing even for a component that only receives.
+            this._conn._scheduleIdle();
+            this._conn._changeConnectStatus(Status.CONNECTED, null);
+        }
+        else if (stanza.nodeName === 'stream:error' || stanza.nodeName === 'error') {
+            const condition = parseStreamError(stanza).condition || 'not-authorized';
+            log.error(`Component handshake failed: ${condition}`);
+            this._teardown(Status.AUTHFAIL, condition);
+        }
+        else {
+            log.error(`Unexpected stanza <${stanza.nodeName}> before component handshake completed`);
+            this._teardown(Status.AUTHFAIL, 'unexpected-stanza');
+        }
+    }
+    /**
+     * _Private_ function to handle incoming stanzas once authenticated.
+     * Wraps the stanza and routes it through the normal handler machinery,
+     * exactly as {@link Websocket#_onMessage} does.
+     * @param stanza - A complete top-level stanza element.
+     */
+    _onMessage(stanza) {
+        if (stanza.nodeName === 'stream:error') {
+            this._checkStreamError(stanza);
+            return;
+        }
+        const raw = this._serialize(stanza);
+        const wrapper = xmlGenerator().createElement('wrapper');
+        wrapper.appendChild(stanza);
+        this._conn._dataRecv(wrapper, raw);
+    }
+    /**
+     * Serialize an element to a string, reusing Strophe's own serializer so
+     * output matches the other transports.
+     */
+    _serialize(elem) {
+        var _a;
+        return (_a = Builder.serialize(elem)) !== null && _a !== void 0 ? _a : '';
+    }
+    /**
+     * _Private_ checks a received stream error and tears the connection down.
+     * @param streamError - The <stream:error/> element.
+     */
+    _checkStreamError(streamError) {
+        const { condition, text } = parseStreamError(streamError);
+        const reason = condition || 'unknown';
+        log.error(`Component stream error: ${reason}${text ? ' - ' + text : ''}`);
+        this._teardown(Status.CONNFAIL, reason);
+    }
+    /**
+     * Handle the closing `</stream:stream>` tag from the server.
+     */
+    _onStreamEnd() {
+        log.debug('Component received </stream:stream>');
+        if (!this._conn.disconnecting) {
+            this._teardown(null);
+        }
+    }
+    /**
+     * Handle a fatal XML parse error on the inbound stream.
+     * @param error - The parse error.
+     */
+    _onParseError(error) {
+        log.error(`Component stream parse error: ${error.message}`);
+        this._teardown(Status.CONNFAIL, ErrorCondition.BAD_FORMAT);
+    }
+    /**
+     * _Private_ function called by Connection.disconnect
+     * Sends an optional last stanza, then the closing stream tag, then
+     * tears down the socket.
+     * @param pres - This stanza will be sent before disconnecting.
+     */
+    _disconnect(pres) {
+        if (this.socket && !this.socket.destroyed) {
+            if (pres) {
+                this._conn.send(pres);
+            }
+            const closeString = '</stream:stream>';
+            this._conn.rawOutput(closeString);
+            try {
+                this.socket.write(closeString);
+            }
+            catch (e) {
+                log.warn(`Couldn't send </stream:stream> tag. "${e.message}"`);
+            }
+        }
+        setTimeout(() => this._teardown(null), 0);
+    }
+    /**
+     * Tear the connection down exactly once.
+     *
+     * A single parsed chunk can surface several teardown triggers back to
+     * back: a `<stream:error/>` immediately followed by the closing
+     * `</stream:stream>`, or a socket error and then its close event. Each
+     * would otherwise call {@link Connection#_doDisconnect} again and fire a
+     * second DISCONNECTED. The first call through here wins; later ones are
+     * no-ops.
+     * @param status - A {@link Status} to report before disconnecting, or null
+     *     to disconnect without a preceding status change (e.g. a plain stream
+     *     close).
+     * @param condition - The accompanying error condition, if any.
+     */
+    _teardown(status, condition) {
+        if (this._disconnected) {
+            return;
+        }
+        this._disconnected = true;
+        if (status !== null) {
+            this._conn._changeConnectStatus(status, condition !== null && condition !== void 0 ? condition : null);
+        }
+        this._conn._doDisconnect(condition !== null && condition !== void 0 ? condition : undefined);
+    }
+    /**
+     * _Private_ function to disconnect. Just closes the socket.
+     */
+    _doDisconnect() {
+        this._disconnected = true;
+        log.debug('Component _doDisconnect was called');
+        this._closeSocket();
+    }
+    /**
+     * _Private_ function to close the TCP socket and drop its listeners.
+     */
+    _closeSocket() {
+        if (this.socket) {
+            try {
+                this.socket.removeAllListeners('connect');
+                this.socket.removeAllListeners('data');
+                this.socket.removeAllListeners('error');
+                this.socket.removeAllListeners('close');
+                this.socket.destroy();
+            }
+            catch (e) {
+                log.debug(e.message);
+            }
+        }
+        this.socket = null;
+    }
+    /**
+     * _Private_ function to check if the message queue is empty.
+     * @returns True, because stanzas are written to the socket immediately.
+     */
+    _emptyQueue() {
+        return true;
+    }
+    /**
+     * _Private_ function to handle the socket closing.
+     */
+    _onClose() {
+        if (this._conn.connected && !this._conn.disconnecting) {
+            log.error('Component socket closed unexpectedly');
+            this._teardown(null);
+        }
+        else if (!this._conn.connected && this.socket) {
+            log.error('Component socket closed before the stream was established');
+            this._teardown(Status.CONNFAIL, 'The TCP connection could not be established or was disconnected.');
+        }
+        else {
+            log.debug('Component socket closed');
+        }
+    }
+    /**
+     * Called on stream start/restart when no authentication mechanism is
+     * offered. Not reachable on the component path (there is no SASL), but kept
+     * for interface parity.
+     * @param callback
+     */
+    _no_auth_received(callback) {
+        log.error('Component received no authentication mechanism');
+        this._conn._changeConnectStatus(Status.CONNFAIL, ErrorCondition.NO_AUTH_MECH);
+        callback === null || callback === void 0 ? void 0 : callback.call(this._conn);
+        this._conn._doDisconnect();
+    }
+    /**
+     * _Private_ timeout handler for a non-graceful disconnection.
+     * Nothing to do for a plain TCP socket.
+     */
+    _onDisconnectTimeout() { }
+    /**
+     * _Private_ helper that makes sure all pending requests are aborted.
+     * A component has no in-flight requests, so this is a no-op.
+     */
+    _abortAllRequests() { }
+    /**
+     * _Private_ function to handle socket errors.
+     * @param error - The socket error.
+     */
+    _onError(error) {
+        var _a;
+        log.error('Component socket error ' + ((_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : JSON.stringify(error)));
+        this._teardown(Status.CONNFAIL, 'The TCP connection could not be established or was disconnected.');
+    }
+    /**
+     * _Private_ function called by Connection._onIdle
+     * Serializes queued stanzas and writes them to the socket, stamping a
+     * `from` attribute under the component's domain when one is absent (the
+     * server validates that a component stamps `from`, per XEP-0114).
+     */
+    _onIdle() {
+        var _a;
+        const data = this._conn._data;
+        if (data.length > 0 && !this._conn.paused) {
+            for (let i = 0; i < data.length; i++) {
+                const stanza = data[i];
+                // Components have no stream-restart concept; ignore any 'restart'
+                // marker (it is only produced by the SASL/bind path).
+                if (stanza === null || stanza === 'restart') {
+                    continue;
+                }
+                this._stampFrom(stanza);
+                const rawStanza = this._serialize(stanza);
+                this._conn.xmlOutput(stanza);
+                this._conn.rawOutput(rawStanza);
+                (_a = this.socket) === null || _a === void 0 ? void 0 : _a.write(rawStanza);
+            }
+            this._conn._data = [];
+        }
+    }
+    /**
+     * Ensure an outgoing stanza carries a `from` attribute under the
+     * component's domain, which XEP-0114 requires the server to validate.
+     * An explicit `from` (e.g. a sub-JID of the component) is left untouched.
+     * @param stanza - The outgoing stanza element.
+     */
+    _stampFrom(stanza) {
+        const name = stanza.nodeName;
+        if ((name === 'message' || name === 'presence' || name === 'iq') && !stanza.getAttribute('from')) {
+            stanza.setAttribute('from', (this._conn.jid || this._conn.domain));
+        }
+    }
+    /**
+     * _Private_ part of the Connection.send function for the component transport.
+     * Just flushes the messages that are in the queue.
+     */
+    _send() {
+        this._conn.flush();
+    }
+    /**
+     * Send an xmpp:restart stanza.
+     *
+     * Components never restart their stream, so this only flushes any queued
+     * data. Included for interface parity with the other transports.
+     */
+    _sendRestart() {
+        clearTimeout(this._conn._idleTimeout);
+        this._conn._onIdle();
+    }
+}
+
 const Strophe = Object.assign(Object.assign(Object.assign({ VERSION: '4.0.0', get TIMEOUT() {
         return Bosh.getTimeoutMultplier();
     },
@@ -6023,5 +6809,27 @@ globalThis.stx = stx;
 const toStanza = Stanza.toElement;
 globalThis.toStanza = Stanza.toElement;
 
-export { $build, $iq, $msg, $pres, Builder, MemoryStorageBackend, Request, SessionStorageBackend, Stanza, StreamManagement, StreamManagementMirror, Strophe, stx, toStanza };
+/**
+ * Node.js entry point for Strophe.js.
+ *
+ * It re-exports everything from the shared browser entry ({@link ./index}) and
+ * additionally wires up the Node-only pieces that must never reach the browser
+ * bundle: the DOM/WebSocket globals (see `./shims/node-dom`, which Node lacks
+ * natively) and the XEP-0114 external component transport, which pulls in
+ * `node:net`/`node:crypto` and the `saxes` stream tokenizer.
+ *
+ * The Rollup config points the Node builds (`strophe.node.esm.js`,
+ * `strophe.cjs`) at this file, while the browser builds keep using `index.ts`.
+ */
+// Must be first: installs the DOM globals (via @xmldom/xmldom) and `ws` that the
+// rest of the library assumes, before any module touches `document`/`DOMParser`.
+// Make the component transport selectable via `{ protocol: 'component' }`.
+Connection.addProtocol('component', Component);
+// Expose the classes on the Strophe namespace for parity with Strophe.Websocket
+// etc. (cast because the shared StropheType intentionally omits the Node-only
+// transports).
+Strophe.Component = Component;
+Strophe.ComponentParser = ComponentParser;
+
+export { $build, $iq, $msg, $pres, Builder, Component, ComponentParser, MemoryStorageBackend, Request, SessionStorageBackend, Stanza, StreamManagement, StreamManagementMirror, Strophe, stx, toStanza };
 //# sourceMappingURL=strophe.node.esm.js.map

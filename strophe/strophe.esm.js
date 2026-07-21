@@ -3,6 +3,7 @@ const _NS = {
     BIND: 'urn:ietf:params:xml:ns:xmpp-bind',
     BOSH: 'urn:xmpp:xbosh',
     CLIENT: 'jabber:client',
+    COMPONENT: 'jabber:component:accept' /** XEP-0114 */,
     DISCO_INFO: 'http://jabber.org/protocol/disco#info',
     DISCO_ITEMS: 'http://jabber.org/protocol/disco#items',
     DELAY: 'urn:xmpp:delay' /** XEP-0203 */,
@@ -689,6 +690,32 @@ function isTagEqual(el, name) {
     return el.tagName === name;
 }
 /**
+ * Return the XML namespace of an element.
+ *
+ * Prefers the serialized `xmlns` attribute and falls back to the DOM
+ * `namespaceURI`, because the two diverge depending on how the element was
+ * built and neither is reliable on its own:
+ *
+ *  - Locally-built stanzas (`$iq`, `stx`, {@link Builder}) are created with
+ *    `createElement` and carry their namespace only in the `xmlns` attribute;
+ *    their `namespaceURI` is null.
+ *  - Stanzas received over the XEP-0114 component transport are built with
+ *    `createElementNS` and carry their namespace only on `namespaceURI`; the
+ *    redundant `xmlns` attribute is omitted.
+ *  - WebSocket / BOSH stanzas parsed by `DOMParser` carry both, except on
+ *    child elements that inherit the default namespace without redeclaring it
+ *    (those have only `namespaceURI`).
+ *
+ * Checking both is the transport-agnostic way to read an element's namespace.
+ *
+ * @method Strophe.getNamespace
+ * @param elem - The element whose namespace is wanted.
+ * @returns The namespace URI, or null if the element has none.
+ */
+function getNamespace(elem) {
+    return elem.getAttribute('xmlns') || elem.namespaceURI;
+}
+/**
  * Get the concatenation of all text children of an element.
  * @method Strophe.getText
  * @param elem - A DOM element.
@@ -830,6 +857,7 @@ var utils$1 = /*#__PURE__*/Object.freeze({
     getBareJidFromJid: getBareJidFromJid,
     getDomainFromJid: getDomainFromJid,
     getFirstElementChild: getFirstElementChild,
+    getNamespace: getNamespace,
     getNodeFromJid: getNodeFromJid,
     getParserError: getParserError,
     getResourceFromJid: getResourceFromJid,
@@ -2050,14 +2078,18 @@ class Handler {
         this.user = true;
     }
     /**
-     * Returns the XML namespace attribute on an element.
+     * Returns the XML namespace of an element.
+     * Resolved via {@link Strophe.getNamespace}, which reads the `xmlns`
+     * attribute and falls back to `namespaceURI` so matching works regardless
+     * of how the stanza's DOM was built (locally, via DOMParser, or via the
+     * component transport's `createElementNS`).
      * If `ignoreNamespaceFragment` was passed in for this handler, then the
      * URL fragment will be stripped.
      * @param elem - The XML element with the namespace.
      * @returns The namespace, with optionally the fragment stripped.
      */
     getNamespace(elem) {
-        let elNamespace = elem.getAttribute('xmlns');
+        let elNamespace = getNamespace(elem);
         if (elNamespace && this.options.ignoreNamespaceFragment) {
             elNamespace = elNamespace.split('#')[0];
         }
@@ -4082,6 +4114,13 @@ function toStanzaView(el) {
  */
 const connectionPlugins = {};
 /**
+ * _Private_ registry of optional, environment-specific transports keyed by the
+ * `protocol` option that selects them. The Node-only XEP-0114 component
+ * transport registers itself here (see the Node entry point) so that its
+ * Node-only dependencies never reach the browser bundle.
+ */
+const transportProtocols = {};
+/**
  * **XMPP Connection manager**
  *
  * This class is the main part of Strophe.  It manages a BOSH or websocket
@@ -4194,7 +4233,7 @@ class Connection {
         // Max retries before disconnecting
         this.maxRetries = 5;
         // Call onIdle callback every 1/10th of a second
-        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
+        this._scheduleIdle();
         addCookies(this.options.cookies);
         this.registerSASLMechanisms(this.options.mechanisms);
         // A client must always respond to incoming IQ "set" and "get" stanzas.
@@ -4229,17 +4268,36 @@ class Connection {
         connectionPlugins[name] = ptype;
     }
     /**
+     * Register an optional transport, selectable via the `protocol` connection
+     * option. Used to plug in environment-specific transports (such as the
+     * Node-only XEP-0114 component transport) without the core browser build
+     * depending on them.
+     * @param name - The `protocol` option value that selects this transport.
+     * @param manager - The transport (protocol-manager) constructor.
+     */
+    static addProtocol(name, manager) {
+        transportProtocols[name] = manager;
+    }
+    /**
      * Select protocal based on this.options or this.service
      */
     setProtocol() {
         const proto = this.options.protocol || '';
-        if (this.options.worker) {
+        const RegisteredTransport = transportProtocols[proto];
+        if (RegisteredTransport) {
+            this._proto = new RegisteredTransport(this);
+        }
+        else if (this.options.worker) {
             this._proto = new WorkerWebsocket(this);
         }
         else if (this.service.indexOf('ws:') === 0 ||
             this.service.indexOf('wss:') === 0 ||
             proto.indexOf('ws') === 0) {
             this._proto = new Websocket(this);
+        }
+        else if (proto) {
+            throw new Error(`Strophe: unknown connection protocol "${proto}". Valid values are "ws" and "wss"; ` +
+                `other transports must first be registered with Connection.addProtocol().`);
         }
         else {
             this._proto = new Bosh(this);
@@ -4784,7 +4842,7 @@ class Connection {
     _sendRestart() {
         this._data.push('restart');
         this._proto._sendRestart();
-        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
+        this._scheduleIdle();
     }
     /**
      * Add a timed handler to the connection.
@@ -5060,7 +5118,7 @@ class Connection {
      * @param raw - The stanza as raw string.
      */
     _dataRecv(req, raw) {
-        const elem = ('_reqToData' in this._proto ? this._proto._reqToData(req) : req);
+        const elem = (this._proto instanceof Bosh ? this._proto._reqToData(req) : req);
         if (elem === null) {
             return;
         }
@@ -5171,7 +5229,7 @@ class Connection {
         this.connected = true;
         let bodyWrap;
         try {
-            bodyWrap = ('_reqToData' in this._proto ? this._proto._reqToData(req) : req);
+            bodyWrap = (this._proto instanceof Bosh ? this._proto._reqToData(req) : req);
         }
         catch (e) {
             if (e.name !== ErrorCondition.BAD_FORMAT) {
@@ -5789,6 +5847,20 @@ class Connection {
         // actually disconnect
         this._doDisconnect();
         return false;
+    }
+    /**
+     * (Re)arm the idle loop.
+     *
+     * Cancels any pending idle tick and schedules the next call to
+     * {@link Connection#_onIdle}. `_onIdle` re-arms itself while connected, so
+     * this only needs to be called to (re)start the loop: at construction, on a
+     * stream restart, or when a transport becomes connected without having gone
+     * through the send path (e.g. a receive-only component after its handshake).
+     * @private
+     */
+    _scheduleIdle() {
+        clearTimeout(this._idleTimeout);
+        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
     }
     /**
      * _Private_ handler to process events during idle cycle.

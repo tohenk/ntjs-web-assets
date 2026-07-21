@@ -3,27 +3,29 @@
  * Strophe.js, letting a Connection attach to an XMPP server as an external
  * component (`jabber:component:accept`) over a raw TCP stream.
  *
- * It is a streaming transport modelled on {@link Websocket}, not on the
- * request/response BOSH transport. Unlike a client-to-server stream there is no
- * SASL, no TLS negotiation and no resource binding: after the stream is opened
- * the component authenticates with a single SHA-1 handshake (XEP-0114 §3) and
- * is then CONNECTED. Because it relies on `node:net` and `node:crypto` it is
- * inherently Node-only and is never included in the browser build.
+ * It is a streaming transport modelled on {@link Websocket}. Unlike a
+ * client-to-server stream there is no SASL, no TLS negotiation and no resource
+ * binding. After the stream is opened the component authenticates with a single
+ * SHA-1 handshake (XEP-0114 §3) and is then CONNECTED. Because it relies on
+ * `node:net` and `node:crypto` it is inherently Node-only and is not included
+ * in the browser build.
  *
- * The connection is created like this:
+ * @example
+ *   // Creating a connection with a XEP-0114 Component
+ *   const conn = new Strophe.Connection('tcp://localhost:5347', { protocol: 'component' });
  *
- *     const conn = new Strophe.Connection('tcp://localhost:5347', { protocol: 'component' });
- *     // jid = the component's own domain; pass = the shared secret
- *     conn.connect('component.example.org', 'the-shared-secret', (status) => {
- *         if (status === Strophe.Status.CONNECTED) {
- *             // send/receive stanzas (stamp `from` under component.example.org)
- *         }
- *     });
+ *   // jid = the component's own domain; pass = the shared secret
+ *   conn.connect('component.example.org', 'the-shared-secret', (status) => {
+ *       if (status === Strophe.Status.CONNECTED) {
+ *           // send/receive stanzas (stamp `from` under component.example.org)
+ *       }
+ *   });
  */
 import { Buffer } from 'node:buffer';
 import { type Socket } from 'node:net';
 import type Connection from '../connection';
 import Builder from '../builder';
+import type { Transport } from './types';
 /**
  * Helper class that handles XEP-0114 external component connections.
  *
@@ -32,7 +34,7 @@ import Builder from '../builder';
  * with the `protocol: 'component'` connection option and a `tcp://host:port`
  * service URL.
  */
-declare class Component {
+declare class Component implements Transport {
     _conn: Connection;
     strip: string;
     socket: Socket | null;

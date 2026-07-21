@@ -3,9 +3,7 @@
  *
  * Browsers provide `DOMParser`, `XMLSerializer` and a `document` natively;
  * Node.js does not. The Node build therefore wires up `@xmldom/xmldom`, a
- * small, pure-JS, XML-only W3C DOM (a fraction of the weight of jsdom, which
- * earlier Node builds used only for these same three globals), together with
- * the `ws` WebSocket.
+ * small, pure-JS, XML-only W3C DOM, together with the `ws` WebSocket.
  *
  * It is imported for its side effects by the Node entry point (see
  * `index-node.ts`) before any Connection is created, and is never part of the

@@ -8,13 +8,14 @@
 type Connection = any;
 import Builder from '../builder';
 import Request from '../request';
+import type { Transport } from './types';
 type ConnectionCallback = (connection: Connection) => void;
 /**
  * _Private_ helper class that handles BOSH Connections
  * The Bosh class is used internally by Connection
  * to encapsulate BOSH sessions. It is not meant to be used from user's code.
  */
-declare class Bosh {
+declare class Bosh implements Transport {
     _conn: Connection;
     rid: number;
     sid: string | null;

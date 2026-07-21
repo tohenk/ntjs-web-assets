@@ -1,5 +1,5 @@
-import type Connection from './connection';
-import type Builder from './builder';
+import type Connection from '../connection';
+import type Builder from '../builder';
 export interface WebsocketLike {
     send(str: string): void;
     close(): void;

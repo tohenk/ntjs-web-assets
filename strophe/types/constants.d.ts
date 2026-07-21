@@ -3,6 +3,7 @@ declare const _NS: {
     readonly BIND: "urn:ietf:params:xml:ns:xmpp-bind";
     readonly BOSH: "urn:xmpp:xbosh";
     readonly CLIENT: "jabber:client";
+    readonly COMPONENT: "jabber:component:accept"; /** XEP-0114 */
     readonly DISCO_INFO: "http://jabber.org/protocol/disco#info";
     readonly DISCO_ITEMS: "http://jabber.org/protocol/disco#items";
     readonly DELAY: "urn:xmpp:delay"; /** XEP-0203 */

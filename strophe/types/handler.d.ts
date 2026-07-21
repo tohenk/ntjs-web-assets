@@ -37,7 +37,11 @@ declare class Handler {
      */
     constructor(handler: ((stanza: Element) => boolean) | null, ns?: string | null, name?: string | null, type?: string | string[] | null, id?: string | null, from?: string | null, options?: HandlerOptions);
     /**
-     * Returns the XML namespace attribute on an element.
+     * Returns the XML namespace of an element.
+     * Resolved via {@link Strophe.getNamespace}, which reads the `xmlns`
+     * attribute and falls back to `namespaceURI` so matching works regardless
+     * of how the stanza's DOM was built (locally, via DOMParser, or via the
+     * component transport's `createElementNS`).
      * If `ignoreNamespaceFragment` was passed in for this handler, then the
      * URL fragment will be stripped.
      * @param elem - The XML element with the namespace.

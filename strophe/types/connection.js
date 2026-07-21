@@ -23,15 +23,22 @@ import SASLSHA512 from './sasl-sha512';
 import SASLXOAuth2 from './sasl-xoauth2';
 import { addCookies, forEachChild, getBareJidFromJid, getDomainFromJid, getNodeFromJid, getResourceFromJid, getText, handleError, toElement, } from './utils';
 import { SessionError } from './errors';
-import Bosh from './bosh';
-import WorkerWebsocket from './worker-websocket';
-import Websocket from './websocket';
+import Bosh from './transports/bosh';
+import WorkerWebsocket from './transports/worker-websocket';
+import Websocket from './transports/websocket';
 import StreamManagement, { SessionStorageBackend, StreamManagementMirror, isCountableStanza, toStanzaView, } from './stream-management';
 /**
  * _Private_ variable Used to store plugin names that need
  * initialization during Connection construction.
  */
 const connectionPlugins = {};
+/**
+ * _Private_ registry of optional, environment-specific transports keyed by the
+ * `protocol` option that selects them. The Node-only XEP-0114 component
+ * transport registers itself here (see the Node entry point) so that its
+ * Node-only dependencies never reach the browser bundle.
+ */
+const transportProtocols = {};
 /**
  * **XMPP Connection manager**
  *
@@ -145,7 +152,7 @@ class Connection {
         // Max retries before disconnecting
         this.maxRetries = 5;
         // Call onIdle callback every 1/10th of a second
-        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
+        this._scheduleIdle();
         addCookies(this.options.cookies);
         this.registerSASLMechanisms(this.options.mechanisms);
         // A client must always respond to incoming IQ "set" and "get" stanzas.
@@ -180,17 +187,36 @@ class Connection {
         connectionPlugins[name] = ptype;
     }
     /**
+     * Register an optional transport, selectable via the `protocol` connection
+     * option. Used to plug in environment-specific transports (such as the
+     * Node-only XEP-0114 component transport) without the core browser build
+     * depending on them.
+     * @param name - The `protocol` option value that selects this transport.
+     * @param manager - The transport (protocol-manager) constructor.
+     */
+    static addProtocol(name, manager) {
+        transportProtocols[name] = manager;
+    }
+    /**
      * Select protocal based on this.options or this.service
      */
     setProtocol() {
         const proto = this.options.protocol || '';
-        if (this.options.worker) {
+        const RegisteredTransport = transportProtocols[proto];
+        if (RegisteredTransport) {
+            this._proto = new RegisteredTransport(this);
+        }
+        else if (this.options.worker) {
             this._proto = new WorkerWebsocket(this);
         }
         else if (this.service.indexOf('ws:') === 0 ||
             this.service.indexOf('wss:') === 0 ||
             proto.indexOf('ws') === 0) {
             this._proto = new Websocket(this);
+        }
+        else if (proto) {
+            throw new Error(`Strophe: unknown connection protocol "${proto}". Valid values are "ws" and "wss"; ` +
+                `other transports must first be registered with Connection.addProtocol().`);
         }
         else {
             this._proto = new Bosh(this);
@@ -735,7 +761,7 @@ class Connection {
     _sendRestart() {
         this._data.push('restart');
         this._proto._sendRestart();
-        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
+        this._scheduleIdle();
     }
     /**
      * Add a timed handler to the connection.
@@ -1011,7 +1037,7 @@ class Connection {
      * @param raw - The stanza as raw string.
      */
     _dataRecv(req, raw) {
-        const elem = ('_reqToData' in this._proto ? this._proto._reqToData(req) : req);
+        const elem = (this._proto instanceof Bosh ? this._proto._reqToData(req) : req);
         if (elem === null) {
             return;
         }
@@ -1122,7 +1148,7 @@ class Connection {
         this.connected = true;
         let bodyWrap;
         try {
-            bodyWrap = ('_reqToData' in this._proto ? this._proto._reqToData(req) : req);
+            bodyWrap = (this._proto instanceof Bosh ? this._proto._reqToData(req) : req);
         }
         catch (e) {
             if (e.name !== ErrorCondition.BAD_FORMAT) {
@@ -1740,6 +1766,20 @@ class Connection {
         // actually disconnect
         this._doDisconnect();
         return false;
+    }
+    /**
+     * (Re)arm the idle loop.
+     *
+     * Cancels any pending idle tick and schedules the next call to
+     * {@link Connection#_onIdle}. `_onIdle` re-arms itself while connected, so
+     * this only needs to be called to (re)start the loop: at construction, on a
+     * stream restart, or when a transport becomes connected without having gone
+     * through the send path (e.g. a receive-only component after its handshake).
+     * @private
+     */
+    _scheduleIdle() {
+        clearTimeout(this._idleTimeout);
+        this._idleTimeout = setTimeout(() => this._onIdle(), 100);
     }
     /**
      * _Private_ handler to process events during idle cycle.

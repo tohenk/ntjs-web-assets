@@ -4,9 +4,7 @@ import Handler from './handler';
 import TimedHandler from './timed-handler';
 import Builder from './builder';
 import { type Cookies } from './utils';
-import Bosh from './bosh';
-import WorkerWebsocket from './worker-websocket';
-import Websocket from './websocket';
+import type { Transport } from './transports/types';
 import { type StreamManagementController, type StreamManagementOptions } from './stream-management';
 export interface ConnectionOptions {
     /**
@@ -97,8 +95,12 @@ export interface ConnectionOptions {
      * Also because downgrading security is not permitted by browsers, when using
      * relative URLs both BOSH and WebSocket connections will use their secure
      * variants if the current connection to the site is also secure (https).
+     *
+     * The `'component'` value selects the Node-only XEP-0114 external component
+     * transport (see the `Component` class). It requires a `tcp://host:port`
+     * service URL and is not available in the browser build.
      */
-    protocol?: 'ws' | 'wss';
+    protocol?: 'ws' | 'wss' | 'component';
     /**
      * _Note: This option is only relevant to Websocket connections, and not BOSH_
      *
@@ -248,7 +250,7 @@ declare class Connection {
     scram_keys: Record<string, unknown> | null;
     connect_callback: ConnectCallback | null;
     disconnection_timeout: number;
-    _proto: Bosh | Websocket | WorkerWebsocket;
+    _proto: Transport;
     _sasl_mechanism: SASLMechanism | null;
     _requests: Request[];
     /**
@@ -285,6 +287,15 @@ declare class Connection {
      * @param ptype - The plugin's prototype.
      */
     static addConnectionPlugin(name: string, ptype: object): void;
+    /**
+     * Register an optional transport, selectable via the `protocol` connection
+     * option. Used to plug in environment-specific transports (such as the
+     * Node-only XEP-0114 component transport) without the core browser build
+     * depending on them.
+     * @param name - The `protocol` option value that selects this transport.
+     * @param manager - The transport (protocol-manager) constructor.
+     */
+    static addProtocol(name: string, manager: new (connection: Connection) => Transport): void;
     /**
      * Select protocal based on this.options or this.service
      */
@@ -984,6 +995,17 @@ declare class Connection {
      * @return `false` to remove the handler.
      */
     _onDisconnectTimeout(): boolean;
+    /**
+     * (Re)arm the idle loop.
+     *
+     * Cancels any pending idle tick and schedules the next call to
+     * {@link Connection#_onIdle}. `_onIdle` re-arms itself while connected, so
+     * this only needs to be called to (re)start the loop: at construction, on a
+     * stream restart, or when a transport becomes connected without having gone
+     * through the send path (e.g. a receive-only component after its handshake).
+     * @private
+     */
+    _scheduleIdle(): void;
     /**
      * _Private_ handler to process events during idle cycle.
      *

@@ -1,6 +1,29 @@
+import { createRequire } from 'node:module';
 import { StringDecoder } from 'node:string_decoder';
-import { SaxesParser } from 'saxes';
 import { xmlGenerator } from '../utils';
+/** Cached `saxes` constructor, resolved by {@link getSaxesParser} on first use. */
+let SaxesParserCtor;
+/**
+ * Resolve the `saxes` parser constructor, loading the package on first use.
+ *
+ * `saxes` is an optional peer dependency needed only by this transport, so it is
+ * deliberately *not* imported at module load.
+ *
+ * The load is synchronous because {@link Component} builds its parser in its
+ * constructor.
+ */
+function getSaxesParser() {
+    if (!SaxesParserCtor) {
+        try {
+            SaxesParserCtor = createRequire(import.meta.url)('saxes').SaxesParser;
+        }
+        catch (_a) {
+            throw new Error('Strophe: the XEP-0114 component transport requires the "saxes" package, ' +
+                'which is an optional peer dependency. Install it with `npm install saxes`.');
+        }
+    }
+    return SaxesParserCtor;
+}
 /**
  * Incrementally parses an XMPP component stream.
  *
@@ -23,7 +46,8 @@ export default class ComponentParser {
         this._stack = [];
         this._streamOpened = false;
         this._errored = false;
-        this._parser = new SaxesParser({ xmlns: true });
+        const SaxesParserClass = getSaxesParser();
+        this._parser = new SaxesParserClass({ xmlns: true });
         this._parser.on('opentag', (tag) => this._onOpenTag(tag));
         this._parser.on('closetag', () => this._onCloseTag());
         this._parser.on('text', (text) => this._onText(text));

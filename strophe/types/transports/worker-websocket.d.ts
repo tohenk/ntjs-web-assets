@@ -1,11 +1,11 @@
 import type Connection from '../connection';
 import Websocket from './websocket';
 import Builder from '../builder';
-import { WebsocketLike } from '../types';
+import { WebsocketLike, Transport } from './types';
 /**
  * Helper class that handles a websocket connection inside a shared worker.
  */
-declare class WorkerWebsocket extends Websocket {
+declare class WorkerWebsocket extends Websocket implements Transport {
     worker: SharedWorker;
     _messageHandler: (m: MessageEvent) => void;
     socket: WebsocketLike | null;

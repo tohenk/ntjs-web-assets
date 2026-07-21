@@ -9,14 +9,14 @@
  */
 import type Connection from '../connection';
 import Builder from '../builder';
-import { WebsocketLike } from '../types';
+import { WebsocketLike, Transport } from './types';
 /**
  * Helper class that handles WebSocket Connections
  *
  * The WebSocket class is used internally by Connection
  * to encapsulate WebSocket sessions. It is not meant to be used from user's code.
  */
-declare class Websocket {
+declare class Websocket implements Transport {
     _conn: Connection;
     strip: string;
     socket: WebSocket | WebsocketLike | null;
