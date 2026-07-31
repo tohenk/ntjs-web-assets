@@ -77,7 +77,7 @@
     "jsdelivr-dist": "cropperjs"
   },
   "datatables": {
-    "version": "3.0.0",
+    "version": "3.0.1",
     "datatables": ""
   },
   "datatables-autofill": {
@@ -85,7 +85,7 @@
     "datatables-extension": "autofill"
   },
   "datatables-buttons": {
-    "version": "4.0.0",
+    "version": "4.0.1",
     "datatables-extension": "buttons"
   },
   "datatables-colreorder": {
@@ -105,7 +105,7 @@
     "datatables-extension": "fixedheader"
   },
   "datatables-i18n": {
-    "version": "3.0.0",
+    "version": "3.0.1",
     "datatables-plugin": "i18n"
   },
   "datatables-keytable": {
@@ -113,7 +113,7 @@
     "datatables-extension": "keytable"
   },
   "datatables-responsive": {
-    "version": "4.0.0",
+    "version": "4.0.1",
     "datatables-extension": "responsive"
   },
   "datatables-rowgroup": {
