@@ -1,4 +1,4 @@
-/*! Responsive 4.0.0 for DataTables
+/*! Responsive 4.0.1 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -50,10 +50,7 @@ const childRow = function (row, update, render) {
     var rowNode = Dom.s(row.node());
     if (update) {
         if (rowNode.classHas('dtr-expanded')) {
-            let rendered = render();
-            if (rendered) {
-                row.child(rendered, 'child').show();
-            }
+            row.child(render(), 'child').show();
             return true;
         }
     }
@@ -1367,7 +1364,7 @@ Responsive.renderer = {
     listHiddenNodes: listHiddenNodes,
     tableAll: tableAll
 };
-Responsive.version = '4.0.0';
+Responsive.version = '4.0.1';
 
 
 Api.register('responsive()', function () {

@@ -1,4 +1,4 @@
-/*! DataTables
+/*! DataTables 3.0.1
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -152,7 +152,7 @@ let _stripHtml = function (input, replacement = '') {
  * This function is replaceable if the user wishes to use a different library
  * for escaping HTML entities in a string.
  *
- * @param d Value to escape HTML in
+ * @param val Value to escape HTML in
  * @returns Escaped value
  */
 let _escapeHtml = function (val) {
@@ -551,7 +551,10 @@ function ajax(optionsIn) {
             options.contentType = 'application/json; charset=utf-8';
         }
     }
-    xhr.open(method, options.url + (options.url.includes('?') ? '&' : '?') + urlParams, true, options.username || null, options.password || null);
+    xhr.open(method, options.url +
+        (urlParams
+            ? (options.url.includes('?') ? '&' : '?') + urlParams
+            : ''), true, options.username || null, options.password || null);
     // Content type for FormData requests gets set by the browser.
     if (options.contentType && !(options.data instanceof FormData)) {
         xhr.setRequestHeader('Content-Type', options.contentType);
@@ -641,7 +644,9 @@ ajax.serialize = serialize;
  * Run callback functions (allowing for none, one or array)
  *
  * @param fnIn Function(s) to run
- * @param parameters Parameters to pass to the function(s)
+ * @param arg1 Parameters to pass to the function(s)
+ * @param arg2 Parameters to pass to the function(s)
+ * @param arg3 Parameters to pass to the function(s)
  */
 function callback(fnIn, arg1, arg2, arg3) {
     if (!fnIn) {
@@ -861,6 +866,7 @@ function pluck(a, prop, prop2) {
  * as the indexes to pick from the source array
  *
  * @param a Array to get values from
+ * @param order Indexes to pick
  * @param prop Property to read values from
  * @param prop2 Inner property to get values from if a 2D array
  * @returns Array of read values
@@ -1919,7 +1925,7 @@ class Dom {
     /**
      * Add an element (or multiple) to the instance. Will ensure uniqueness.
      *
-     * @param el Element(s) to add
+     * @param selector Element(s) to add
      * @param sort Indicate if the element should be added in document order.
      * @returns Self for chaining
      */
@@ -2320,7 +2326,7 @@ class Dom {
     /**
      * Get all matching descendants
      *
-     * @param selector Elements to find
+     * @param input Elements to find
      * @returns A new Dom instance with all matching elements
      */
     find(input) {
@@ -3049,6 +3055,7 @@ const legacy = [];
  * @param name The name of the new feature.
  * @param cb A function that will create the elements and event listeners for
  * the feature being added.
+ * @param legacyChar
  */
 function register$2(name, cb, legacyChar = '') {
     features[name] = cb;
@@ -3913,7 +3920,7 @@ const ext = {
      * Software version
      *  @type string
      */
-    version: '3.0.0'
+    version: '3.0.1'
 };
 //
 // Backwards compatibility. Alias to pre 1.10 Hungarian notation counter parts
@@ -4818,7 +4825,7 @@ function create$1(parts = {}) {
  * DOM source.
  *
  * @param settings DataTables settings object
- * @param data data array to be added
+ * @param dataIn data array to be added
  * @param tr TR element to add to the table - optional. If not given, DataTables
  *   will create a row automatically
  * @param tds Array of TD|TH elements for the row - must be given if tr is.
@@ -4857,7 +4864,7 @@ function addData(settings, dataIn, tr, tds) {
  * it is not cloned).
  *
  * @param settings DataTables settings object
- * @param trs The TR element(s) to add to the table
+ * @param rows The TR element(s) to add to the table
  * @returns Array of indexes for the added rows
  */
 function addTr(settings, rows) {
@@ -5439,7 +5446,7 @@ function getWideStrings(settings, colIdx) {
 /**
  * Append a CSS unit (only if required) to a string
  *
- * @param value to css-ify
+ * @param s Value to css-ify
  * @returns Value with css unit
  */
 function stringToCss(s) {
@@ -6373,7 +6380,7 @@ function renderer(ctx, type) {
 /**
  * Add the options to the page HTML for the table
  *
- * @param settings DataTables settings object
+ * @param ctx DataTables context
  */
 function createLayout(ctx) {
     var classes = ctx.classes;
@@ -6750,6 +6757,7 @@ function sortAttachListener(settings, node, selector, column, callback) {
  * Sort the display array to match the master's order
  *
  * @param settings DataTables context
+ * @param display The display array
  */
 function sortDisplay(settings, display) {
     if (display.length < 2) {
@@ -6977,7 +6985,6 @@ function sort(ctx, col, dir) {
  * Function to run on user sort request
  *
  * @param settings dataTables settings object
- * @param attachTo node to attach the handler to
  * @param colIdx column sorting index
  * @param addIndex Counter
  * @param shift Shift click add
@@ -7794,7 +7801,6 @@ const __filter_div_textContent = __filter_div.textContent !== undefined;
  * Filter the table using both the global filter and column based filtering
  *
  * @param settings DataTables settings object
- * @param input search information
  */
 function filterComplete(settings) {
     settings.columns;
@@ -7858,7 +7864,6 @@ function filterCustom(settings) {
  * @param settings
  * @param input
  * @param options
- * @param column
  * @returns
  */
 function filter(searchRows, settings, input, options) {
@@ -9211,7 +9216,7 @@ function getPrototypeNames(name) {
  * Each of the input parameter types will be converted to a DataTables settings
  * object where possible.
  *
- * @param mixed DataTable identifier. Can be one of:
+ * @param mixedIn DataTable identifier. Can be one of:
  *   * `string` - jQuery selector. Any DataTables' matching the given selector
  *     with be found and used.
  *   * `node` - `TABLE` node which has already been formed into a DataTable.
@@ -9500,7 +9505,7 @@ const __reload = function (settings, holdPosition, callback) {
         processingDisplay(settings, true);
         // Cancel an existing request
         var xhr = settings.jqXHR;
-        if (xhr && xhr.readyState !== 4) {
+        if (xhr && xhr.readyState !== 4 && typeof xhr.abort === 'function') {
             xhr.abort();
         }
         // Trigger xhr
@@ -10277,7 +10282,7 @@ registerPlural('columns().orderable()', 'column().orderable()', function (direct
 /**
  * Set the page length
  *
- * @param settings DataTables context
+ * @param ctx DataTables context
  * @param val Value to change to
  */
 function lengthChange(ctx, val) {
@@ -11211,7 +11216,14 @@ function check(releaseDate, software) {
             return true;
         }
     }
-    else if (_licenseInfo.type === 'plus' ||
+    else if (software === null) {
+        // Validating the key only - there hasn't been any specific software
+        // calling the `plus` parameter yet. The key is good, so carry on.
+        return true;
+    }
+    else if (
+    // Checking if the build version can be used with this key
+    _licenseInfo.type === 'plus' ||
         (_licenseInfo.type === 'editor' && software === 'editor')) {
         if (!expires || new Date(releaseDate) > expires) {
             noticePrep('Upgrade required for this version');
@@ -11221,6 +11233,7 @@ function check(releaseDate, software) {
         return true;
     }
     else if (_licenseInfo.type === 'editor' && software !== 'editor') {
+        // Editor specific license
         noticePrep('License for Editor only. Upgrade for Plus');
         noticeDisplay();
         return false;
@@ -11379,7 +11392,7 @@ function verify(licenseString) {
  */
 function plus (DataTable) {
     Object.defineProperty(DataTable, 'plus', {
-        value: function (releaseDate, software = null) {
+        value: function (releaseDate, software = '') {
             // Unsecure sites are only useful for development, so allow there
             // and on the site.
             let host = window.location.hostname;
@@ -11530,6 +11543,8 @@ register$2('info', function (settings, optsIn) {
 /**
  * Update the information elements in the display
  *  @param settings DataTables settings object
+ *  @param opts
+ *  @param node
  */
 function updateInfo(settings, opts, node) {
     var start = settings.displayStart + 1, end = displayEnd(settings), max = recordsTotal(settings), total = recordsDisplay(settings), out = total ? opts.text : opts.empty;
@@ -11602,7 +11617,7 @@ function _pagingDraw(settings, host, opts) {
     if (!settings.initDone) {
         return;
     }
-    let plugin = opts.type ? ext.pager[opts.type] : _pagingDynamic, aria = settings.language.aria.paginate || {}, start = settings.displayStart, len = settings.pageLength, visRecords = recordsDisplay(settings), all = len === -1, page = all ? 0 : Math.ceil(start / len), pages = Math.ceil(visRecords / (all ? 1 : len)), buttons = [], buttonEls = [], buttonsNested = plugin(opts).map(function (val) {
+    let plugin = opts.type ? ext.pager[opts.type] : _pagingDynamic, aria = settings.language.aria.paginate || {}, start = settings.displayStart, len = settings.pageLength, visRecords = recordsDisplay(settings), all = len === -1, page = all ? 0 : Math.ceil(start / len), pages = all ? (visRecords ? 1 : 0) : Math.ceil(visRecords / len), buttons = [], buttonEls = [], buttonsNested = plugin(opts).map(function (val) {
         return val === 'numbers'
             ? pagingNumbers(page, pages, opts.buttons, opts.boundaryNumbers)
             : val;
@@ -12271,7 +12286,8 @@ const defaults = {
     },
     stateSaveParams: null,
     tabIndex: 0,
-    titleRow: null
+    titleRow: null,
+    typeDetect: true
 };
 
 const DataTable = function (selector, options) {
