@@ -1,5 +1,5 @@
 /**
- * interact.js 1.10.27
+ * interact.js 1.10.28
  *
  * Copyright (c) 2012-present Taye Adeyemi <dev@taye.me>
  * Released under the MIT License.
@@ -5508,7 +5508,7 @@
         var _this2 = this;
         if (is.func(checker)) {
           this.getRect = function (element) {
-            var rect = extend({}, checker.apply(_this2, element));
+            var rect = extend({}, checker.call(_this2, element));
             if (!('width' in rect)) {
               rect.width = rect.right - rect.left;
               rect.height = rect.bottom - rect.top;
@@ -5920,7 +5920,7 @@
     interact.globalEvents = {};
 
     // eslint-disable-next-line no-undef
-    interact.version = "1.10.27";
+    interact.version = "1.10.28";
     interact.scope = scope;
     interact.use = function (plugin, options) {
       this.scope.usePlugin(plugin, options);
