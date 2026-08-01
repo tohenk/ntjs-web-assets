@@ -161,7 +161,7 @@
     "jsdelivr": "jquery-hotkeys"
   },
   "interact": {
-    "version": "1.10.27",
+    "version": "1.10.28",
     "jsdelivr-dist": "interactjs"
   },
   "jqgrid": {
