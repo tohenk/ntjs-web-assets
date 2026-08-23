@@ -79,6 +79,8 @@ export declare class CropperCanvas extends CropperElement_2 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected $bind(): void;
     protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
     protected $handlePointerDown(event: Event): void;
     protected $handlePointerMove(event: Event): void;
     protected $handlePointerUp(event: Event): void;
@@ -125,6 +127,8 @@ declare class CropperCanvas_2 extends CropperElement_2_2 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected $bind(): void;
     protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
     protected $handlePointerDown(event: Event): void;
     protected $handlePointerMove(event: Event): void;
     protected $handlePointerUp(event: Event): void;
@@ -171,6 +175,8 @@ declare class CropperCanvas_2_2 extends CropperElement_3_2 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected $bind(): void;
     protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
     protected $handlePointerDown(event: Event): void;
     protected $handlePointerMove(event: Event): void;
     protected $handlePointerUp(event: Event): void;
@@ -217,6 +223,8 @@ declare class CropperCanvas_3 extends CropperElement_2_3 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected $bind(): void;
     protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
     protected $handlePointerDown(event: Event): void;
     protected $handlePointerMove(event: Event): void;
     protected $handlePointerUp(event: Event): void;
@@ -263,6 +271,8 @@ declare class CropperCanvas_3_2 extends CropperElement_2_3_2 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected $bind(): void;
     protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
     protected $handlePointerDown(event: Event): void;
     protected $handlePointerMove(event: Event): void;
     protected $handlePointerUp(event: Event): void;
@@ -309,6 +319,8 @@ declare class CropperCanvas_4 extends CropperElement_2_4 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected $bind(): void;
     protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
     protected $handlePointerDown(event: Event): void;
     protected $handlePointerMove(event: Event): void;
     protected $handlePointerUp(event: Event): void;
@@ -355,6 +367,8 @@ declare class CropperCanvas_5 extends CropperElement_2_2_2 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected $bind(): void;
     protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
     protected $handlePointerDown(event: Event): void;
     protected $handlePointerMove(event: Event): void;
     protected $handlePointerUp(event: Event): void;
@@ -401,7 +415,7 @@ export declare class CropperElement extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -452,7 +466,7 @@ declare class CropperElement_2 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -503,7 +517,7 @@ declare class CropperElement_2_2 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -554,7 +568,7 @@ declare class CropperElement_2_2_2 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -605,7 +619,7 @@ declare class CropperElement_2_3 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -656,7 +670,7 @@ declare class CropperElement_2_3_2 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -707,7 +721,7 @@ declare class CropperElement_2_4 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -758,7 +772,7 @@ declare class CropperElement_2_5 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -809,7 +823,7 @@ declare class CropperElement_3 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -860,7 +874,7 @@ declare class CropperElement_3_2 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -911,7 +925,7 @@ declare class CropperElement_4 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -962,7 +976,7 @@ declare class CropperElement_4_2 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -1013,7 +1027,7 @@ declare class CropperElement_5 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -1064,7 +1078,7 @@ declare class CropperElement_6 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -1115,7 +1129,7 @@ declare class CropperElement_7 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -1166,7 +1180,7 @@ declare class CropperElement_8 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -1217,7 +1231,7 @@ declare class CropperElement_9 extends HTMLElement {
     themeColor?: string;
     constructor();
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -1298,7 +1312,13 @@ export declare class CropperImage extends CropperElement_3 {
     protected $actionStartTarget: EventTarget | null;
     protected $style: string;
     readonly $image: HTMLImageElement;
+    /**
+     * @deprecated since version 2.2.0, use `initialFit` instead.
+     */
     initialCenterSize: string;
+    initialFit: string;
+    maxFit: string;
+    minFit: string;
     rotatable: boolean;
     scalable: boolean;
     skewable: boolean;
@@ -1317,7 +1337,7 @@ export declare class CropperImage extends CropperElement_3 {
     protected set $canvas(element: CropperCanvas_2);
     protected get $canvas(): CropperCanvas_2;
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -1445,7 +1465,13 @@ declare class CropperImage_2 extends CropperElement_2_5 {
     protected $actionStartTarget: EventTarget | null;
     protected $style: string;
     readonly $image: HTMLImageElement;
+    /**
+     * @deprecated since version 2.2.0, use `initialFit` instead.
+     */
     initialCenterSize: string;
+    initialFit: string;
+    maxFit: string;
+    minFit: string;
     rotatable: boolean;
     scalable: boolean;
     skewable: boolean;
@@ -1464,7 +1490,7 @@ declare class CropperImage_2 extends CropperElement_2_5 {
     protected set $canvas(element: CropperCanvas_5);
     protected get $canvas(): CropperCanvas_5;
     protected static get observedAttributes(): string[];
-    protected attributeChangedCallback(name: string, oldValue: string, newValue: string): void;
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
@@ -2063,6 +2089,16 @@ export declare const NAMESPACE = "cropper";
  * @returns {Promise} A promise that resolves to nothing.
  */
 export declare function nextTick(context?: unknown, callback?: () => void): Promise<void>;
+
+export declare const OBJECT_FIT_CONTAIN = "contain";
+
+export declare const OBJECT_FIT_COVER = "cover";
+
+export declare const OBJECT_FIT_FILL = "fill";
+
+export declare const OBJECT_FIT_NONE = "none";
+
+export declare const OBJECT_FIT_SCALE_DOWN = "scale-down";
 
 /**
  * Remove event listener from the event target.
