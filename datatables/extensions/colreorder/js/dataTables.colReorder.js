@@ -1,4 +1,4 @@
-/*! ColReorder 3.0.1 for DataTables
+/*! ColReorder 3.0.2 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -607,8 +607,8 @@ class ColReorder {
         let origTr = origCell.parent();
         let origThead = origTr.parent();
         let origTable = origThead.parent();
-        let cloneCell = origCell.clone();
-        // This is a slightly odd combination of jQuery and DOM, but it is the
+        let cloneCell = origCell.clone(true);
+        // This is a slightly odd combination of Dom and vanilla, but it is the
         // fastest and least resource intensive way I could think of cloning
         // the table with just a single header cell in it.
         this.dom.drag = Dom.s(origTable.get(0).cloneNode(false))
@@ -927,7 +927,7 @@ ColReorder.defaults = {
     headerRows: null,
     order: null
 };
-ColReorder.version = '3.0.1';
+ColReorder.version = '3.0.2';
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

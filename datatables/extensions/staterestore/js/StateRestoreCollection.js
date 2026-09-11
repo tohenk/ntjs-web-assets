@@ -1,6 +1,7 @@
 var $;
 var dataTable;
 import StateRestore from './StateRestore';
+import { ajax } from './util';
 export function setJQuery(jq) {
     $ = jq;
     dataTable = jq.fn.dataTable;
@@ -121,9 +122,7 @@ var StateRestoreCollection = /** @class */ (function () {
                 '</div>'),
             removeContents: $('<div class="' + this.classes.confirmationText + '"><span></span></div>'),
             removeTitle: $('<div class="' + this.classes.creationText + '">' +
-                '<h2 class="' + this.classes.creationTitle + '">' +
-                this.s.dt.i18n('stateRestore.removeTitle', this.c.i18n.removeTitle) +
-                '</h2>' +
+                '<h2 class="' + this.classes.creationTitle + '"></h2>' +
                 '</div>'),
             scrollerToggle: $('<div class="' + this.classes.checkLabel + '">' +
                 '<input type="checkbox" class="' +
@@ -163,41 +162,21 @@ var StateRestoreCollection = /** @class */ (function () {
         };
         table.settings()[0]._stateRestore = this;
         this._searchForStates();
-        // Has staterestore been used before? Is there anything to load?
+        // Has StateRestore been used before? Is there anything to load?
         this._addPreDefined(this.c.preDefined);
-        var ajaxFunction;
-        var ajaxData = {
-            action: 'load'
+        // Ajax load if required
+        var fn = function () {
+            ajax(_this.s.dt, _this.c.ajax, { action: 'load' }, function (data) {
+                _this._addPreDefined(data);
+            });
         };
-        if (typeof this.c.ajax === 'function') {
-            ajaxFunction = function () {
-                if (typeof _this.c.ajax === 'function') {
-                    _this.c.ajax.call(_this.s.dt, ajaxData, function (s) { return _this._addPreDefined(s); });
-                }
-            };
+        if (this.s.dt.ready()) {
+            fn();
         }
-        else if (typeof this.c.ajax === 'string') {
-            ajaxFunction = function () {
-                $.ajax({
-                    data: ajaxData,
-                    dataType: 'json',
-                    success: function (data) {
-                        _this._addPreDefined(data);
-                    },
-                    type: 'POST',
-                    url: _this.c.ajax
-                });
-            };
-        }
-        if (typeof ajaxFunction === 'function') {
-            if (this.s.dt.settings()[0]._bInitComplete) {
-                ajaxFunction();
-            }
-            else {
-                this.s.dt.one('preInit.dtsr', function () {
-                    ajaxFunction();
-                });
-            }
+        else {
+            this.s.dt.one('preInit.dtsr', function () {
+                fn();
+            });
         }
         this.s.dt.on('destroy.dtsr', function () {
             _this.destroy();
@@ -234,7 +213,7 @@ var StateRestoreCollection = /** @class */ (function () {
             };
             var currState = _this.s.dt.state();
             currState.stateRestore = {
-                isPredefined: false,
+                isPreDefined: false,
                 state: id,
                 tableId: _this.s.dt.table().node().id
             };
@@ -301,6 +280,7 @@ var StateRestoreCollection = /** @class */ (function () {
                 this.s.dt.i18n('stateRestore.removeJoiner', this.c.i18n.removeJoiner) +
                 ids.slice(-1);
         }
+        $(this.dom.removeTitle).find('h2').html(this.s.dt.i18n('stateRestore.removeTitle', this.c.i18n.removeTitle, ids.length));
         $(this.dom.removeContents.children('span')).html(this.s.dt
             .i18n('stateRestore.removeConfirm', this.c.i18n.removeConfirm)
             .replace(/%s/g, replacementString));
@@ -804,6 +784,9 @@ var StateRestoreCollection = /** @class */ (function () {
      */
     StateRestoreCollection.prototype._fixTypes = function (state) {
         var i;
+        if (typeof state === 'string') {
+            state = JSON.parse(state);
+        }
         var fixNum = function (d, prop) {
             var val = d[prop];
             if (val !== undefined) {
@@ -825,7 +808,13 @@ var StateRestoreCollection = /** @class */ (function () {
         fixNum(state, 'time');
         if (state.order) {
             for (i = 0; i < state.order.length; i++) {
-                fixNum(state.order[i], 0);
+                // Allow for the fact that column names can be used in index 0
+                // of the ordering state. If it is a number though, then it
+                // should be an actual number
+                if (typeof state.order[i][0] === 'string' &&
+                    state.order[i][0].match(/^\d+$/)) {
+                    fixNum(state.order[i], 0);
+                }
             }
         }
         if (state.search) {
@@ -899,6 +888,10 @@ var StateRestoreCollection = /** @class */ (function () {
             confirmationButton.focus();
         }
         var background = $('div.' + this.classes.background.replace(/ /g, '.'));
+        if (this.c.modalCloseButton) {
+            this.dom.confirmation.append(this.dom.closeButton);
+            this.dom.closeButton.on('click', function () { return background.click(); });
+        }
         var keyupFunction = function (e) {
             // If enter same action as pressing the button
             if (e.key === 'Enter') {
@@ -1045,7 +1038,10 @@ var StateRestoreCollection = /** @class */ (function () {
             removeError: 'Failed to remove state.',
             removeJoiner: ' and ',
             removeSubmit: 'Remove',
-            removeTitle: 'Remove State',
+            removeTitle: {
+                1: 'Remove State',
+                _: 'Remove States'
+            },
             renameButton: 'Rename',
             renameLabel: 'New Name for %s:',
             renameTitle: 'Rename State'

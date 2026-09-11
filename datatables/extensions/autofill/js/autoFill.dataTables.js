@@ -1,4 +1,4 @@
-/*! AutoFill default styling 3.0.0 for DataTables
+/*! AutoFill default styling 3.0.1 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 

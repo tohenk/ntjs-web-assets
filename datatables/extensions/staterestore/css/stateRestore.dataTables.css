@@ -1,233 +1,153 @@
-div.dtsr-confirmation,
-div.dtsr-creation {
+:root {
+  --dtsb-modal_top: 20%;
+  --dtsb-modal_left: 50%;
+  --dtsb-modal_width: 500px;
+  --dtsb-modal_margin-left: -250px;
+  --dtsb-modal_width-wide: 800px;
+  --dtsb-modal_margin-left-wide: -400px;
+  --dtsb-modal_background: white;
+  --dtsb-modal_box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  --dtsb-modal_border: 1px solid rgba(255, 255, 255, 0.15);
+  --dtsb-modal_border-radius: 5px;
+  --dtsb-modal_padding: 2em;
+  --dtsb-modal-background_background: radial-gradient(ellipse farthest-corner at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%);
+  --dtsb-modal-button_background: #f6f6f6;
+  --dtsb-modal-button_background-hover: #ebebeb;
+  --dtsb-modal-button_border: 1px solid rgba(0, 0, 0, 0.175);
+}
+:root.dark {
+  --dtsb-modal_background: rgb(33, 37, 41);
+  --dtsb-modal_border: 1px solid rgb(255, 255, 255, 0.2);
+  --dtsb-modal-background_background: radial-gradient(ellipse farthest-corner at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%);
+  --dtsb-modal-button_background: rgb(47, 52, 56);
+  --dtsb-modal-button_background-hover: rgb(64, 69, 73);
+  --dtsb-modal-button_border: 1px solid rgba(255, 255, 255, 0.175);
+}
+
+div.dtsb-modal {
   position: fixed;
-  top: 20%;
-  left: 50%;
-  width: 500px;
-  margin-left: -250px;
-  background-color: white;
-  border-radius: 0.75em;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  top: var(--dtsb-modal_top);
+  left: var(--dtsb-modal_left);
+  width: var(--dtsb-modal_width);
+  margin-left: var(--dtsb-modal_margin-left);
+  background-color: var(--dtsb-modal_background);
+  border-radius: var(--dtsb-modal_border-radius);
+  border: var(--dtsb-modal_border);
+  box-shadow: var(--dtsb-modal_box-shadow);
   z-index: 2003;
   box-sizing: border-box;
-  padding: 2em;
+  padding: var(--dtsb-modal_padding);
 }
-div.dtsr-confirmation div.dtsr-creation-text,
-div.dtsr-confirmation div.dtsr-confirmation-title-row,
-div.dtsr-creation div.dtsr-creation-text,
-div.dtsr-creation div.dtsr-confirmation-title-row {
-  text-align: left;
+div.dtsb-modal.dtsb-modal_wide {
+  width: var(--dtsb-modal_width-wide);
+  margin-left: var(--dtsb-modal_margin-left-wide);
 }
-div.dtsr-confirmation div.dtsr-creation-text h2,
-div.dtsr-confirmation div.dtsr-confirmation-title-row h2,
-div.dtsr-creation div.dtsr-creation-text h2,
-div.dtsr-creation div.dtsr-confirmation-title-row h2 {
-  padding-left: 0;
-  border-bottom: 0px;
-  margin-top: 0px;
-  padding-top: 0px;
-  margin-bottom: 1rem;
-}
-div.dtsr-confirmation div.dtsr-confirmation-text,
-div.dtsr-creation div.dtsr-confirmation-text {
-  text-align: center;
-}
-div.dtsr-confirmation div.dtsr-modal-foot,
-div.dtsr-confirmation div.dtsr-confirmation-buttons,
-div.dtsr-creation div.dtsr-modal-foot,
-div.dtsr-creation div.dtsr-confirmation-buttons {
-  text-align: right;
-  margin-top: 1em;
-}
-div.dtsr-confirmation div.dtsr-modal-foot button,
-div.dtsr-confirmation div.dtsr-confirmation-buttons button,
-div.dtsr-creation div.dtsr-modal-foot button,
-div.dtsr-creation div.dtsr-confirmation-buttons button {
-  margin: 0px;
-}
-div.dtsr-confirmation div.dtsr-creation-text,
-div.dtsr-creation div.dtsr-creation-text {
-  text-align: left;
-  padding: 0px;
-  border: none;
-}
-div.dtsr-confirmation div.dtsr-creation-text span,
-div.dtsr-creation div.dtsr-creation-text span {
-  font-size: 20px;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-left, div.dtsr-confirmation div.dtsr-creation-form div.dtsr-right,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-left,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-right {
-  display: inline-block;
-  width: 50%;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-left,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-left {
-  text-align: right;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-right, div.dtsr-confirmation div.dtsr-creation-form div.dtsr-name-row,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-right,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-name-row {
-  text-align: left;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-form-row,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-form-row {
-  display: flex;
-  margin: 0.5em 0;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-form-row:first-child,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-form-row:first-child {
-  margin-top: 1em;
-  margin-bottom: 1em;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-form-row:last-child,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-form-row:last-child {
-  margin-bottom: 0;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-form-row label,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-form-row label {
-  width: 25%;
-  padding-right: 1em;
-  text-align: right;
-  padding-top: 2px;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-form-row div.dtsr-input,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-form-row div.dtsr-input {
-  width: 75%;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-form-row div.dtsr-input div.dtsr-check-label,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-form-row div.dtsr-input div.dtsr-check-label {
-  margin-bottom: 0.5em;
-}
-div.dtsr-confirmation div.dtsr-creation-form div.dtsr-form-row div.dtsr-input div.dtsr-check-label input,
-div.dtsr-creation div.dtsr-creation-form div.dtsr-form-row div.dtsr-input div.dtsr-check-label input {
-  margin-right: 0.5em;
-}
-div.dtsr-confirmation div.dtsr-confirmation-text,
-div.dtsr-creation div.dtsr-confirmation-text {
-  text-align: left;
-}
-div.dtsr-confirmation div.dtsr-confirmation-text label.dtsr-name-label,
-div.dtsr-creation div.dtsr-confirmation-text label.dtsr-name-label {
-  width: auto;
-  display: inline-block;
-  text-align: right;
-  padding-right: 15px;
-}
-div.dtsr-confirmation div.dtsr-confirmation-text input.dtsr-name-input,
-div.dtsr-creation div.dtsr-confirmation-text input.dtsr-name-input {
-  width: 66.6%;
-  display: inline-block;
-}
-div.dtsr-confirmation div.dtsr-modal-foot,
-div.dtsr-creation div.dtsr-modal-foot {
-  text-align: right;
-  padding-top: 10px;
-}
-div.dtsr-confirmation span.dtsr-modal-error,
-div.dtsr-creation span.dtsr-modal-error {
-  color: red;
-  font-size: 0.9em;
-}
-
-div.dtsr-creation {
-  top: 10%;
-}
-
-div.dtsr-check-row {
-  padding-top: 0px;
-}
-
-div.dtsr-popover-close {
+div.dtsb-modal button.dtsb-modal-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 22px;
-  height: 22px;
-  text-align: center;
-  border-radius: 3px;
+  top: 1em;
+  right: 1em;
+  background: transparent;
+  border: none;
+  color: inherit;
   cursor: pointer;
-  z-index: 12;
+}
+div.dtsb-modal p {
+  margin: 1em 0 3em;
+}
+div.dtsb-modal div.dtsb-modal-header {
+  font-size: 1.3em;
+  font-weight: bold;
+}
+div.dtsb-modal div.dtsb-modal-body {
+  margin: 2em 0 0 0;
+}
+div.dtsb-modal div.dtsb-modal-buttons {
+  text-align: right;
+  margin-top: 2em;
+}
+div.dtsb-modal div.dtsb-modal-buttons button {
+  display: inline-block;
+  padding: 0.5em 1em;
+  border-radius: var(--dtsb-modal_border-radius);
+  color: inherit;
+  border: var(--dtsb-modal-button_border);
+  background: var(--dtsb-modal-button_background);
+  cursor: pointer;
+}
+div.dtsb-modal div.dtsb-modal-buttons button:hover {
+  background-color: var(--dtsb-modal-button_background-hover);
 }
 
-div.dtsr-background {
+div.dtsb-modal-background {
   z-index: 2002;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  background: radial-gradient(ellipse farthest-corner at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%);
+  background: var(--dtsb-modal-background_background);
 }
 
-div.dt-button-collection h3 {
-  text-align: center;
-  margin-top: 4px;
-  margin-bottom: 8px;
-  font-size: 1.5em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+div.dtsb-field {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  gap: 1em;
+  margin-top: 1em;
 }
-div.dt-button-collection span.dtsr-emptyStates {
-  border-radius: 5px;
+div.dtsb-field:first-child {
+  margin-top: 0;
+}
+div.dtsb-field div.dtsb-field-value > div {
+  margin-bottom: 0.5em;
+}
+div.dtsb-field div.dtsb-field-info {
+  font-size: 0.8em;
+  line-height: 1.3em;
+  margin: 0.5em 0 0 0;
+}
+div.dtsb-field div.dtsb-field-info:empty {
+  margin: 0;
+}
+div.dtsb-field div.dtsb-field-error {
+  font-size: 0.8em;
+  line-height: 1.3em;
+  margin: 0.5em 0 0 0;
+}
+div.dtsb-field div.dtsb-field-error:empty {
+  margin: 0;
+}
+div.dtsb-field span {
   display: inline-block;
-  line-height: 1.6em;
-  white-space: nowrap;
-  text-align: center;
-  vertical-align: middle;
-  width: 100%;
-  padding-bottom: 7px;
-  padding-top: 3px;
+  padding-left: 1em;
+}
+div.dtsb-field input[type=text] {
+  border: var(--dt-input_border);
+  border-radius: var(--dt-input_border-radius);
+  padding: var(--dt-input_padding);
+  background-color: var(--dt-input_background);
+  color: var(--dt-input_color);
+  width: 96%;
+  box-sizing: border-box;
+  margin-top: -6px;
+}
+div.dtsb-field input[type=checkbox] {
+  border: var(--dt-input_border);
+  margin: 0 0.75em 0 0;
 }
 
-html.dark div.dtsr-confirmation,
-html.dark div.dtsr-creation,
-html[data-bs-theme=dark] div.dtsr-confirmation,
-html[data-bs-theme=dark] div.dtsr-creation {
-  background-color: rgb(33, 37, 41);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-html.dark div.dtsr-confirmation button,
-html.dark div.dtsr-creation button,
-html[data-bs-theme=dark] div.dtsr-confirmation button,
-html[data-bs-theme=dark] div.dtsr-creation button {
-  color: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.175);
-  background-color: rgb(47, 52, 56);
-}
-html.dark div.dtsr-confirmation button:hover,
-html.dark div.dtsr-creation button:hover,
-html[data-bs-theme=dark] div.dtsr-confirmation button:hover,
-html[data-bs-theme=dark] div.dtsr-creation button:hover {
-  background-color: rgb(64, 69, 73);
-}
-
-div.dtsr-confirmation h2,
-div.dtsr-creation h2 {
-  font-size: 24px;
-}
-div.dtsr-confirmation input[type=text],
-div.dtsr-creation input[type=text] {
-  padding: 3px;
-}
-div.dtsr-confirmation div.dtsr-creation-text,
-div.dtsr-creation div.dtsr-creation-text {
-  margin-bottom: 2em;
-}
-div.dtsr-confirmation button,
-div.dtsr-creation button {
-  display: inline-block;
-  margin: 1em;
-  padding: 0.5em 1em;
-  border-radius: 0.5em;
-  border: 1px solid rgba(0, 0, 0, 0.175);
-  background-color: #f6f6f6;
-  text-align: left;
+button.dtsb-button {
+  padding: 0.25em 1em;
   cursor: pointer;
+  border: var(--dtb-button_border);
+  border-radius: var(--dtb-button_border-radius);
+  box-shadow: var(--dtb-button_box-shadow);
+  background: var(--dtb-button_background);
+  color: var(--dtb-button_color);
 }
-div.dtsr-confirmation button:hover,
-div.dtsr-creation button:hover {
-  background-color: #ebebeb;
+button.dtsb-button:hover {
+  border: var(--dtb-button_border-hover);
+  border-radius: var(--dtb-button_border-radius-hover);
+  box-shadow: var(--dtb-button_box-shadow-hover);
+  background: var(--dtb-button_background-hover);
+  color: var(--dtb-button_color-hover);
 }
