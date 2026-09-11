@@ -77,19 +77,19 @@
     "jsdelivr-dist": "cropperjs"
   },
   "datatables": {
-    "version": "3.0.3",
+    "version": "3.0.4",
     "datatables": ""
   },
   "datatables-autofill": {
-    "version": "3.0.0",
+    "version": "3.0.1",
     "datatables-extension": "autofill"
   },
   "datatables-buttons": {
-    "version": "4.0.2",
+    "version": "4.0.3",
     "datatables-extension": "buttons"
   },
   "datatables-colreorder": {
-    "version": "3.0.1",
+    "version": "3.0.2",
     "datatables-extension": "colreorder"
   },
   "datatables-datetime": {
@@ -129,7 +129,7 @@
     "datatables-extension": "scroller"
   },
   "datatables-searchbuilder": {
-    "version": "2.0.0",
+    "version": "2.0.1",
     "datatables-extension": "searchbuilder"
   },
   "datatables-searchpanes": {
@@ -141,7 +141,7 @@
     "datatables-extension": "select"
   },
   "datatables-staterestore": {
-    "version": "1.4.3",
+    "version": "2.0.0",
     "datatables-extension": "staterestore"
   },
   "exif-js": {
