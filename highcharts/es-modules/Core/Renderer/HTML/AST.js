@@ -69,7 +69,7 @@ class AST {
             if (AST.allowedAttributes.indexOf(key) === -1) {
                 valid = false;
             }
-            if (['background', 'dynsrc', 'href', 'lowsrc', 'src']
+            if (['background', 'dynsrc', 'href', 'lowsrc', 'src', 'xlink:href']
                 .indexOf(key) !== -1) {
                 valid = isString(val) && AST.allowedReferences.some((ref) => val.indexOf(ref) === 0);
             }

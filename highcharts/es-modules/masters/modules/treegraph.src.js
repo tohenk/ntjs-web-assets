@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Highcharts
 /**
- * @license Highcharts JS v13.1.0 (2026-09-18)
+ * @license Highcharts JS v13.1.1 (2026-09-20)
  * Treegraph chart series type
  * @module highcharts/modules/treegraph
  * @requires highcharts
