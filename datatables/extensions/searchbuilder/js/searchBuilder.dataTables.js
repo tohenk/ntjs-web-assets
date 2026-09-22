@@ -1,4 +1,4 @@
-/*! SearchBuilder default styling 2.0.1 for DataTables
+/*! SearchBuilder default styling 2.1.0 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 

@@ -1,4 +1,4 @@
-/*! StateRestore 2.0.1 for DataTables
+/*! StateRestore 2.1.0 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license/plus
  *
  * SVG icons: ISC License
@@ -476,24 +476,35 @@ const local = {
 if (!DataTable || !DataTable.versionCheck || !DataTable.versionCheck('3')) {
     throw 'DataTables StateRestore requires DataTables 3 or newer';
 }
-const _modal = Dom.c('div').classAdd('dtsb-modal');
-const _modalCloseButton = Dom.c('button')
-    .classAdd('dtsb-modal-close')
-    .attr('type', 'button')
-    .html('&times;');
-const _modalBackground = Dom.c('div').classAdd('dtsb-modal-background');
+// Package scope for the elements so they can be reused
+let _modal;
+let _modalCloseButton;
+let _modalBackground;
+function assertModal() {
+    if (!_modal) {
+        _modal = Dom.c('div').classAdd('dtsb-modal');
+        _modalCloseButton = Dom.c('button')
+            .classAdd('dtsb-modal-close')
+            .attr('type', 'button')
+            .html('&times;');
+        _modalBackground = Dom.c('div').classAdd('dtsb-modal-background');
+    }
+}
 class States {
     static modalClean() {
+        assertModal();
         Dom.s(document).off('keyup.dtsr');
         _modal.empty().classRemove(States.classes.modal.table);
         _modalCloseButton.off('click');
         _modalBackground.off('click');
     }
     static modalClose() {
+        assertModal();
         _modal.remove();
         _modalBackground.remove();
     }
     static modal(title, body, className, close) {
+        assertModal();
         _modal.classAdd(className);
         _modalCloseButton.on('click', () => {
             close();
@@ -825,7 +836,7 @@ class States {
     constructor(host) {
         let dt = new DataTable.Api(host);
         let opts = dt.init().stateRestore;
-        DataTable.plus('2026-09-16');
+        DataTable.plus('2026-09-22');
         this.c = util.object.assignDeep({}, States.defaults, DataTable.defaults.stateRestore, opts);
         // Defaults can only be used if `stateRestore` is in the initialisation
         // options (as that will add the state loader - it won't work without
@@ -1142,9 +1153,7 @@ class States {
         // the `submit` event for the form.
         return Dom.c('div')
             .classAdd('dtsb-modal-buttons')
-            .append(Dom.c('button')
-            .classAdd(this.classes.modal.button)
-            .text(text));
+            .append(Dom.c('button').classAdd(this.classes.modal.button).text(text));
     }
 }
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -1199,7 +1208,7 @@ States.defaults = {
     predefined: []
 };
 States.manipulators = stateManipulators;
-States.version = '2.0.1';
+States.version = '2.1.0';
 
 // The SVG for many of these icons are from Lucide ( https://lucide.dev ), which are available
 // under the ISC License. There are a number of custom icons as well. These are optimised through
@@ -1578,7 +1587,7 @@ DataTable.ext.buttons.savedStates = DataTable.ext.buttons.statesList;
 DataTable.ext.buttons.removeAllStates = DataTable.ext.buttons.statesRemoveAll;
 // Attach a listener to the document which listens for DataTables initialisation
 // events so we can automatically initialise
-Dom.s(document).on('options.dt.stateRestore', function (e, init) {
+Dom.on('options.dt.stateRestore', function (e, init) {
     if (e.namespace !== 'dt') {
         return;
     }

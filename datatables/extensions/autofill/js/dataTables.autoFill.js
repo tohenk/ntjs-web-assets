@@ -1,4 +1,4 @@
-/*! AutoFill 3.0.1 for DataTables
+/*! AutoFill 3.1.1 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -46,8 +46,8 @@ var Api = DataTable.Api;
 var util = DataTable.util;
 
 
-if (!DataTable || !DataTable.versionCheck || !DataTable.versionCheck('3')) {
-    throw 'Warning: AutoFill requires DataTables 3 or greater';
+if (!DataTable || !DataTable.versionCheck || !DataTable.versionCheck('3.1')) {
+    throw 'Warning: AutoFill requires DataTables 3.1 or greater';
 }
 var _instance = 0;
 class AutoFill {
@@ -939,7 +939,7 @@ AutoFill.defaults = {
     horizontal: true
 };
 /** AutoFill version */
-AutoFill.version = '3.0.1';
+AutoFill.version = '3.1.1';
 
 // Doesn't do anything - Not documented
 Api.register('autoFill()', function () {
@@ -965,7 +965,7 @@ Api.register('autoFill().disable()', function () {
 });
 // Attach a listener to the document which listens for DataTables initialisation
 // events so we can automatically initialise
-Dom.s(document).on('preInit.dt.autofill', function (e, settings) {
+Dom.on('preInit.dt.autofill', function (e, settings) {
     if (e.namespace !== 'dt') {
         return;
     }

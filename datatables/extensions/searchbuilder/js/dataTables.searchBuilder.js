@@ -1,4 +1,4 @@
-/*! SearchBuilder 2.0.1 for DataTables
+/*! SearchBuilder 2.1.0 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -3231,8 +3231,8 @@ Group.defaults = {
 };
 
 // Check that the required version of DataTables is included
-if (!DataTable || !DataTable.versionCheck || !DataTable.versionCheck('3')) {
-    throw new Error('SearchBuilder requires DataTables 3 or newer');
+if (!DataTable || !DataTable.versionCheck || !DataTable.versionCheck('3.1')) {
+    throw new Error('SearchBuilder requires DataTables 3.1 or newer');
 }
 /**
  * SearchBuilder class for DataTables.
@@ -3645,7 +3645,7 @@ class SearchBuilder {
         });
     }
 }
-SearchBuilder.version = '2.0.1';
+SearchBuilder.version = '2.1.0';
 SearchBuilder.classes = {
     button: 'dtsb-button',
     clearAll: 'dtsb-clearAll',
@@ -3827,7 +3827,7 @@ function _init(settings, options) {
 }
 // Attach a listener to the document which listens for DataTables initialisation
 // events so we can automatically initialise
-Dom.s(document).on('preInit.dt.dtsp', function (e, settings) {
+Dom.on('preInit.dt.dtsp', function (e, settings) {
     if (e.namespace !== 'dt') {
         return;
     }
