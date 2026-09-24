@@ -93,7 +93,7 @@
     "datatables-extension": "colreorder"
   },
   "datatables-datetime": {
-    "version": "2.1.0",
+    "version": "2.1.1",
     "datatables-extension": "datetime"
   },
   "datatables-fixedcolumns": {
