@@ -1,4 +1,4 @@
-/*! FixedHeader 5.1.0 for DataTables
+/*! FixedHeader 5.1.1 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -382,7 +382,7 @@ class FixedHeader {
             // floating element and clone into the original table. Note that the
             // order is important in Chrome. It must be colgroup, thead, tbody,
             // tfoot. Otherwise a "jitter" when scrolling will occur.
-            itemDom.placeholder.insertAfter(itemDom.host.find(item === 'header' ? 'colgroup' : 'tbody'));
+            itemDom.placeholder.insertAfter(itemDom.host.children(item === 'header' ? 'colgroup' : 'tbody'));
             itemDom.floating.append(itemElement);
             this._widths(itemDom);
             return scrollLeftUpdate;
@@ -494,7 +494,7 @@ class FixedHeader {
             if (itemDom.host) {
                 if (!itemDom.host.contains(tablePart)) {
                     if (item === 'header') {
-                        tablePart.insertAfter(itemDom.host.find('colgroup'));
+                        tablePart.insertAfter(itemDom.host.children('colgroup'));
                     }
                     else {
                         itemDom.host.append(tablePart);
@@ -901,7 +901,7 @@ class FixedHeader {
         // header
         var cols = itemDom.placeholder
             .parent()
-            .find('colgroup')
+            .children('colgroup')
             .clone(true)
             .appendTo(itemDom.floating)
             .find('col');
@@ -928,7 +928,7 @@ FixedHeader.defaults = {
     footerOffset: 0
 };
 /** Version */
-FixedHeader.version = '5.1.0';
+FixedHeader.version = '5.1.1';
 
 
 if (!DataTable || !DataTable.versionCheck('3.1')) {
