@@ -77,59 +77,59 @@
     "jsdelivr-dist": "cropperjs"
   },
   "datatables": {
-    "version": "3.1.1",
+    "version": "3.1.2",
     "datatables": ""
   },
   "datatables-autofill": {
-    "version": "3.1.1",
+    "version": "3.1.2",
     "datatables-extension": "autofill"
   },
   "datatables-buttons": {
-    "version": "4.1.1",
+    "version": "4.1.2",
     "datatables-extension": "buttons"
   },
   "datatables-colreorder": {
-    "version": "3.1.1",
+    "version": "3.1.2",
     "datatables-extension": "colreorder"
   },
   "datatables-datetime": {
-    "version": "2.1.1",
+    "version": "2.1.2",
     "datatables-extension": "datetime"
   },
   "datatables-fixedcolumns": {
-    "version": "6.1.0",
+    "version": "6.1.1",
     "datatables-extension": "fixedcolumns"
   },
   "datatables-fixedheader": {
-    "version": "5.1.0",
+    "version": "5.1.1",
     "datatables-extension": "fixedheader"
   },
   "datatables-i18n": {
-    "version": "3.0.2",
+    "version": "3.1.2",
     "datatables-plugin": "i18n"
   },
   "datatables-keytable": {
-    "version": "3.1.0",
+    "version": "3.1.1",
     "datatables-extension": "keytable"
   },
   "datatables-responsive": {
-    "version": "4.1.0",
+    "version": "4.1.1",
     "datatables-extension": "responsive"
   },
   "datatables-rowgroup": {
-    "version": "2.1.0",
+    "version": "2.1.1",
     "datatables-extension": "rowgroup"
   },
   "datatables-rowreorder": {
-    "version": "2.1.0",
+    "version": "2.1.1",
     "datatables-extension": "rowreorder"
   },
   "datatables-scroller": {
-    "version": "3.1.0",
+    "version": "3.1.1",
     "datatables-extension": "scroller"
   },
   "datatables-searchbuilder": {
-    "version": "2.1.0",
+    "version": "2.1.1",
     "datatables-extension": "searchbuilder"
   },
   "datatables-searchpanes": {
@@ -137,11 +137,11 @@
     "datatables-extension": "searchpanes"
   },
   "datatables-select": {
-    "version": "4.1.0",
+    "version": "4.1.1",
     "datatables-extension": "select"
   },
   "datatables-staterestore": {
-    "version": "2.1.0",
+    "version": "2.1.1",
     "datatables-extension": "staterestore"
   },
   "exif-js": {
@@ -243,7 +243,7 @@
     "jsdelivr-dist": ""
   },
   "socket.io": {
-    "version": "4.8.3",
+    "version": "4.8.4",
     "jsdelivr-dist": "socket.io-client"
   },
   "strophe": {
