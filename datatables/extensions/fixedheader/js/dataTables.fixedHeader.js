@@ -1,4 +1,4 @@
-/*! FixedHeader 5.1.1 for DataTables
+/*! FixedHeader 5.1.2 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -305,7 +305,8 @@ class FixedHeader {
                 .attr('aria-hidden', 'true')
                 .css({
                 top: '0px',
-                left: '0px'
+                left: '0px',
+                'table-layout': 'fixed'
             })
                 .attrRemove('id');
             itemDom.floatingParent
@@ -635,7 +636,7 @@ class FixedHeader {
         var tbody = this.dom.tbody;
         var scrollBody = tableNode.parent();
         position.visible = tableNode.isVisible();
-        position.width = tableNode.width('outer');
+        position.width = tableNode.width('withBorder');
         position.left = tableNode.offset().left;
         position.theadTop = thead.offset().top;
         position.tbodyTop = scrollEnabled
@@ -928,7 +929,7 @@ FixedHeader.defaults = {
     footerOffset: 0
 };
 /** Version */
-FixedHeader.version = '5.1.1';
+FixedHeader.version = '5.1.2';
 
 
 if (!DataTable || !DataTable.versionCheck('3.1')) {
