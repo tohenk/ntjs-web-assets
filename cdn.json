@@ -231,7 +231,7 @@
     "jsdelivr-dist": "@popperjs/core"
   },
   "sceditor": {
-    "version": "3.2.1",
+    "version": "3.2.2",
     "jsdelivr": ""
   },
   "semantic-ui": {
