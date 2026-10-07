@@ -28,11 +28,24 @@ export declare const ACTION_TRANSFORM = "transform";
 
 export declare const ATTRIBUTE_ACTION = "action";
 
+/**
+ * Create a new Cropper instance.
+ * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.
+ * @param {CropperOptions} [options] - The configuration options.
+ * @returns {Cropper} A new Cropper instance.
+ */
+export declare function createCropper(element: HTMLImageElement | HTMLCanvasElement | string, options?: CropperOptions): Cropper;
+
 declare class Cropper {
     static version: string;
     element: HTMLImageElement | HTMLCanvasElement;
     options: CropperOptions;
     container: Element;
+    /**
+     * Create a new Cropper.
+     * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.
+     * @param {CropperOptions} [options] - The configuration options.
+     */
     constructor(element: HTMLImageElement | HTMLCanvasElement | string, options?: CropperOptions);
     getCropperCanvas(): CropperCanvas | null;
     getCropperImage(): CropperImage | null;
@@ -40,6 +53,7 @@ declare class Cropper {
     getCropperSelections(): NodeListOf<CropperSelection> | null;
     destroy(): void;
 }
+export { Cropper }
 export default Cropper;
 
 export declare const CROPPER_CANVAS = "cropper-canvas";
@@ -154,7 +168,103 @@ declare class CropperCanvas_2 extends CropperElement_2_2 {
     }): Promise<HTMLCanvasElement>;
 }
 
-declare class CropperCanvas_2_2 extends CropperElement_3_2 {
+declare class CropperCanvas_2_2 extends CropperElement_2_2_2 {
+    static $name: string;
+    static $version: string;
+    protected $onPointerDown: EventListener | null;
+    protected $onPointerMove: EventListener | null;
+    protected $onPointerUp: EventListener | null;
+    protected $onWheel: EventListener | null;
+    protected $wheeling: boolean;
+    protected readonly $pointers: Map<number, any>;
+    protected $style: string;
+    protected $action: string;
+    background: boolean;
+    disabled: boolean;
+    scaleStep: number;
+    themeColor: string;
+    protected static get observedAttributes(): string[];
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected $bind(): void;
+    protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
+    protected $handlePointerDown(event: Event): void;
+    protected $handlePointerMove(event: Event): void;
+    protected $handlePointerUp(event: Event): void;
+    protected $handleWheel(event: Event): void;
+    /**
+     * Changes the current action to a new one.
+     * @param {string} action The new action.
+     * @returns {CropperCanvas} Returns `this` for chaining.
+     */
+    $setAction(action: string): this;
+    /**
+     * Generates a real canvas element, with the image draw into if there is one.
+     * @param {object} [options] The available options.
+     * @param {number} [options.width] The width of the canvas.
+     * @param {number} [options.height] The height of the canvas.
+     * @param {Function} [options.beforeDraw] The function called before drawing the image onto the canvas.
+     * @returns {Promise} Returns a promise that resolves to the generated canvas element.
+     */
+    $toCanvas(options?: {
+        width?: number;
+        height?: number;
+        beforeDraw?: (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void;
+    }): Promise<HTMLCanvasElement>;
+}
+
+declare class CropperCanvas_2_2_2 extends CropperElement_2_2_2_2 {
+    static $name: string;
+    static $version: string;
+    protected $onPointerDown: EventListener | null;
+    protected $onPointerMove: EventListener | null;
+    protected $onPointerUp: EventListener | null;
+    protected $onWheel: EventListener | null;
+    protected $wheeling: boolean;
+    protected readonly $pointers: Map<number, any>;
+    protected $style: string;
+    protected $action: string;
+    background: boolean;
+    disabled: boolean;
+    scaleStep: number;
+    themeColor: string;
+    protected static get observedAttributes(): string[];
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected $bind(): void;
+    protected $unbind(): void;
+    protected $addPointers(event: Event): void;
+    protected $removePointers(event: Event): void;
+    protected $handlePointerDown(event: Event): void;
+    protected $handlePointerMove(event: Event): void;
+    protected $handlePointerUp(event: Event): void;
+    protected $handleWheel(event: Event): void;
+    /**
+     * Changes the current action to a new one.
+     * @param {string} action The new action.
+     * @returns {CropperCanvas} Returns `this` for chaining.
+     */
+    $setAction(action: string): this;
+    /**
+     * Generates a real canvas element, with the image draw into if there is one.
+     * @param {object} [options] The available options.
+     * @param {number} [options.width] The width of the canvas.
+     * @param {number} [options.height] The height of the canvas.
+     * @param {Function} [options.beforeDraw] The function called before drawing the image onto the canvas.
+     * @returns {Promise} Returns a promise that resolves to the generated canvas element.
+     */
+    $toCanvas(options?: {
+        width?: number;
+        height?: number;
+        beforeDraw?: (context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void;
+    }): Promise<HTMLCanvasElement>;
+}
+
+declare class CropperCanvas_2_3 extends CropperElement_2_2_3 {
     static $name: string;
     static $version: string;
     protected $onPointerDown: EventListener | null;
@@ -346,7 +456,7 @@ declare class CropperCanvas_4 extends CropperElement_2_4 {
     }): Promise<HTMLCanvasElement>;
 }
 
-declare class CropperCanvas_5 extends CropperElement_2_2_2 {
+declare class CropperCanvas_5 extends CropperElement_2_5 {
     static $name: string;
     static $version: string;
     protected $onPointerDown: EventListener | null;
@@ -558,6 +668,108 @@ declare class CropperElement_2_2 extends HTMLElement {
 }
 
 declare class CropperElement_2_2_2 extends HTMLElement {
+    static $name: string;
+    static $version: string;
+    protected $style?: string;
+    protected $template?: string;
+    protected get $sharedStyle(): string;
+    shadowRootMode: ShadowRootMode;
+    slottable: boolean;
+    themeColor?: string;
+    constructor();
+    protected static get observedAttributes(): string[];
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $getTagNameOf(name: string): string;
+    protected $setStyles(properties: Record<string, any>): this;
+    /**
+     * Outputs the shadow root of the element.
+     * @returns {ShadowRoot} Returns the shadow root.
+     */
+    $getShadowRoot(): ShadowRoot;
+    /**
+     * Adds styles to the shadow root.
+     * @param {string} styles The styles to add.
+     * @returns {CSSStyleSheet|HTMLStyleElement} Returns the generated style sheet.
+     */
+    $addStyles(styles: string): CSSStyleSheet | HTMLStyleElement;
+    /**
+     * Dispatches an event at the element.
+     * @param {string} type The name of the event.
+     * @param {*} [detail] The data passed when initializing the event.
+     * @param {CustomEventInit} [options] The other event options.
+     * @returns {boolean} Returns the result value.
+     */
+    $emit(type: string, detail?: unknown, options?: CustomEventInit): boolean;
+    /**
+     * Defers the callback to be executed after the next DOM update cycle.
+     * @param {Function} [callback] The callback to execute after the next DOM update cycle.
+     * @returns {Promise} A promise that resolves to nothing.
+     */
+    $nextTick(callback?: () => void): Promise<void>;
+    /**
+     * Defines the constructor as a new custom element.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CustomElementRegistry/define}
+     * @param {string|object} [name] The element name.
+     * @param {object} [options] The element definition options.
+     */
+    static $define(name?: string | ElementDefinitionOptions, options?: ElementDefinitionOptions): void;
+}
+
+declare class CropperElement_2_2_2_2 extends HTMLElement {
+    static $name: string;
+    static $version: string;
+    protected $style?: string;
+    protected $template?: string;
+    protected get $sharedStyle(): string;
+    shadowRootMode: ShadowRootMode;
+    slottable: boolean;
+    themeColor?: string;
+    constructor();
+    protected static get observedAttributes(): string[];
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $getTagNameOf(name: string): string;
+    protected $setStyles(properties: Record<string, any>): this;
+    /**
+     * Outputs the shadow root of the element.
+     * @returns {ShadowRoot} Returns the shadow root.
+     */
+    $getShadowRoot(): ShadowRoot;
+    /**
+     * Adds styles to the shadow root.
+     * @param {string} styles The styles to add.
+     * @returns {CSSStyleSheet|HTMLStyleElement} Returns the generated style sheet.
+     */
+    $addStyles(styles: string): CSSStyleSheet | HTMLStyleElement;
+    /**
+     * Dispatches an event at the element.
+     * @param {string} type The name of the event.
+     * @param {*} [detail] The data passed when initializing the event.
+     * @param {CustomEventInit} [options] The other event options.
+     * @returns {boolean} Returns the result value.
+     */
+    $emit(type: string, detail?: unknown, options?: CustomEventInit): boolean;
+    /**
+     * Defers the callback to be executed after the next DOM update cycle.
+     * @param {Function} [callback] The callback to execute after the next DOM update cycle.
+     * @returns {Promise} A promise that resolves to nothing.
+     */
+    $nextTick(callback?: () => void): Promise<void>;
+    /**
+     * Defines the constructor as a new custom element.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CustomElementRegistry/define}
+     * @param {string|object} [name] The element name.
+     * @param {object} [options] The element definition options.
+     */
+    static $define(name?: string | ElementDefinitionOptions, options?: ElementDefinitionOptions): void;
+}
+
+declare class CropperElement_2_2_3 extends HTMLElement {
     static $name: string;
     static $version: string;
     protected $style?: string;
@@ -864,6 +1076,108 @@ declare class CropperElement_3 extends HTMLElement {
 }
 
 declare class CropperElement_3_2 extends HTMLElement {
+    static $name: string;
+    static $version: string;
+    protected $style?: string;
+    protected $template?: string;
+    protected get $sharedStyle(): string;
+    shadowRootMode: ShadowRootMode;
+    slottable: boolean;
+    themeColor?: string;
+    constructor();
+    protected static get observedAttributes(): string[];
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $getTagNameOf(name: string): string;
+    protected $setStyles(properties: Record<string, any>): this;
+    /**
+     * Outputs the shadow root of the element.
+     * @returns {ShadowRoot} Returns the shadow root.
+     */
+    $getShadowRoot(): ShadowRoot;
+    /**
+     * Adds styles to the shadow root.
+     * @param {string} styles The styles to add.
+     * @returns {CSSStyleSheet|HTMLStyleElement} Returns the generated style sheet.
+     */
+    $addStyles(styles: string): CSSStyleSheet | HTMLStyleElement;
+    /**
+     * Dispatches an event at the element.
+     * @param {string} type The name of the event.
+     * @param {*} [detail] The data passed when initializing the event.
+     * @param {CustomEventInit} [options] The other event options.
+     * @returns {boolean} Returns the result value.
+     */
+    $emit(type: string, detail?: unknown, options?: CustomEventInit): boolean;
+    /**
+     * Defers the callback to be executed after the next DOM update cycle.
+     * @param {Function} [callback] The callback to execute after the next DOM update cycle.
+     * @returns {Promise} A promise that resolves to nothing.
+     */
+    $nextTick(callback?: () => void): Promise<void>;
+    /**
+     * Defines the constructor as a new custom element.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CustomElementRegistry/define}
+     * @param {string|object} [name] The element name.
+     * @param {object} [options] The element definition options.
+     */
+    static $define(name?: string | ElementDefinitionOptions, options?: ElementDefinitionOptions): void;
+}
+
+declare class CropperElement_3_2_2 extends HTMLElement {
+    static $name: string;
+    static $version: string;
+    protected $style?: string;
+    protected $template?: string;
+    protected get $sharedStyle(): string;
+    shadowRootMode: ShadowRootMode;
+    slottable: boolean;
+    themeColor?: string;
+    constructor();
+    protected static get observedAttributes(): string[];
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $getTagNameOf(name: string): string;
+    protected $setStyles(properties: Record<string, any>): this;
+    /**
+     * Outputs the shadow root of the element.
+     * @returns {ShadowRoot} Returns the shadow root.
+     */
+    $getShadowRoot(): ShadowRoot;
+    /**
+     * Adds styles to the shadow root.
+     * @param {string} styles The styles to add.
+     * @returns {CSSStyleSheet|HTMLStyleElement} Returns the generated style sheet.
+     */
+    $addStyles(styles: string): CSSStyleSheet | HTMLStyleElement;
+    /**
+     * Dispatches an event at the element.
+     * @param {string} type The name of the event.
+     * @param {*} [detail] The data passed when initializing the event.
+     * @param {CustomEventInit} [options] The other event options.
+     * @returns {boolean} Returns the result value.
+     */
+    $emit(type: string, detail?: unknown, options?: CustomEventInit): boolean;
+    /**
+     * Defers the callback to be executed after the next DOM update cycle.
+     * @param {Function} [callback] The callback to execute after the next DOM update cycle.
+     * @returns {Promise} A promise that resolves to nothing.
+     */
+    $nextTick(callback?: () => void): Promise<void>;
+    /**
+     * Defines the constructor as a new custom element.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CustomElementRegistry/define}
+     * @param {string|object} [name] The element name.
+     * @param {object} [options] The element definition options.
+     */
+    static $define(name?: string | ElementDefinitionOptions, options?: ElementDefinitionOptions): void;
+}
+
+declare class CropperElement_3_3 extends HTMLElement {
     static $name: string;
     static $version: string;
     protected $style?: string;
@@ -1304,6 +1618,7 @@ export declare class CropperImage extends CropperElement_3 {
     static $name: string;
     static $version: string;
     protected $isReady: boolean;
+    protected $insetRejected: boolean;
     protected $matrix: number[];
     protected $onLoad: EventListener | null;
     protected $onCanvasAction: EventListener | null;
@@ -1319,6 +1634,9 @@ export declare class CropperImage extends CropperElement_3 {
     initialFit: string;
     maxFit: string;
     minFit: string;
+    maxInset: string;
+    minInset: string;
+    zoomAroundCenter: boolean;
     rotatable: boolean;
     scalable: boolean;
     skewable: boolean;
@@ -1341,6 +1659,8 @@ export declare class CropperImage extends CropperElement_3 {
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
+    protected $exceedsFit(imageRect: DOMRect, canvasRect: DOMRect): boolean;
+    protected $exceedsInset(imageRect: DOMRect, canvasRect: DOMRect): boolean;
     protected $handleLoad(): void;
     protected $handleAction(event: Event | CustomEvent): void;
     /**
@@ -1453,10 +1773,11 @@ export declare class CropperImage extends CropperElement_3 {
     $resetTransform(): this;
 }
 
-declare class CropperImage_2 extends CropperElement_2_5 {
+declare class CropperImage_2 extends CropperElement_3_2 {
     static $name: string;
     static $version: string;
     protected $isReady: boolean;
+    protected $insetRejected: boolean;
     protected $matrix: number[];
     protected $onLoad: EventListener | null;
     protected $onCanvasAction: EventListener | null;
@@ -1472,6 +1793,9 @@ declare class CropperImage_2 extends CropperElement_2_5 {
     initialFit: string;
     maxFit: string;
     minFit: string;
+    maxInset: string;
+    minInset: string;
+    zoomAroundCenter: boolean;
     rotatable: boolean;
     scalable: boolean;
     skewable: boolean;
@@ -1487,13 +1811,333 @@ declare class CropperImage_2 extends CropperElement_2_5 {
     sizes: string;
     src: string;
     srcset: string;
-    protected set $canvas(element: CropperCanvas_5);
-    protected get $canvas(): CropperCanvas_5;
+    protected set $canvas(element: CropperCanvas_2_2);
+    protected get $canvas(): CropperCanvas_2_2;
     protected static get observedAttributes(): string[];
     protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
+    protected $exceedsFit(imageRect: DOMRect, canvasRect: DOMRect): boolean;
+    protected $exceedsInset(imageRect: DOMRect, canvasRect: DOMRect): boolean;
+    protected $handleLoad(): void;
+    protected $handleAction(event: Event | CustomEvent): void;
+    /**
+     * Defers the callback to execute after successfully loading the image.
+     * @param {Function} [callback] The callback to execute after successfully loading the image.
+     * @returns {Promise} Returns a promise that resolves to the image element.
+     */
+    $ready(callback?: (image: HTMLImageElement) => unknown): Promise<HTMLImageElement>;
+    /**
+     * Aligns the image to the center of its parent element.
+     * @param {string} [size] The size of the image.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $center(size?: string): this;
+    /**
+     * Moves the image.
+     * @param {number} x The moving distance in the horizontal direction.
+     * @param {number} [y] The moving distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $move(x: number, y?: number): this;
+    /**
+     * Moves the image to a specific position.
+     * @param {number} x The new position in the horizontal direction.
+     * @param {number} [y] The new position in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $moveTo(x: number, y?: number): this;
+    /**
+     * Rotates the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/rotate}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/rotate}
+     * @param {number|string} angle The rotation angle (in radians).
+     * @param {number} [x] The rotation origin in the horizontal, defaults to the center of the image.
+     * @param {number} [y] The rotation origin in the vertical, defaults to the center of the image.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $rotate(angle: number | string, x?: number, y?: number): this;
+    /**
+     * Zooms the image.
+     * @param {number} scale The zoom factor. Positive numbers for zooming in, and negative numbers for zooming out.
+     * @param {number} [x] The zoom origin in the horizontal, defaults to the center of the image.
+     * @param {number} [y] The zoom origin in the vertical, defaults to the center of the image.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $zoom(scale: number, x?: number, y?: number): this;
+    /**
+     * Scales the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/scale}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/scale}
+     * @param {number} x The scaling factor in the horizontal direction.
+     * @param {number} [y] The scaling factor in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $scale(x: number, y?: number): this;
+    /**
+     * Skews the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/skew}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/transform}
+     * @param {number|string} x The skewing angle in the horizontal direction.
+     * @param {number|string} [y] The skewing angle in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $skew(x: number | string, y?: number | string): this;
+    /**
+     * Translates the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/translate}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/translate}
+     * @param {number} x The translating distance in the horizontal direction.
+     * @param {number} [y] The translating distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $translate(x: number, y?: number): this;
+    /**
+     * Transforms the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/matrix}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/transform}
+     * @param {number} a The scaling factor in the horizontal direction.
+     * @param {number} b The skewing angle in the vertical direction.
+     * @param {number} c The skewing angle in the horizontal direction.
+     * @param {number} d The scaling factor in the vertical direction.
+     * @param {number} e The translating distance in the horizontal direction.
+     * @param {number} f The translating distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $transform(a: number, b: number, c: number, d: number, e: number, f: number): this;
+    /**
+     * Resets (overrides) the current transform to the specific identity matrix.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setTransform}
+     * @param {number|Array} a The scaling factor in the horizontal direction.
+     * @param {number} b The skewing angle in the vertical direction.
+     * @param {number} c The skewing angle in the horizontal direction.
+     * @param {number} d The scaling factor in the vertical direction.
+     * @param {number} e The translating distance in the horizontal direction.
+     * @param {number} f The translating distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $setTransform(a: number | number[], b?: number, c?: number, d?: number, e?: number, f?: number): this;
+    /**
+     * Retrieves the current transformation matrix being applied to the element.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/getTransform}
+     * @returns {Array} Returns the readonly transformation matrix.
+     */
+    $getTransform(): number[];
+    /**
+     * Resets the current transform to the initial identity matrix.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/resetTransform}
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $resetTransform(): this;
+}
+
+declare class CropperImage_2_2 extends CropperElement_3_2_2 {
+    static $name: string;
+    static $version: string;
+    protected $isReady: boolean;
+    protected $insetRejected: boolean;
+    protected $matrix: number[];
+    protected $onLoad: EventListener | null;
+    protected $onCanvasAction: EventListener | null;
+    protected $onCanvasActionEnd: EventListener | null;
+    protected $onCanvasActionStart: EventListener | null;
+    protected $actionStartTarget: EventTarget | null;
+    protected $style: string;
+    readonly $image: HTMLImageElement;
+    /**
+     * @deprecated since version 2.2.0, use `initialFit` instead.
+     */
+    initialCenterSize: string;
+    initialFit: string;
+    maxFit: string;
+    minFit: string;
+    maxInset: string;
+    minInset: string;
+    zoomAroundCenter: boolean;
+    rotatable: boolean;
+    scalable: boolean;
+    skewable: boolean;
+    slottable: boolean;
+    translatable: boolean;
+    alt: string;
+    crossorigin: string;
+    decoding: string;
+    elementtiming: string;
+    fetchpriority: string;
+    loading: string;
+    referrerpolicy: string;
+    sizes: string;
+    src: string;
+    srcset: string;
+    protected set $canvas(element: CropperCanvas_2_2_2);
+    protected get $canvas(): CropperCanvas_2_2_2;
+    protected static get observedAttributes(): string[];
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $exceedsFit(imageRect: DOMRect, canvasRect: DOMRect): boolean;
+    protected $exceedsInset(imageRect: DOMRect, canvasRect: DOMRect): boolean;
+    protected $handleLoad(): void;
+    protected $handleAction(event: Event | CustomEvent): void;
+    /**
+     * Defers the callback to execute after successfully loading the image.
+     * @param {Function} [callback] The callback to execute after successfully loading the image.
+     * @returns {Promise} Returns a promise that resolves to the image element.
+     */
+    $ready(callback?: (image: HTMLImageElement) => unknown): Promise<HTMLImageElement>;
+    /**
+     * Aligns the image to the center of its parent element.
+     * @param {string} [size] The size of the image.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $center(size?: string): this;
+    /**
+     * Moves the image.
+     * @param {number} x The moving distance in the horizontal direction.
+     * @param {number} [y] The moving distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $move(x: number, y?: number): this;
+    /**
+     * Moves the image to a specific position.
+     * @param {number} x The new position in the horizontal direction.
+     * @param {number} [y] The new position in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $moveTo(x: number, y?: number): this;
+    /**
+     * Rotates the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/rotate}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/rotate}
+     * @param {number|string} angle The rotation angle (in radians).
+     * @param {number} [x] The rotation origin in the horizontal, defaults to the center of the image.
+     * @param {number} [y] The rotation origin in the vertical, defaults to the center of the image.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $rotate(angle: number | string, x?: number, y?: number): this;
+    /**
+     * Zooms the image.
+     * @param {number} scale The zoom factor. Positive numbers for zooming in, and negative numbers for zooming out.
+     * @param {number} [x] The zoom origin in the horizontal, defaults to the center of the image.
+     * @param {number} [y] The zoom origin in the vertical, defaults to the center of the image.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $zoom(scale: number, x?: number, y?: number): this;
+    /**
+     * Scales the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/scale}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/scale}
+     * @param {number} x The scaling factor in the horizontal direction.
+     * @param {number} [y] The scaling factor in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $scale(x: number, y?: number): this;
+    /**
+     * Skews the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/skew}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/transform}
+     * @param {number|string} x The skewing angle in the horizontal direction.
+     * @param {number|string} [y] The skewing angle in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $skew(x: number | string, y?: number | string): this;
+    /**
+     * Translates the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/translate}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/translate}
+     * @param {number} x The translating distance in the horizontal direction.
+     * @param {number} [y] The translating distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $translate(x: number, y?: number): this;
+    /**
+     * Transforms the image.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function/matrix}
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/transform}
+     * @param {number} a The scaling factor in the horizontal direction.
+     * @param {number} b The skewing angle in the vertical direction.
+     * @param {number} c The skewing angle in the horizontal direction.
+     * @param {number} d The scaling factor in the vertical direction.
+     * @param {number} e The translating distance in the horizontal direction.
+     * @param {number} f The translating distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $transform(a: number, b: number, c: number, d: number, e: number, f: number): this;
+    /**
+     * Resets (overrides) the current transform to the specific identity matrix.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setTransform}
+     * @param {number|Array} a The scaling factor in the horizontal direction.
+     * @param {number} b The skewing angle in the vertical direction.
+     * @param {number} c The skewing angle in the horizontal direction.
+     * @param {number} d The scaling factor in the vertical direction.
+     * @param {number} e The translating distance in the horizontal direction.
+     * @param {number} f The translating distance in the vertical direction.
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $setTransform(a: number | number[], b?: number, c?: number, d?: number, e?: number, f?: number): this;
+    /**
+     * Retrieves the current transformation matrix being applied to the element.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/getTransform}
+     * @returns {Array} Returns the readonly transformation matrix.
+     */
+    $getTransform(): number[];
+    /**
+     * Resets the current transform to the initial identity matrix.
+     * {@link https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/resetTransform}
+     * @returns {CropperImage} Returns `this` for chaining.
+     */
+    $resetTransform(): this;
+}
+
+declare class CropperImage_3 extends CropperElement_3_3 {
+    static $name: string;
+    static $version: string;
+    protected $isReady: boolean;
+    protected $insetRejected: boolean;
+    protected $matrix: number[];
+    protected $onLoad: EventListener | null;
+    protected $onCanvasAction: EventListener | null;
+    protected $onCanvasActionEnd: EventListener | null;
+    protected $onCanvasActionStart: EventListener | null;
+    protected $actionStartTarget: EventTarget | null;
+    protected $style: string;
+    readonly $image: HTMLImageElement;
+    /**
+     * @deprecated since version 2.2.0, use `initialFit` instead.
+     */
+    initialCenterSize: string;
+    initialFit: string;
+    maxFit: string;
+    minFit: string;
+    maxInset: string;
+    minInset: string;
+    zoomAroundCenter: boolean;
+    rotatable: boolean;
+    scalable: boolean;
+    skewable: boolean;
+    slottable: boolean;
+    translatable: boolean;
+    alt: string;
+    crossorigin: string;
+    decoding: string;
+    elementtiming: string;
+    fetchpriority: string;
+    loading: string;
+    referrerpolicy: string;
+    sizes: string;
+    src: string;
+    srcset: string;
+    protected set $canvas(element: CropperCanvas_2_3);
+    protected get $canvas(): CropperCanvas_2_3;
+    protected static get observedAttributes(): string[];
+    protected attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
+    protected connectedCallback(): void;
+    protected disconnectedCallback(): void;
+    protected $exceedsFit(imageRect: DOMRect, canvasRect: DOMRect): boolean;
+    protected $exceedsInset(imageRect: DOMRect, canvasRect: DOMRect): boolean;
     protected $handleLoad(): void;
     protected $handleAction(event: Event | CustomEvent): void;
     /**
@@ -1620,34 +2264,49 @@ export declare class CropperSelection extends CropperElement_6 {
     protected $onDocumentKeyDown: EventListener | null;
     protected $action: string;
     protected $actionStartTarget: EventTarget | null;
+    protected $resizeStart: (Selection_2 & {
+        action: string;
+        pageX: number;
+        pageY: number;
+    }) | null;
     protected $changing: boolean;
+    protected $insetRejected: boolean;
     protected $style: string;
     private $initialSelection;
+    private $changingAroundCenter;
     x: number;
     y: number;
     width: number;
     height: number;
     aspectRatio: number;
+    borderRadius: string;
     initialAspectRatio: number;
     initialCoverage: number;
     active: boolean;
     linked: boolean;
     dynamic: boolean;
     movable: boolean;
+    maxInset: string;
+    minInset: string;
     resizable: boolean;
+    resizeAroundCenter: boolean;
     zoomable: boolean;
+    zoomAroundCenter: boolean;
     multiple: boolean;
     keyboard: boolean;
     outlined: boolean;
     precise: boolean;
     protected set $canvas(element: CropperCanvas_4);
     protected get $canvas(): CropperCanvas_4;
+    protected set $image(element: CropperImage_2);
+    protected get $image(): CropperImage_2;
     protected static get observedAttributes(): string[];
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
+    protected $exceedsInset(x: number, y: number, width: number, height: number): boolean;
     protected $getSelections(): CropperSelection[];
-    protected $initSelection(center?: boolean, resize?: boolean): void;
+    protected $initSelection(center?: boolean, resize?: boolean): Promise<void>;
     protected $createSelection(): CropperSelection;
     protected $removeSelection(selection?: CropperSelection): void;
     protected $handleActionStart(event: Event): void;
@@ -1740,34 +2399,49 @@ declare class CropperSelection_2 extends CropperElement_4_2 {
     protected $onDocumentKeyDown: EventListener | null;
     protected $action: string;
     protected $actionStartTarget: EventTarget | null;
+    protected $resizeStart: (Selection_2_2 & {
+        action: string;
+        pageX: number;
+        pageY: number;
+    }) | null;
     protected $changing: boolean;
+    protected $insetRejected: boolean;
     protected $style: string;
     private $initialSelection;
+    private $changingAroundCenter;
     x: number;
     y: number;
     width: number;
     height: number;
     aspectRatio: number;
+    borderRadius: string;
     initialAspectRatio: number;
     initialCoverage: number;
     active: boolean;
     linked: boolean;
     dynamic: boolean;
     movable: boolean;
+    maxInset: string;
+    minInset: string;
     resizable: boolean;
+    resizeAroundCenter: boolean;
     zoomable: boolean;
+    zoomAroundCenter: boolean;
     multiple: boolean;
     keyboard: boolean;
     outlined: boolean;
     precise: boolean;
     protected set $canvas(element: CropperCanvas_3_2);
     protected get $canvas(): CropperCanvas_3_2;
+    protected set $image(element: CropperImage_2_2);
+    protected get $image(): CropperImage_2_2;
     protected static get observedAttributes(): string[];
     protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
+    protected $exceedsInset(x: number, y: number, width: number, height: number): boolean;
     protected $getSelections(): CropperSelection_2[];
-    protected $initSelection(center?: boolean, resize?: boolean): void;
+    protected $initSelection(center?: boolean, resize?: boolean): Promise<void>;
     protected $createSelection(): CropperSelection_2;
     protected $removeSelection(selection?: CropperSelection_2): void;
     protected $handleActionStart(event: Event): void;
@@ -1863,11 +2537,13 @@ export declare class CropperShade extends CropperElement_4 {
     y: number;
     width: number;
     height: number;
+    borderRadius: string;
     slottable: boolean;
     themeColor: string;
     protected set $canvas(element: CropperCanvas_3);
     protected get $canvas(): CropperCanvas_3;
     protected static get observedAttributes(): string[];
+    protected $propertyChangedCallback(name: string, oldValue: unknown, newValue: unknown): void;
     protected connectedCallback(): void;
     protected disconnectedCallback(): void;
     /**
@@ -1902,12 +2578,12 @@ export declare class CropperViewer extends CropperElement_9 {
     resize: string;
     selection: string;
     slottable: boolean;
-    protected set $image(element: CropperImage_2);
-    protected get $image(): CropperImage_2;
-    protected set $sourceImage(element: CropperImage_2);
-    protected get $sourceImage(): CropperImage_2;
-    protected set $canvas(element: CropperCanvas_2_2);
-    protected get $canvas(): CropperCanvas_2_2;
+    protected set $canvas(element: CropperCanvas_5);
+    protected get $canvas(): CropperCanvas_5;
+    protected set $image(element: CropperImage_3);
+    protected get $image(): CropperImage_3;
+    protected set $sourceImage(element: CropperImage_3);
+    protected get $sourceImage(): CropperImage_3;
     set $selection(element: CropperSelection_2);
     get $selection(): CropperSelection_2;
     protected static get observedAttributes(): string[];
@@ -1916,7 +2592,7 @@ export declare class CropperViewer extends CropperElement_9 {
     protected $handleSelectionChange(event: Event): void;
     protected $handleSourceImageLoad(): void;
     protected $handleSourceImageTransform(event?: Event): void;
-    protected $render(selection?: Selection_2, matrix?: number[]): void;
+    protected $render(selection?: Selection_2_2, matrix?: number[]): void;
     protected $transformImageByOffset(matrix: number[], x: number, y: number): void;
 }
 
@@ -1966,6 +2642,17 @@ export declare const EVENT_TOUCH_START: string;
 export declare const EVENT_TRANSFORM = "transform";
 
 export declare const EVENT_WHEEL = "wheel";
+
+/**
+ * Check if the distances to the edges of a container are out of the `maxInset` or `minInset` limits.
+ * @param {Array} distances The distances to the top, right, bottom, and left edges.
+ * @param {string} maxInset The max inset value.
+ * @param {string} minInset The min inset value.
+ * @param {Element} container The container element.
+ * @param {DOMRect} containerRect The bounding client rect of the container.
+ * @returns {boolean} Returns `true` if any distance is out of the limits, else `false`.
+ */
+export declare function exceedsInset(distances: number[], maxInset: string, minInset: string, container: Element, containerRect: DOMRect): boolean;
 
 /**
  * Get the max sizes in a rectangle under the given aspect ratio.
@@ -2136,6 +2823,13 @@ declare interface Selection_2 {
     height: number;
 }
 
+declare interface Selection_2_2 {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 declare interface SizeAdjustmentData {
     aspectRatio: number;
     height: number;
@@ -2155,6 +2849,13 @@ declare interface SizeAdjustmentDataWithoutWidth {
 declare type SizeAdjustmentType = 'contain' | 'cover';
 
 /**
+ * Split an inset value into its top-level tokens, keeping functions such as `calc()` intact.
+ * @param {string} value The inset value to split.
+ * @returns {Array} Returns the tokens.
+ */
+export declare function splitInsetValue(value: string): string[];
+
+/**
  * Convert an angle to a radian number.
  * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/angle}
  * @param {number|string} angle The angle to convert.
@@ -2168,6 +2869,17 @@ export declare function toAngleInRadian(angle: number | string): number;
  * @returns {string} Returns the transformed value.
  */
 export declare function toCamelCase(value: string): string;
+
+/**
+ * Convert a CSS `inset` value to pixel distances in the order of top, right, bottom, and left.
+ * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/inset}
+ * @param {string} value The inset value, supports 1 to 4 values.
+ * @param {number} width The reference width for percentages on the left and right sides.
+ * @param {number} height The reference height for percentages on the top and bottom sides.
+ * @param {Function} [resolve] Resolves the values that are neither numbers, pixels, nor percentages.
+ * @returns {Array} Returns the distances, `null` stands for `auto` (unlimited).
+ */
+export declare function toInsetValues(value: string, width: number, height: number, resolve?: (token: string, horizontal: boolean) => number | null): Array<number | null>;
 
 /**
  * Transform the given string from camelCase to kebab-case.

@@ -1,4 +1,4 @@
-/*! Cropper.js v2.2.0 | (c) 2015-present Chen Fengyuan | MIT */
+/*! Cropper.js v2.3.0 | (c) 2015-present Chen Fengyuan | MIT */
 import { isString, isElement, getRootDocument, CROPPER_IMAGE, CROPPER_CANVAS, CROPPER_SELECTION } from '@cropper/utils';
 export * from '@cropper/utils';
 import { CropperCanvas, CropperCrosshair, CropperGrid, CropperHandle, CropperImage, CropperSelection, CropperShade, CropperViewer } from '@cropper/elements';
@@ -37,6 +37,11 @@ CropperSelection.$define();
 CropperShade.$define();
 CropperViewer.$define();
 class Cropper {
+    /**
+     * Create a new Cropper.
+     * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.
+     * @param {CropperOptions} [options] - The configuration options.
+     */
     constructor(element, options) {
         var _a;
         this.options = DEFAULT_OPTIONS;
@@ -134,6 +139,15 @@ class Cropper {
         }
     }
 }
-Cropper.version = '2.2.0';
+Cropper.version = '2.3.0';
+/**
+ * Create a new Cropper instance.
+ * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.
+ * @param {CropperOptions} [options] - The configuration options.
+ * @returns {Cropper} A new Cropper instance.
+ */
+function createCropper(element, options) {
+    return new Cropper(element, options);
+}
 
-export { DEFAULT_TEMPLATE, Cropper as default };
+export { Cropper, DEFAULT_TEMPLATE, createCropper, Cropper as default };

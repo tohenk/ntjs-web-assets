@@ -1,4 +1,4 @@
-/*! Cropper.js v2.2.0 | (c) 2015-present Chen Fengyuan | MIT */
+/*! Cropper.js v2.3.0 | (c) 2015-present Chen Fengyuan | MIT */
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@cropper/utils'), require('@cropper/elements')) :
     typeof define === 'function' && define.amd ? define(['exports', '@cropper/utils', '@cropper/elements'], factory) :
@@ -38,6 +38,11 @@
     elements.CropperShade.$define();
     elements.CropperViewer.$define();
     class Cropper {
+        /**
+         * Create a new Cropper.
+         * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.
+         * @param {CropperOptions} [options] - The configuration options.
+         */
         constructor(element, options) {
             var _a;
             this.options = DEFAULT_OPTIONS;
@@ -135,9 +140,20 @@
             }
         }
     }
-    Cropper.version = '2.2.0';
+    Cropper.version = '2.3.0';
+    /**
+     * Create a new Cropper instance.
+     * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.
+     * @param {CropperOptions} [options] - The configuration options.
+     * @returns {Cropper} A new Cropper instance.
+     */
+    function createCropper(element, options) {
+        return new Cropper(element, options);
+    }
 
+    exports.Cropper = Cropper;
     exports.DEFAULT_TEMPLATE = DEFAULT_TEMPLATE;
+    exports.createCropper = createCropper;
     exports["default"] = Cropper;
     Object.keys(utils).forEach(function (k) {
         if (k !== 'default' && !exports.hasOwnProperty(k)) Object.defineProperty(exports, k, {
