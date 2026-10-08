@@ -49,7 +49,7 @@
     "jsdelivr-dist": "@eonasdan/tempus-dominus"
   },
   "bootstrap-icons": {
-    "version": "1.13.1",
+    "version": "1.13.2",
     "jsdelivr": ""
   },
   "bootstrap-select": {
@@ -69,7 +69,7 @@
     "jsdelivr-dist": ""
   },
   "ckeditor": {
-    "version": "48.5.2",
+    "version": "49.0.0",
     "ckeditor": ""
   },
   "cropper": {
