@@ -1,4 +1,4 @@
-/*! Cropper.js v2.3.0 | (c) 2015-present Chen Fengyuan | MIT */
+/*! Cropper.js v2.3.1 | (c) 2015-present Chen Fengyuan | MIT */
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@cropper/utils'), require('@cropper/elements')) :
     typeof define === 'function' && define.amd ? define(['exports', '@cropper/utils', '@cropper/elements'], factory) :
@@ -140,7 +140,7 @@
             }
         }
     }
-    Cropper.version = '2.3.0';
+    Cropper.version = '2.3.1';
     /**
      * Create a new Cropper instance.
      * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.

@@ -1,4 +1,4 @@
-/*! Cropper.js v2.3.0 | (c) 2015-present Chen Fengyuan | MIT */
+/*! Cropper.js v2.3.1 | (c) 2015-present Chen Fengyuan | MIT */
 import { isString, isElement, getRootDocument, CROPPER_IMAGE, CROPPER_CANVAS, CROPPER_SELECTION } from '@cropper/utils';
 export * from '@cropper/utils';
 import { CropperCanvas, CropperCrosshair, CropperGrid, CropperHandle, CropperImage, CropperSelection, CropperShade, CropperViewer } from '@cropper/elements';
@@ -139,7 +139,7 @@ class Cropper {
         }
     }
 }
-Cropper.version = '2.3.0';
+Cropper.version = '2.3.1';
 /**
  * Create a new Cropper instance.
  * @param {HTMLImageElement|HTMLCanvasElement|string} element - The target image or canvas element to crop.
