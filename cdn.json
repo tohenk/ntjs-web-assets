@@ -73,7 +73,7 @@
     "ckeditor": ""
   },
   "cropper": {
-    "version": "2.3.0",
+    "version": "2.3.1",
     "jsdelivr-dist": "cropperjs"
   },
   "datatables": {
@@ -133,7 +133,7 @@
     "datatables-extension": "searchbuilder"
   },
   "datatables-searchpanes": {
-    "version": "2.3.5",
+    "version": "3.0.0",
     "datatables-extension": "searchpanes"
   },
   "datatables-select": {
