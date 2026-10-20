@@ -141,7 +141,7 @@
     "datatables-extension": "select"
   },
   "datatables-staterestore": {
-    "version": "2.1.1",
+    "version": "2.2.0",
     "datatables-extension": "staterestore"
   },
   "exif-js": {
