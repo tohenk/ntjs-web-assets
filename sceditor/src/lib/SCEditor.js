@@ -434,6 +434,9 @@ export default function SCEditor(original, userOptions) {
 		});
 	};
 
+	// eslint-disable-next-line camelcase
+	base.__UNSTABLE__sanitize = sanitize;
+
 	/**
 	 * Creates the editor iframe and textarea
 	 * @private
@@ -1064,11 +1067,11 @@ export default function SCEditor(original, userOptions) {
 	 */
 	base.readOnly = function (readOnly) {
 		if (typeof readOnly !== 'boolean') {
-			return !sourceEditor.readonly;
+			return sourceEditor.readOnly;
 		}
 
 		wysiwygBody.contentEditable = !readOnly;
-		sourceEditor.readonly = !readOnly;
+		sourceEditor.readOnly = readOnly;
 
 		updateToolBar(readOnly);
 
@@ -3146,7 +3149,7 @@ export default function SCEditor(original, userOptions) {
 				'0': ')',
 				'-': '_',
 				'=': '+',
-				';': ': ',
+				';': ':',
 				'\'': '"',
 				',': '<',
 				'.': '>',
