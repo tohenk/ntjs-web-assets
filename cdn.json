@@ -255,7 +255,7 @@
     }
   },
   "tinymce": {
-    "version": "8.10.0",
+    "version": "8.10.1",
     "jsdelivr": ""
   },
   "tinymce-i18n": {
