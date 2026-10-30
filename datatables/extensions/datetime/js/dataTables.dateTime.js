@@ -1,4 +1,4 @@
-/*! DateTime 2.1.2 for DataTables.net
+/*! DateTime 2.1.3 for DataTables.net
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -10,13 +10,6 @@
 		});
 	}
 	else if (typeof exports === 'object') {
-		// CommonJS
-		var cjsRequires = function (root) {
-			if (! root.DataTable) {
-				require('datatables.net')(root);
-			}
-		};
-
 		if (typeof window === 'undefined') {
 			module.exports = function (root) {
 				if (! root) {
@@ -24,14 +17,20 @@
 					// root. This will give an error otherwise
 					root = window;
 				}
+				
+				var DataTable = root.DataTable ?
+					root.DataTable :
+					require('datatables.net')(root);
 
-				cjsRequires(root);
-				return factory(root, root.document, root.DataTable);
+				return factory(root, root.document, DataTable);
 			};
 		}
 		else {
-			cjsRequires(window);
-			module.exports = factory(window, window.document, window.DataTable);
+			var DataTable = window.DataTable ?
+				window.DataTable :
+				require('datatables.net');
+
+			module.exports = factory(window, window.document, DataTable);
 		}
 	}
 	else {
@@ -934,18 +933,16 @@ class DateTime {
             className += ' weekNumber';
         }
         // Show / hide month icons based on min/max
-        if (minDate) {
-            var underMin = minDate >= new Date(Date.UTC(year, month, 1, 0, 0, 0));
-            this.dom.title
-                .find('div.' + classPrefix + '-iconLeft')
-                .css('display', underMin ? 'none' : 'block');
-        }
-        if (maxDate) {
-            var overMax = maxDate < new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));
-            this.dom.title
-                .find('div.' + classPrefix + '-iconRight')
-                .css('display', overMax ? 'none' : 'block');
-        }
+        var underMin = minDate
+            && minDate >= new Date(Date.UTC(year, month, 1, 0, 0, 0));
+        this.dom.title
+            .find('div.' + classPrefix + '-iconLeft')
+            .css('display', underMin ? 'none' : 'block');
+        var overMax = maxDate
+            && maxDate < new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));
+        this.dom.title
+            .find('div.' + classPrefix + '-iconRight')
+            .css('display', overMax ? 'none' : 'block');
         return ('<table class="' +
             className +
             '">' +
@@ -1566,7 +1563,7 @@ DateTime.defaults = {
     showWeekNumber: false,
     yearRange: 25
 };
-DateTime.version = '2.1.2';
+DateTime.version = '2.1.3';
 // Global export - if no conflicts
 const win = DataTable.use('win');
 if (win && !win.DateTime) {

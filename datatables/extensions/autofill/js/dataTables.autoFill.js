@@ -1,4 +1,4 @@
-/*! AutoFill 3.1.2 for DataTables
+/*! AutoFill 3.1.3 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -10,13 +10,6 @@
 		});
 	}
 	else if (typeof exports === 'object') {
-		// CommonJS
-		var cjsRequires = function (root) {
-			if (! root.DataTable) {
-				require('datatables.net')(root);
-			}
-		};
-
 		if (typeof window === 'undefined') {
 			module.exports = function (root) {
 				if (! root) {
@@ -24,14 +17,20 @@
 					// root. This will give an error otherwise
 					root = window;
 				}
+				
+				var DataTable = root.DataTable ?
+					root.DataTable :
+					require('datatables.net')(root);
 
-				cjsRequires(root);
-				return factory(root, root.document, root.DataTable);
+				return factory(root, root.document, DataTable);
 			};
 		}
 		else {
-			cjsRequires(window);
-			module.exports = factory(window, window.document, window.DataTable);
+			var DataTable = window.DataTable ?
+				window.DataTable :
+				require('datatables.net');
+
+			module.exports = factory(window, window.document, DataTable);
 		}
 	}
 	else {
@@ -208,15 +207,31 @@ class AutoFill {
             handleDim.height = handle.height('outer');
             handleDim.width = handle.width('outer');
         }
-        // Might need to go through multiple offset parents
-        let offset = this._getPosition(node, this.dom.offsetParent);
         this.dom.attachedTo = node;
-        handle
-            .css({
-            top: offset.top + node.offsetHeight - handleDim.height + 'px',
-            left: offset.left + node.offsetWidth - handleDim.width + 'px'
-        })
-            .appendTo(this.dom.offsetParent);
+        if (Dom.s(node).css('position') === 'sticky') {
+            // FixedColumns will set the fixed cells to `sticky`, so we insert
+            // the drag handle into them directly since they are already an
+            // offset parent.
+            handle
+                .css({
+                top: node.offsetHeight - handleDim.height + 'px',
+                left: node.offsetWidth - handleDim.width + 'px'
+            })
+                .appendTo(node);
+        }
+        else {
+            // Might need to go through multiple offset parents
+            let offset = this._getPosition(node, this.dom.offsetParent);
+            handle
+                .css({
+                top: offset.top +
+                    node.offsetHeight -
+                    handleDim.height +
+                    'px',
+                left: offset.left + node.offsetWidth - handleDim.width + 'px'
+            })
+                .appendTo(this.dom.offsetParent);
+        }
     }
     /**
      * Determine can the fill type should be. This can be automatic, or ask the
@@ -312,7 +327,9 @@ class AutoFill {
             column: this.c.horizontal ? Dom.s(target).index() : start.column
         };
         var colIndx = dt.column.index('toData', end.column);
-        var endRow = dt.row(':eq(' + end.row + ')', { page: 'current' }); // Workaround for M581
+        var endRow = dt.row(':eq(' + (end.row >= 0 ? end.row : 0) + ')', {
+            page: 'current'
+        }); // Workaround for M581
         var endCell = Dom.s(dt.cell(endRow.index(), colIndx).node());
         // Be sure that is a DataTables controlled cell
         if (!dt.cell(endCell.get(0)).any()) {
@@ -939,7 +956,7 @@ AutoFill.defaults = {
     horizontal: true
 };
 /** AutoFill version */
-AutoFill.version = '3.1.2';
+AutoFill.version = '3.1.3';
 
 // Doesn't do anything - Not documented
 Api.register('autoFill()', function () {

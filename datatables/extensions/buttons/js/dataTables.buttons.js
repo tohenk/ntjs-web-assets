@@ -1,4 +1,4 @@
-/*! Buttons 4.1.2 for DataTables
+/*! Buttons 4.1.3 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -10,13 +10,6 @@
 		});
 	}
 	else if (typeof exports === 'object') {
-		// CommonJS
-		var cjsRequires = function (root) {
-			if (! root.DataTable) {
-				require('datatables.net')(root);
-			}
-		};
-
 		if (typeof window === 'undefined') {
 			module.exports = function (root) {
 				if (! root) {
@@ -24,14 +17,20 @@
 					// root. This will give an error otherwise
 					root = window;
 				}
+				
+				var DataTable = root.DataTable ?
+					root.DataTable :
+					require('datatables.net')(root);
 
-				cjsRequires(root);
-				return factory(root, root.document, root.DataTable);
+				return factory(root, root.document, DataTable);
 			};
 		}
 		else {
-			cjsRequires(window);
-			module.exports = factory(window, window.document, window.DataTable);
+			var DataTable = window.DataTable ?
+				window.DataTable :
+				require('datatables.net');
+
+			module.exports = factory(window, window.document, DataTable);
 		}
 	}
 	else {
@@ -947,7 +946,7 @@ const excelHtml5 = {
             '[Content_Types].xml': getXml('[Content_Types].xml')
         };
         var data = dt.buttons.exportData(config.exportOptions);
-        var columnTypes = dt.columns(config.exportOptions.columns).types();
+        var columnTypes = data.columnTypes;
         var currentRow, rowNode;
         var addRow = function (row) {
             currentRow = rowPos + 1;
@@ -994,7 +993,8 @@ const excelHtml5 = {
                     }
                 }
                 if (!cell) {
-                    if (columnTypes[i].includes('num') &&
+                    if (columnTypes[i] &&
+                        columnTypes[i].includes('num') &&
                         (typeof row[i] === 'number' ||
                             (row[i].match &&
                                 row[i].match(/^-?\d+(\.\d+)?([eE]\-?\d+)?$/) && // Includes exponential format
@@ -2223,7 +2223,7 @@ class Buttons {
                 if (top > half) {
                     top = half;
                 }
-                display.css('marginTop', top + 'px');
+                display.css('marginTop', -top + 'px');
             };
             place();
             Dom.w.on('resize.dtb-collection', function () {
@@ -3703,7 +3703,7 @@ Buttons.defaults = {
 /**
  * Version information
  */
-Buttons.version = '4.1.2';
+Buttons.version = '4.1.3';
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * DataTables API
@@ -4143,7 +4143,8 @@ var _exportData = function (dt, inOpts) {
         headerStructure: _headerFormatter(config.format.header, dt.table().header.structure(config.columns)),
         footer: footer,
         footerStructure: _headerFormatter(config.format.footer, dt.table().footer.structure(config.columns)),
-        body: body
+        body: body,
+        columnTypes: dt.columns(config.columns).types().toArray()
     };
     if (config.customizeData) {
         config.customizeData(data);
