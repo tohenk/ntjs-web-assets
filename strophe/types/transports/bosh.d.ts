@@ -6,9 +6,9 @@
  * More information on BOSH can be found in XEP 124.
  */
 type Connection = any;
-import Builder from '../builder';
-import Request from '../request';
-import type { Transport } from './types';
+import Builder from '../builder.js';
+import Request from '../request.js';
+import type { Transport } from './types.js';
 type ConnectionCallback = (connection: Connection) => void;
 /**
  * _Private_ helper class that handles BOSH Connections

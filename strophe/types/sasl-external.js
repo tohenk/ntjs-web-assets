@@ -1,4 +1,4 @@
-import SASLMechanism from './sasl';
+import SASLMechanism from './sasl.js';
 class SASLExternal extends SASLMechanism {
     constructor(mechname = 'EXTERNAL', isClientFirst = true, priority = 10) {
         super(mechname, isClientFirst, priority);

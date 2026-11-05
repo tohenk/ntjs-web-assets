@@ -1,31 +1,6 @@
-/**
- * This file implements the XEP-0114 "Jabber Component Protocol" transport for
- * Strophe.js, letting a Connection attach to an XMPP server as an external
- * component (`jabber:component:accept`) over a raw TCP stream.
- *
- * It is a streaming transport modelled on {@link Websocket}. Unlike a
- * client-to-server stream there is no SASL, no TLS negotiation and no resource
- * binding. After the stream is opened the component authenticates with a single
- * SHA-1 handshake (XEP-0114 §3) and is then CONNECTED. Because it relies on
- * `node:net` and `node:crypto` it is inherently Node-only and is not included
- * in the browser build.
- *
- * @example
- *   // Creating a connection with a XEP-0114 Component
- *   const conn = new Strophe.Connection('tcp://localhost:5347', { protocol: 'component' });
- *
- *   // jid = the component's own domain; pass = the shared secret
- *   conn.connect('component.example.org', 'the-shared-secret', (status) => {
- *       if (status === Strophe.Status.CONNECTED) {
- *           // send/receive stanzas (stamp `from` under component.example.org)
- *       }
- *   });
- */
-import { Buffer } from 'node:buffer';
-import { type Socket } from 'node:net';
-import type Connection from '../connection';
-import Builder from '../builder';
-import type { Transport } from './types';
+import type Connection from '../connection.js';
+import Builder from '../builder.js';
+import type { Transport } from './types.js';
 /**
  * Helper class that handles XEP-0114 external component connections.
  *
@@ -37,7 +12,7 @@ import type { Transport } from './types';
 declare class Component implements Transport {
     _conn: Connection;
     strip: string;
-    socket: Socket | null;
+    private socket;
     private _parser;
     private _streamId;
     /** Whether the XEP-0114 handshake has completed successfully. */
@@ -100,7 +75,7 @@ declare class Component implements Transport {
      * Feeds them into the incremental stream parser.
      * @param chunk - The bytes received from the socket.
      */
-    _onData(chunk: Buffer): void;
+    _onData(chunk: Uint8Array): void;
     /**
      * Handle the server's opening stream header. Captures the stream id and
      * replies with the SHA-1 handshake (XEP-0114 §3).

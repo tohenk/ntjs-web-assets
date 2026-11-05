@@ -7,7 +7,7 @@
  * SessionStorageBackend requires a browser page context, but only at
  * construction time, there is no module-level DOM access here.
  */
-import log from '../log';
+import log from '../log.js';
 /**
  * In-memory storage backend (Node, tests, or non-resumable setups).
  * State is serialized on save so callers can't mutate stored state by reference.

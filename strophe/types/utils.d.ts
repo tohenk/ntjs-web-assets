@@ -56,11 +56,36 @@ export declare function xmlGenerator(): Document;
 /**
  * Creates an XML DOM text node.
  * Provides a cross implementation version of document.createTextNode.
+ *
+ * The text is put through {@link xmlText} first. Nothing parses a node built
+ * this way, on its way in or on its way out, so this is the only chance to
+ * refuse text which cannot be sent. See {@link xmlText} for what that means.
+ *
  * @param text - The content of the text node.
  * @returns A new XML DOM text node.
  */
 export declare function xmlTextNode(text: string): Text;
 /**
+ * Remove the whitespace which pretty-printing put between an element's tags.
+ *
+ * XML written by hand (or via the {@link Stanza} template literal) is usually
+ * indented, and parsing it turns each run of indentation into a text node.
+ * Those whitespace-only text nodes are formatting, not content, so they're
+ * removed. Whitespace which is content is kept:
+ *
+ * - An element whose only child is a text node keeps it, so `<body>   </body>`
+ *   survives intact.
+ * - A subtree marked `xml:space="preserve"` is left alone, per XML 1.0 § 2.10,
+ *   until a descendant sets `xml:space="default"` again.
+ * - An XHTML-IM `<body>`, the one in the XHTML namespace, is left alone, since
+ *   the whitespace between its inline elements separates words rather than
+ *   laying them out.
+ *
+ * Whitespace interpolated into an `stx` template is content as well, but by
+ * the time the template has been concatenated into a string it can no longer
+ * be told apart from indentation. {@link Stanza} therefore marks it before
+ * parsing rather than exempting it here.
+ *
  * @param stanza
  * @returns
  */
@@ -184,29 +209,11 @@ export declare function forEachChild(elem: Element, elemName: string, func: (chi
  */
 export declare function isTagEqual(el: Element, name: string): boolean;
 /**
- * Return the XML namespace of an element.
- *
- * Prefers the serialized `xmlns` attribute and falls back to the DOM
- * `namespaceURI`, because the two diverge depending on how the element was
- * built and neither is reliable on its own:
- *
- *  - Locally-built stanzas (`$iq`, `stx`, {@link Builder}) are created with
- *    `createElement` and carry their namespace only in the `xmlns` attribute;
- *    their `namespaceURI` is null.
- *  - Stanzas received over the XEP-0114 component transport are built with
- *    `createElementNS` and carry their namespace only on `namespaceURI`; the
- *    redundant `xmlns` attribute is omitted.
- *  - WebSocket / BOSH stanzas parsed by `DOMParser` carry both, except on
- *    child elements that inherit the default namespace without redeclaring it
- *    (those have only `namespaceURI`).
- *
- * Checking both is the transport-agnostic way to read an element's namespace.
- *
- * @method Strophe.getNamespace
- * @param elem - The element whose namespace is wanted.
- * @returns The namespace URI, or null if the element has none.
+ * `whitespace` needs this too and cannot import it from here, since this module
+ * imports {@link strip} from there. It lives in `namespace` and is re-exported
+ * so that it still reaches the `Strophe` object with the rest of `utils`.
  */
-export declare function getNamespace(elem: Element): string | null;
+export { getNamespace } from './namespace.js';
 /**
  * Get the concatenation of all text children of an element.
  * @method Strophe.getText

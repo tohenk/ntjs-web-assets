@@ -1,11 +1,34 @@
+/**
+ * This file implements the XEP-0114 "Jabber Component Protocol" transport for
+ * Strophe.js, letting a Connection attach to an XMPP server as an external
+ * component (`jabber:component:accept`) over a raw TCP stream.
+ *
+ * It is a streaming transport modelled on {@link Websocket}. Unlike a
+ * client-to-server stream there is no SASL, no TLS negotiation and no resource
+ * binding. After the stream is opened the component authenticates with a single
+ * SHA-1 handshake (XEP-0114 §3) and is then CONNECTED. Because it relies on
+ * `node:net` and `node:crypto` it is inherently Node-only and is not included
+ * in the browser build.
+ *
+ * @example
+ *   // Creating a connection with a XEP-0114 Component
+ *   const conn = new Strophe.Connection('tcp://localhost:5347', { protocol: 'component' });
+ *
+ *   // jid = the component's own domain; pass = the shared secret
+ *   conn.connect('component.example.org', 'the-shared-secret', (status) => {
+ *       if (status === Strophe.Status.CONNECTED) {
+ *           // send/receive stanzas (stamp `from` under component.example.org)
+ *       }
+ *   });
+ */
 import { connect as netConnect } from 'node:net';
 import { createHash } from 'node:crypto';
-import Builder from '../builder';
-import { stx } from '../stanza';
-import log from '../log';
-import { ErrorCondition, NS, Status } from '../constants';
-import { xmlGenerator, xmlescape } from '../utils';
-import ComponentParser from './component-parser';
+import Builder from '../builder.js';
+import { stx } from '../stanza.js';
+import log from '../log.js';
+import { ErrorCondition, NS, Status } from '../constants.js';
+import { xmlGenerator, xmlescape } from '../utils.js';
+import ComponentParser from './component-parser.js';
 const DEFAULT_COMPONENT_PORT = 5347;
 /**
  * Extract the defined condition and optional descriptive text from a

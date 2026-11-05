@@ -14,10 +14,10 @@
  * beyond log/constants and its worker-safe siblings, in particular no
  * ../utils.ts or ../builder.ts, and no module-level DOM access.
  */
-import log from '../log';
-import { NS } from '../constants';
-import { H_WRAP, freshState, isCountableStanza, parseH, stampDelay, stripFrom, xmlEscape } from './utils';
-import { MemoryStorageBackend } from './storage';
+import log from '../log.js';
+import { NS } from '../constants.js';
+import { H_WRAP, freshState, isCountableStanza, parseH, stampDelay, stripFrom, xmlEscape } from './utils.js';
+import { MemoryStorageBackend } from './storage.js';
 /**
  * The XEP-0198 Stream Management engine.
  *

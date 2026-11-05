@@ -7,26 +7,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import Handler from './handler';
-import TimedHandler from './timed-handler';
-import Builder, { $build, $iq, $pres } from './builder';
-import log from './log';
-import { ErrorCondition, NS, Status } from './constants';
-import SASLAnonymous from './sasl-anon';
-import SASLExternal from './sasl-external';
-import SASLOAuthBearer from './sasl-oauthbearer';
-import SASLPlain from './sasl-plain';
-import SASLSHA1 from './sasl-sha1';
-import SASLSHA256 from './sasl-sha256';
-import SASLSHA384 from './sasl-sha384';
-import SASLSHA512 from './sasl-sha512';
-import SASLXOAuth2 from './sasl-xoauth2';
-import { addCookies, forEachChild, getBareJidFromJid, getDomainFromJid, getNodeFromJid, getResourceFromJid, getText, handleError, toElement, } from './utils';
-import { SessionError } from './errors';
-import Bosh from './transports/bosh';
-import WorkerWebsocket from './transports/worker-websocket';
-import Websocket from './transports/websocket';
-import StreamManagement, { SessionStorageBackend, StreamManagementMirror, isCountableStanza, toStanzaView, } from './stream-management';
+import Handler from './handler.js';
+import TimedHandler from './timed-handler.js';
+import Builder, { $build, $iq, $pres } from './builder.js';
+import log from './log.js';
+import { ErrorCondition, NS, Status } from './constants.js';
+import SASLAnonymous from './sasl-anon.js';
+import SASLExternal from './sasl-external.js';
+import SASLOAuthBearer from './sasl-oauthbearer.js';
+import SASLPlain from './sasl-plain.js';
+import SASLSHA1 from './sasl-sha1.js';
+import SASLSHA256 from './sasl-sha256.js';
+import SASLSHA384 from './sasl-sha384.js';
+import SASLSHA512 from './sasl-sha512.js';
+import SASLXOAuth2 from './sasl-xoauth2.js';
+import { addCookies, forEachChild, getBareJidFromJid, getDomainFromJid, getNodeFromJid, getResourceFromJid, getText, handleError, toElement, } from './utils.js';
+import { SessionError } from './errors.js';
+import Bosh from './transports/bosh.js';
+import WorkerWebsocket from './transports/worker-websocket.js';
+import Websocket from './transports/websocket.js';
+import StreamManagement, { SessionStorageBackend, StreamManagementMirror, isCountableStanza, toStanzaView, } from './stream-management/index.js';
 /**
  * _Private_ variable Used to store plugin names that need
  * initialization during Connection construction.

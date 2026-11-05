@@ -12,7 +12,7 @@
  * the opening tag with a regex. Divergence between the page and worker
  * environments is prevented by sharing the engine, not the parser.
  */
-import type { StanzaView } from './types';
+import type { StanzaView } from './types.js';
 /**
  * Extract a {@link StanzaView} from a raw websocket frame by inspecting its
  * opening tag. Namespace prefixes are stripped from the tag name and

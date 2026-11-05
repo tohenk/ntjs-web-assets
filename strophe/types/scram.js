@@ -7,8 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import utils from './utils';
-import log from './log';
+import utils from './utils.js';
+import log from './log.js';
 /**
  * @param authMessage
  * @param clientKey

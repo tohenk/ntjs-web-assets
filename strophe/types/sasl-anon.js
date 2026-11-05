@@ -1,4 +1,4 @@
-import SASLMechanism from './sasl';
+import SASLMechanism from './sasl.js';
 class SASLAnonymous extends SASLMechanism {
     constructor(mechname = 'ANONYMOUS', isClientFirst = false, priority = 20) {
         super(mechname, isClientFirst, priority);

@@ -1,11 +1,11 @@
-import type SASLMechanism from './sasl';
-import type Request from './request';
-import Handler from './handler';
-import TimedHandler from './timed-handler';
-import Builder from './builder';
-import { type Cookies } from './utils';
-import type { Transport } from './transports/types';
-import { type StreamManagementController, type StreamManagementOptions } from './stream-management';
+import type SASLMechanism from './sasl.js';
+import type Request from './request.js';
+import Handler from './handler.js';
+import TimedHandler from './timed-handler.js';
+import Builder from './builder.js';
+import { type Cookies } from './utils.js';
+import type { Transport } from './transports/types.js';
+import { type StreamManagementController, type StreamManagementOptions } from './stream-management/index.js';
 export interface ConnectionOptions {
     /**
      * Allows you to pass in cookies that will be included in HTTP requests.

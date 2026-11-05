@@ -1,7 +1,7 @@
-import type Connection from '../connection';
-import Websocket from './websocket';
-import Builder from '../builder';
-import { WebsocketLike, Transport } from './types';
+import type Connection from '../connection.js';
+import Websocket from './websocket.js';
+import Builder from '../builder.js';
+import { WebsocketLike, Transport } from './types.js';
 /**
  * Helper class that handles a websocket connection inside a shared worker.
  */

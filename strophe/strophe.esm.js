@@ -113,12 +113,17 @@ const LOG_LEVELS = {
  *
  * - ElementType.NORMAL - Normal element.
  * - ElementType.TEXT - Text data element.
+ * - ElementType.CDATA - CDATA section.
+ * - ElementType.PROCESSING_INSTRUCTION - Processing instruction.
+ * - ElementType.COMMENT - Comment.
  * - ElementType.FRAGMENT - XHTML fragment element.
  */
 const ElementType = {
     NORMAL: 1,
     TEXT: 3,
     CDATA: 4,
+    PROCESSING_INSTRUCTION: 7,
+    COMMENT: 8,
     FRAGMENT: 11,
 };
 
@@ -210,6 +215,256 @@ const log = {
     },
 };
 
+/*
+ * Reading and checking the namespace of an element, in a module of its own so
+ * that `whitespace` can reach it.
+ *
+ * {@link getNamespace} would otherwise live in `utils`, which is where the rest
+ * of this kind of thing is. But `whitespace` needs it, and `utils` imports
+ * `whitespace` for {@link stripWhitespace}, so `whitespace` cannot import
+ * `utils` back without a cycle. {@link checkNamespace} has no such reason to be
+ * here; it sits beside {@link getNamespace} because the two answer the same
+ * question.
+ *
+ * {@link getNamespace} is re-exported by `utils`, which is what puts it on the
+ * `Strophe` object. {@link checkNamespace} is internal and stays here.
+ */
+/**
+ * Return the XML namespace of an element.
+ *
+ * Prefers the serialized `xmlns` attribute and falls back to the DOM
+ * `namespaceURI`, because the two diverge depending on how the element was
+ * built and neither is reliable on its own:
+ *
+ *  - Locally-built stanzas (`$iq`, `stx`, {@link Builder}) are created with
+ *    `createElement` and carry their namespace only in the `xmlns` attribute;
+ *    their `namespaceURI` is null.
+ *  - Stanzas received over the XEP-0114 component transport are built with
+ *    `createElementNS` and carry their namespace only on `namespaceURI`; the
+ *    redundant `xmlns` attribute is omitted.
+ *  - WebSocket / BOSH stanzas parsed by `DOMParser` carry both, except on
+ *    child elements that inherit the default namespace without redeclaring it
+ *    (those have only `namespaceURI`).
+ *
+ * Checking both is the transport-agnostic way to read an element's namespace.
+ *
+ * @method Strophe.getNamespace
+ * @param elem - The element whose namespace is wanted.
+ * @returns The namespace URI, or null if the element has none.
+ */
+function getNamespace(elem) {
+    return elem.getAttribute('xmlns') || elem.namespaceURI;
+}
+/**
+ * Complain about a stanza which is in neither of the namespaces a stanza may
+ * be in.
+ *
+ * Only `message`, `iq` and `presence` are stanzas. Anything else is some other
+ * element which happens to have been passed in, and is in whatever namespace
+ * it likes.
+ *
+ * Reads `namespaceURI` rather than going through {@link getNamespace} because
+ * every caller hands it an element which has just come out of the parser,
+ * where the resolved namespace is the one that counts.
+ *
+ * @param node - The element to check.
+ * @param throwErrorIfInvalidNS - Whether the wrong namespace is fatal rather
+ *  than merely logged.
+ */
+function checkNamespace(node, throwErrorIfInvalidNS) {
+    if (!['message', 'iq', 'presence'].includes(node.nodeName.toLowerCase()))
+        return;
+    if (node.namespaceURI === NS.CLIENT || node.namespaceURI === NS.SERVER)
+        return;
+    const err_msg = `Invalid namespaceURI ${node.namespaceURI}`;
+    if (throwErrorIfInvalidNS) {
+        throw new Error(err_msg);
+    }
+    else {
+        log.error(err_msg);
+    }
+}
+
+/**
+ * Whether an element's whitespace-only text children are content instead of
+ * formatting.
+ *
+ * @param el
+ * @param inherited - Whether an ancestor already asked for preservation.
+ */
+function preservesWhitespace(el, inherited) {
+    // XML 1.0 § 2.10: xml:space applies to the element and all its
+    // descendants, until a descendant overrides it.
+    const space = el.getAttribute('xml:space');
+    if (space === 'preserve')
+        return true;
+    if (space === 'default')
+        return false;
+    // The XHTML-IM body of XEP-0071: markup a human wrote to be read, in which
+    // a run of whitespace between two inline elements separates words rather
+    // than laying them out, so removing it runs the words together.
+    //
+    // Only that <body>, which is why the namespace is read and not just the
+    // name. A <body> anywhere else is a different element which happens to
+    // share the name: a plain-text message body, whose whitespace is already
+    // kept by the single-text-node rule above and which otherwise holds nothing
+    // but the template's own indentation, or a BOSH wrapper, whose layout is
+    // nobody's content.
+    //
+    // XHTML in some other element, such as the <div> of an Atom type="xhtml"
+    // construct, is laid out by whatever wrote it and is stripped like the rest
+    // of it. Interpolate the parts to keep the whitespace between them, which
+    // is the whole point of a value being a value, or mark the element
+    // `xml:space="preserve"` where there is no `${}` to put them in.
+    //
+    // Being a guess about what the markup is for, it loses to xml:space either
+    // way round: the checks above come first, so `xml:space="default"` opts an
+    // XHTML-IM body back out again.
+    //
+    // Read through {@link getNamespace} rather than off `namespaceURI`: a
+    // stanza built rather than parsed, which is what `Builder` and `$msg().c()`
+    // produce, carries its namespace in an `xmlns` attribute and has no
+    // `namespaceURI` at all.
+    if (getNamespace(el) === NS.XHTML && el.localName.toLowerCase() === 'body')
+        return true;
+    return inherited;
+}
+/**
+ * Remove the whitespace which pretty-printing put between an element's tags.
+ *
+ * XML written by hand (or via the `stx` template literal) is usually indented,
+ * and parsing it turns each run of indentation into a text node. Those
+ * whitespace-only text nodes are formatting, not content, so they're removed.
+ * Whitespace which is content is kept:
+ *
+ * - An element whose only child is a text node keeps it, so `<body>   </body>`
+ *   survives intact.
+ * - A subtree marked `xml:space="preserve"` is left alone, per XML 1.0 § 2.10,
+ *   until a descendant sets `xml:space="default"` again.
+ * - An XHTML-IM `<body>`, the one in the XHTML namespace, is left alone, since
+ *   the whitespace between its inline elements separates words rather than
+ *   laying them out, unless it sets `xml:space="default"`.
+ * - Anything `keep` claims, which is how a caller which knows more than this
+ *   function does says so.
+ *
+ * Kept out of `utils` because everything `utils` exports is spread onto the
+ * `Strophe` object, and `keep` and `preserve` are internal rather than public
+ * API. {@link stripWhitespace} is the public entry point.
+ *
+ * @param el
+ * @param keep - Whether a whitespace-only text node is content after all.
+ * @param preserve - Whether an ancestor asked for whitespace to be preserved.
+ *  Only the recursion passes this.
+ * @returns
+ */
+function strip(el, keep, preserve = false) {
+    preserve = preservesWhitespace(el, preserve);
+    const childNodes = Array.from(el.childNodes);
+    if (childNodes.length === 1 && childNodes[0].nodeType === ElementType.TEXT) {
+        return el;
+    }
+    childNodes.forEach((node) => {
+        if (node.nodeType === ElementType.TEXT) {
+            if (!preserve && !/\S/.test(node.nodeValue) && !keep(node)) {
+                el.removeChild(node);
+            }
+        }
+        else if (node.nodeType === ElementType.NORMAL) {
+            strip(node, keep, preserve);
+        }
+    });
+    return el;
+}
+
+/**
+ * What XML 1.0 says a document may be made of, character by character.
+ *
+ * Kept in a module of its own because the `stx` builder and the Node DOM shim
+ * both have to ask this, and neither is somewhere the other can import from.
+ * It pulls in nothing itself, so the shim can have it at load time without
+ * dragging the library along behind it.
+ */
+/**
+ * Anything outside the `Char` production of XML 1.0 § 2.2.
+ *
+ * Tab, line feed and carriage return are the only control characters XML has;
+ * the rest of C0, the unpaired surrogates and the two non-characters at the end
+ * of the BMP cannot appear in a document at all, not even written as a
+ * character reference. The `u` flag is what makes the last range mean whole
+ * code points, so an astral character is one character here rather than the two
+ * surrogates it is stored as.
+ */
+// eslint-disable-next-line no-control-regex -- the three XML does allow have to be named to be allowed
+const NOT_XML_CHAR = /[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u;
+/**
+ * The first character of `text` which XML cannot represent, if it holds one.
+ *
+ * The caller words its own error, since what is worth saying depends on where
+ * the text came from: a value handed to `stx` can be pointed at and named,
+ * whereas a document arriving at the parser can only be refused.
+ *
+ * @param text
+ * @returns The character and where it is, or null if the text is entirely
+ *  representable.
+ */
+function findDisallowedChar(text) {
+    const found = NOT_XML_CHAR.exec(text);
+    if (!found)
+        return null;
+    const point = found[0].codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+    return { point: `U+${point}`, index: found.index };
+}
+/**
+ * A string as XML is able to carry it, for the places one is put into a tree
+ * without a parser ever reading it.
+ *
+ * Line endings are normalised as XML 1.0 § 2.11 requires. Left alone, a CRLF
+ * reaches the wire intact and every recipient's parser turns it into a line
+ * feed, so the sender's own tree disagrees with the one everyone else holds
+ * about a message they all received whole.
+ *
+ * A character XML cannot represent is refused. Nothing escapes one, so a stanza
+ * carrying it is unsendable: it would be serialized unchanged, and the server
+ * would answer the stream with `not-well-formed` and close it, costing the
+ * connection rather than the one message.
+ *
+ * @param text
+ * @param subject - What to call the text in the error, as the sentence's
+ *  subject: `A text node`, `The "id" attribute`.
+ * @returns The text, with its line endings normalised.
+ */
+function xmlText(text, subject) {
+    // `String()` because callers in plain JavaScript pass numbers to every API
+    // which reaches here, and `createTextNode` and `setAttribute` took them
+    // before this check stood in front of them.
+    const normalised = String(text).replace(/\r\n?/g, '\n');
+    const found = findDisallowedChar(normalised);
+    if (found) {
+        throw new Error(`${subject} holds ${found.point} at index ${found.index}, which XML cannot represent and no ` +
+            `escape can stand in for. Remove it before building the stanza.`);
+    }
+    return normalised;
+}
+/**
+ * Text already escaped by `xmlescape`, with its whitespace written so that an
+ * attribute value reads it back unchanged.
+ *
+ * A parser normalises the whitespace in an attribute value (XML 1.0 § 3.3.3):
+ * a tab, a line feed or a carriage return written literally is read back as a
+ * space. Written as a character reference each is read back as itself, which is
+ * the only way an attribute can carry one at all. Element content needs none of
+ * it, since a parser leaves the whitespace between tags as it stands.
+ *
+ * Takes the text escaped rather than escaping it, so that this module still
+ * pulls in nothing.
+ *
+ * @param escaped - Text which has been through `xmlescape`.
+ * @returns The text, as an attribute value has to hold it.
+ */
+function attributeWhitespace(escaped) {
+    return escaped.replace(/\t/g, '&#x9;').replace(/\n/g, '&#xA;').replace(/\r/g, '&#xD;');
+}
+
 /**
  * Takes a string and turns it into an XML Element.
  * @param string
@@ -223,17 +478,7 @@ function toElement(string, throwErrorIfInvalidNS) {
         throw new Error(`Parser Error: ${parserError}`);
     }
     const node = getFirstElementChild(doc);
-    if (['message', 'iq', 'presence'].includes(node.nodeName.toLowerCase()) &&
-        node.namespaceURI !== 'jabber:client' &&
-        node.namespaceURI !== 'jabber:server') {
-        const err_msg = `Invalid namespaceURI ${node.namespaceURI}`;
-        if (throwErrorIfInvalidNS) {
-            throw new Error(err_msg);
-        }
-        else {
-            log.error(err_msg);
-        }
-    }
+    checkNamespace(node, throwErrorIfInvalidNS);
     return node;
 }
 /**
@@ -354,33 +599,43 @@ function xmlGenerator() {
 /**
  * Creates an XML DOM text node.
  * Provides a cross implementation version of document.createTextNode.
+ *
+ * The text is put through {@link xmlText} first. Nothing parses a node built
+ * this way, on its way in or on its way out, so this is the only chance to
+ * refuse text which cannot be sent. See {@link xmlText} for what that means.
+ *
  * @param text - The content of the text node.
  * @returns A new XML DOM text node.
  */
 function xmlTextNode(text) {
-    return xmlGenerator().createTextNode(text);
+    return xmlGenerator().createTextNode(xmlText(text, 'A text node'));
 }
 /**
+ * Remove the whitespace which pretty-printing put between an element's tags.
+ *
+ * XML written by hand (or via the {@link Stanza} template literal) is usually
+ * indented, and parsing it turns each run of indentation into a text node.
+ * Those whitespace-only text nodes are formatting, not content, so they're
+ * removed. Whitespace which is content is kept:
+ *
+ * - An element whose only child is a text node keeps it, so `<body>   </body>`
+ *   survives intact.
+ * - A subtree marked `xml:space="preserve"` is left alone, per XML 1.0 § 2.10,
+ *   until a descendant sets `xml:space="default"` again.
+ * - An XHTML-IM `<body>`, the one in the XHTML namespace, is left alone, since
+ *   the whitespace between its inline elements separates words rather than
+ *   laying them out.
+ *
+ * Whitespace interpolated into an `stx` template is content as well, but by
+ * the time the template has been concatenated into a string it can no longer
+ * be told apart from indentation. {@link Stanza} therefore marks it before
+ * parsing rather than exempting it here.
+ *
  * @param stanza
  * @returns
  */
 function stripWhitespace(stanza) {
-    const childNodes = Array.from(stanza.childNodes);
-    if (childNodes.length === 1 && childNodes[0].nodeType === ElementType.TEXT) {
-        return stanza;
-    }
-    childNodes.forEach((node) => {
-        if (node.nodeName.toLowerCase() === 'body') {
-            return;
-        }
-        if (node.nodeType === ElementType.TEXT && !/\S/.test(node.nodeValue)) {
-            stanza.removeChild(node);
-        }
-        else if (node.nodeType === ElementType.NORMAL) {
-            stripWhitespace(node);
-        }
-    });
-    return stanza;
+    return strip(stanza, () => false);
 }
 /**
  * Creates an XML DOM node.
@@ -413,7 +668,7 @@ function getFirstElementChild(el) {
     let i = 0;
     const nodes = el.childNodes;
     while ((node = nodes[i++])) {
-        if (node.nodeType === 1)
+        if (node.nodeType === ElementType.NORMAL)
             return node;
     }
     return null;
@@ -453,7 +708,7 @@ function xmlElement(name, attrs, text) {
         for (const attr of attrs) {
             if (Array.isArray(attr)) {
                 if (attr[0] != null && attr[1] != null) {
-                    node.setAttribute(attr[0], attr[1]);
+                    node.setAttribute(attr[0], xmlText(attr[1], `The "${attr[0]}" attribute`));
                 }
             }
         }
@@ -461,7 +716,7 @@ function xmlElement(name, attrs, text) {
     else if (typeof attrs === 'object') {
         for (const k of Object.keys(attrs)) {
             if (k && attrs[k] != null) {
-                node.setAttribute(k, attrs[k].toString());
+                node.setAttribute(k, xmlText(attrs[k].toString(), `The "${k}" attribute`));
             }
         }
     }
@@ -688,32 +943,6 @@ function forEachChild(elem, elemName, func) {
  */
 function isTagEqual(el, name) {
     return el.tagName === name;
-}
-/**
- * Return the XML namespace of an element.
- *
- * Prefers the serialized `xmlns` attribute and falls back to the DOM
- * `namespaceURI`, because the two diverge depending on how the element was
- * built and neither is reliable on its own:
- *
- *  - Locally-built stanzas (`$iq`, `stx`, {@link Builder}) are created with
- *    `createElement` and carry their namespace only in the `xmlns` attribute;
- *    their `namespaceURI` is null.
- *  - Stanzas received over the XEP-0114 component transport are built with
- *    `createElementNS` and carry their namespace only on `namespaceURI`; the
- *    redundant `xmlns` attribute is omitted.
- *  - WebSocket / BOSH stanzas parsed by `DOMParser` carry both, except on
- *    child elements that inherit the default namespace without redeclaring it
- *    (those have only `namespaceURI`).
- *
- * Checking both is the transport-agnostic way to read an element's namespace.
- *
- * @method Strophe.getNamespace
- * @param elem - The element whose namespace is wanted.
- * @returns The namespace URI, or null if the element has none.
- */
-function getNamespace(elem) {
-    return elem.getAttribute('xmlns') || elem.namespaceURI;
 }
 /**
  * Get the concatenation of all text children of an element.
@@ -1056,7 +1285,10 @@ class Builder {
         const el = elem instanceof Builder ? elem.tree() : elem;
         const names = [...Array(el.attributes.length).keys()].map((i) => el.attributes[i].nodeName);
         names.sort();
-        let result = names.reduce((a, n) => `${a} ${n}="${xmlescape(el.attributes.getNamedItem(n).value)}"`, `<${el.nodeName}`);
+        // Escaping the whitespace is what makes the line endings xmlText
+        // normalised on the way in worth anything here: written literally, the
+        // tree held a line feed and every recipient's tree a space.
+        let result = names.reduce((a, n) => `${a} ${n}="${attributeWhitespace(xmlescape(el.attributes.getNamedItem(n).value))}"`, `<${el.nodeName}`);
         if (el.childNodes.length > 0) {
             result += '>';
             for (let i = 0; i < el.childNodes.length; i++) {
@@ -1142,7 +1374,7 @@ class Builder {
         for (const k in moreattrs) {
             if (Object.prototype.hasOwnProperty.call(moreattrs, k)) {
                 if (moreattrs[k] != null) {
-                    this.node.setAttribute(k, moreattrs[k].toString());
+                    this.node.setAttribute(k, xmlText(moreattrs[k].toString(), `The "${k}" attribute`));
                 }
                 else {
                     this.node.removeAttribute(k);
@@ -5910,20 +6142,558 @@ class Connection {
     }
 }
 
-var _Stanza_string, _Stanza_strings, _Stanza_values;
+var _Stanza_instances, _a, _Stanza_strings, _Stanza_values, _Stanza_expand, _Stanza_expandValue;
 class UnsafeXML extends String {
+}
+/**
+ * The whitespace in an `stx` template has two origins which mean opposite
+ * things. The static parts of the template are markup, so the line breaks and
+ * indentation between their tags are formatting and is stripped. Text
+ * interpolated with `${}` is considered content and its whitespace is kept.
+ *
+ * Interpolated values are therefore never written into the text which is
+ * parsed. Instead, a processing instruction stands in for it, and is replaced
+ * by the value's nodes once the tree exists. The processing instruction's name
+ * is `${SLOT}-${slotSeq}`, where `slotSeq` is the incrementing number for each
+ * expansion.
+ *
+ * The random part of the name keeps a value which is written into the template
+ * text verbatim, as one inside a tag or at document level is, from naming a
+ * slot by accident. It is not what stops such a value from naming one on
+ * purpose. {@link assertFilled} is, by requiring that every slot be accounted
+ * for exactly once, so do not read the name as a secret.
+ */
+const SLOT = `strophe-slot-${Math.random().toString(36).slice(2)}`;
+/** Gives each expansion a {@link SLOT} of its own. */
+let slotSeq = 0;
+/** The element a fragment of spliced-in markup is parsed inside. */
+const FRAGMENT = 'strophe-fragment';
+/**
+ * A cursor placed at the start of a template. A nested template shares it, so
+ * the whole stanza is expanded with the one slot name and filled in one pass.
+ */
+function newCursor() {
+    return {
+        mode: 'text',
+        quote: '',
+        depth: 0,
+        element: false,
+        prev: '',
+        tail: 0,
+        opened: false,
+        slot: `${SLOT}-${slotSeq++}`,
+    };
+}
+/**
+ * The run of text ended in the middle of what it was reading. The construct
+ * carries on into the next run, so the cursor is left in the mode it reached.
+ */
+const EXHAUSTED = -1;
+/**
+ * Element content, up to the `<` which ends it.
+ *
+ * What follows the `<` says what was opened. A comment, a CDATA section and a
+ * processing instruction are read whole by {@link scanDelimited}; everything
+ * else is a tag, and only some tags are an element's.
+ */
+function scanText(xml, i, cursor) {
+    const lt = xml.indexOf('<', i);
+    if (lt === -1)
+        return EXHAUSTED;
+    if (xml.startsWith('<!--', lt)) {
+        cursor.mode = 'comment';
+        return lt + 4;
+    }
+    if (xml.startsWith('<![CDATA[', lt)) {
+        cursor.mode = 'cdata';
+        cursor.tail = 0;
+        cursor.opened = false;
+        return lt + 9;
+    }
+    // A processing instruction has no attributes, so a quote in one is a
+    // character like any other, and the `?>` which ends it is a token like the
+    // `-->` which ends a comment. Read as a tag, a PI holding an apostrophe
+    // left the cursor inside an attribute value for the rest of the template,
+    // and every value after it was written out as though it were in one.
+    if (xml.startsWith('<?', lt)) {
+        cursor.mode = 'pi';
+        return lt + 2;
+    }
+    // A declaration is not an element, so it encloses nothing.
+    const next = xml[lt + 1];
+    cursor.element = next !== '!';
+    if (cursor.element)
+        cursor.depth += next === '/' ? -1 : 1;
+    cursor.mode = 'tag';
+    cursor.prev = '';
+    return lt + 1;
+}
+/**
+ * The inside of a tag, a character at a time, up to the `>` which ends it.
+ *
+ * A character at a time because a `>` inside an attribute value does not end
+ * the tag, so the quoting has to be followed through, and because whether the
+ * tag closed the element it opened is only readable from the character before
+ * the `>`.
+ */
+function scanTag(xml, i, cursor) {
+    const c = xml[i];
+    if (cursor.quote) {
+        // Inside an attribute value, where only its own closing quote counts.
+        if (c === cursor.quote)
+            cursor.quote = '';
+    }
+    else if (c === '"' || c === "'") {
+        cursor.quote = c;
+    }
+    else if (c === '>') {
+        // `<a/>` opened and closed an element in the one tag.
+        if (cursor.element && cursor.prev === '/')
+            cursor.depth--;
+        cursor.mode = 'text';
+    }
+    cursor.prev = c;
+    return i + 1;
+}
+const CLOSERS = { pi: '?>', comment: '-->', cdata: ']]>' };
+/**
+ * A processing instruction, a comment or a CDATA section, up to its closing
+ * token.
+ *
+ * All three are opaque. What they hold is not markup, so there is nothing in
+ * there to count and nowhere in there to stand a value.
+ *
+ * A run can end part-way through a `]]>`, with the `]` in this run and the `>`
+ * in the next. Neither run holds the token, so a search of either finds
+ * nothing, yet the parser reads the two as one text and closes the section
+ * there. The `]` a CDATA run ends in are therefore counted into
+ * {@link Cursor.tail}, for {@link emit} to hold against the run which follows.
+ * Two are all a `]]>` can use, so no more are counted.
+ */
+function scanDelimited(xml, i, cursor) {
+    const close = CLOSERS[cursor.mode];
+    const end = xml.indexOf(close, i);
+    if (end === -1) {
+        if (cursor.mode === 'cdata')
+            cursor.tail = Math.min(2, /\]*$/.exec(xml.slice(i))[0].length);
+        return EXHAUSTED;
+    }
+    cursor.mode = 'text';
+    cursor.tail = 0;
+    return end + close.length;
+}
+/**
+ * How each mode reads. Keyed by every mode there is, so a new one cannot be
+ * added to {@link Cursor} without saying how to read it.
+ */
+const SCANNERS = {
+    text: scanText,
+    tag: scanTag,
+    pi: scanDelimited,
+    comment: scanDelimited,
+    cdata: scanDelimited,
+};
+/**
+ * Read a run of template text, leaving the cursor where that text ended.
+ *
+ * This is a lexer that answers the question where in the markup the next value
+ * lands, because that decides whether it can be represented by a processing
+ * instruction or has to be written out verbatim.
+ *
+ * The parser can't answer this because it needs the finished text with every
+ * interpolated value already written, but the way the values are written (i.e.
+ * with or without whitespace) depends on the answer.
+ *
+ * It is deliberately not a validator and rejects nothing, since the parser will
+ * validate a moment later and will say it better. All it has to get right is which
+ * of three places the text ended in, and how many elements are open there:
+ *
+ * - in element content, where a value can be stood in for by a processing
+ *   instruction, so long as an element encloses it
+ * - inside a tag, where no processing instruction can go, so the value is
+ *   written out instead
+ * - inside a processing instruction, a comment or a CDATA section, likewise
+ */
+function scan(xml, cursor) {
+    let i = 0;
+    while (i !== EXHAUSTED && i < xml.length) {
+        i = SCANNERS[cursor.mode](xml, i, cursor);
+    }
+}
+/**
+ * Write text into the template, keeping the cursor in step with it.
+ *
+ * Everything which ends up in the text that is parsed goes through here, so
+ * the cursor has read what the parser will read. A value written verbatim can
+ * open or close a tag just as a static part of the template can, and if the
+ * cursor did not see it the two would disagree about where the next value
+ * lands. A value at document level is read like any other; what it opens is
+ * simply not counted, which {@link Stanza.expandValue} arranges by putting
+ * {@link Cursor.depth} back afterwards.
+ *
+ * Inside a CDATA section the parser reads one run into the next, so a `]]>`
+ * which begins in the run before this one and ends in this one would close the
+ * section where neither run wrote a close, and the rest of this run would be
+ * read as markup. A value in a CDATA section is written as characters, so it
+ * ends in whatever it ends in and is followed by whatever the template or the
+ * next value begins with, and the two can meet that way. The section is closed
+ * and opened again between them instead, and the parser reads the `]` and the
+ * `>` as the character data they were.
+ */
+function emit(xml, cursor) {
+    if (cursor.mode === 'cdata' && closesAcross(cursor.tail, xml)) {
+        xml = `]]><![CDATA[${xml}`;
+    }
+    scan(xml, cursor);
+    return xml;
+}
+/**
+ * Whether the first `]]>` the parser would read begins in the `]` the CDATA
+ * section's text so far ended in, which {@link Cursor.tail} counts, and ends in
+ * this run. One which begins in this run is the run's own: the template's
+ * closing token, or a `]]>` {@link serializeIntoCdata} has already split.
+ */
+function closesAcross(tail, xml) {
+    const at = (']'.repeat(tail) + xml).indexOf(']]>');
+    return at !== -1 && at < tail;
+}
+/**
+ * A value as it is written into the template text, where what surrounds it is
+ * markup and a string has to be escaped to be read as the characters it holds.
+ */
+function serializeValue(value) {
+    if (Array.isArray(value))
+        return value.map(serializeValue).join('');
+    if (value instanceof UnsafeXML || value instanceof Builder)
+        return value.toString();
+    return xmlescape((value !== null && value !== void 0 ? value : '').toString());
+}
+/**
+ * A value as it is written inside an attribute value.
+ *
+ * The one position where a parser rewrites what it reads: it flattens the
+ * whitespace in an attribute value, so a value's own whitespace would be lost
+ * on its way through the parser, in the one position where a value cannot be
+ * stood in for and so has to go through it at all. {@link attributeWhitespace}
+ * writes it so that it is read back as it was, as {@link Builder.serialize}
+ * does for an attribute set by hand, and the two agree.
+ *
+ * Interpolated markup is left as it stands, as it is everywhere else. An
+ * attribute value holds no markup, so `unsafeXML` there says the text is already
+ * written the way it is meant to be read.
+ */
+function serializeIntoAttribute(value) {
+    if (Array.isArray(value))
+        return value.map(serializeIntoAttribute).join('');
+    if (value instanceof UnsafeXML || value instanceof Builder)
+        return value.toString();
+    return attributeWhitespace(xmlescape(xmlText((value !== null && value !== void 0 ? value : '').toString(), 'An interpolated value')));
+}
+/**
+ * A value as its own characters, with nothing escaped and no markup meant.
+ */
+function characterData(value) {
+    if (Array.isArray(value))
+        return value.map(characterData).join('');
+    if (value instanceof UnsafeXML || value instanceof Builder)
+        return value.toString();
+    return (value !== null && value !== void 0 ? value : '').toString();
+}
+/**
+ * A value as it is written inside a CDATA section.
+ *
+ * A CDATA section escapes nothing. Everything up to the `]]>` which ends it is
+ * character data as it stands, so a value goes in as its own characters: an `&`
+ * written `&amp;` in there is read back as those five characters rather than as
+ * an ampersand, which is what escaping it did.
+ *
+ * `]]>` is the one sequence a value cannot carry, since it would end the
+ * section early and leave the rest of the value to be read as markup. XML has
+ * no escape for it, so the section is closed and opened again around it: the
+ * `]]` ends the first section and the `>` begins the second, and the two are
+ * read back as one run of character data. {@link scanDelimited} follows the
+ * same pair, so the cursor comes out of this still inside a CDATA section,
+ * which is where the template left it.
+ *
+ * Splitting after the parts are joined rather than within each of them is what
+ * catches a `]]>` which only exists because one part ended in `]]` and the next
+ * began with `>`. The same can happen at either end of the value, between it
+ * and the template text or the value beside it, which nothing here can see:
+ * {@link emit} catches that one, since it reads every run against the one
+ * before it.
+ */
+function serializeIntoCdata(value) {
+    return characterData(value).split(']]>').join(']]]]><![CDATA[>');
+}
+/**
+ * @param node
+ * @param slot - The target this expansion stands its values in.
+ */
+function isSlot(node, slot) {
+    return !!node && node.nodeType === ElementType.PROCESSING_INSTRUCTION && node.nodeName === slot;
+}
+/**
+ * Whether the node next to a run of template whitespace is a value which puts
+ * text with something in it against it. Whitespace between two elements is
+ * formatting, but whitespace next to text is part of that text.
+ *
+ * A value is asked about the end of it which faces the whitespace: the value
+ * before a run faces it with its last node, the one after it with its first.
+ * A string contributes the one text node, so both ends are the same node and
+ * the question is simply whether the string has anything in it. Spliced-in
+ * markup can begin in text and end in an element, or the other way about, so
+ * the two ends are asked separately.
+ *
+ * A value which resolved to no nodes is looked past rather than answered for.
+ * It puts nothing against the whitespace, so what the whitespace touches is
+ * whatever lies beyond it. Answering `false` there would let an unrelated
+ * optional value shadow the one next to it, and the line break in
+ * `<body>\n${prefix}${text}</body>` would survive or not according to whether
+ * `prefix` happened to be set.
+ *
+ * @param node - The sibling on that side of the whitespace, if there is one.
+ * @param edge - The end of the value which faces the whitespace. Also says
+ *  which way to keep looking when a value which resolved to nothing is passed
+ *  over: `first` is the side after the whitespace, `last` the side before it.
+ */
+function abutsText(node, slot, resolved, edge) {
+    let sibling = node;
+    while (isSlot(sibling, slot)) {
+        const nodes = resolved.get(sibling);
+        if (!(nodes === null || nodes === void 0 ? void 0 : nodes.length)) {
+            sibling = edge === 'first' ? sibling.nextSibling : sibling.previousSibling;
+            continue;
+        }
+        const end = nodes[edge === 'first' ? 0 : nodes.length - 1];
+        // A CDATA section is text written another way, so it counts as text here.
+        if (end.nodeType !== ElementType.TEXT && end.nodeType !== ElementType.CDATA)
+            return false;
+        return /\S/.test(end.nodeValue);
+    }
+    return false;
+}
+/**
+ * The namespace declarations in scope at an element, written out as they would
+ * appear on a tag.
+ *
+ * Every value under the one element is parsed in the same scope, so this is
+ * worked out once per element in {@link resolve} rather than once per value.
+ * The walk is up the ancestors, so the nearest declaration of a prefix is the
+ * one which is kept and the rest are passed over.
+ */
+function inScopeDeclarations(context) {
+    const declarations = [];
+    const seen = new Set();
+    for (let el = context; el; el = el.parentElement) {
+        Array.from(el.attributes).forEach(({ nodeName, value }) => {
+            if (nodeName !== 'xmlns' && !nodeName.startsWith('xmlns:'))
+                return;
+            if (seen.has(nodeName))
+                return;
+            seen.add(nodeName);
+            declarations.push(`${nodeName}="${xmlescape(value)}"`);
+        });
+    }
+    return declarations.join(' ');
+}
+/**
+ * Parse a fragment of markup as if it had been written where it was
+ * interpolated, by repeating the namespace declarations in scope there.
+ * Splicing markup in is then no different from writing it out in the template.
+ */
+function parseFragment(xml, declarations) {
+    const doc = xmlHtmlNode(`<${FRAGMENT} ${declarations}>${xml}</${FRAGMENT}>`);
+    const parserError = getParserError(doc);
+    if (parserError) {
+        throw new Error(`Parser Error: markup interpolated into an stx template must be well-formed on its own, ` +
+            `and cannot open or close an element belonging to the template: ${xml}\n` +
+            parserError.split(FRAGMENT).join('the enclosing element'));
+    }
+    return Array.from(getFirstElementChild(doc).childNodes);
+}
+/**
+ * The nodes a value contributes where it was interpolated.
+ *
+ * Markup is moved into the stanza's document rather than copied into it. Its
+ * own document was made to parse it and is dropped as soon as it has been read,
+ * so there is nothing for a copy to leave behind, and the deep copy
+ * `importNode` makes is the most expensive thing about splicing a value in.
+ *
+ * A value in element content becomes a text node without the parser reading it,
+ * so it goes through {@link xmlText} for the same reasons a text node built by
+ * {@link Builder} does. It cannot use {@link xmlTextNode} to make the node,
+ * since the node has to belong to the document the template was parsed into.
+ */
+function nodesFor(value, context, declarations) {
+    const doc = context.ownerDocument;
+    if (value instanceof UnsafeXML || value instanceof Builder) {
+        return parseFragment(value.toString(), declarations).map((node) => doc.adoptNode(node));
+    }
+    const text = xmlText((value !== null && value !== void 0 ? value : '').toString(), 'An interpolated value');
+    return text ? [doc.createTextNode(text)] : [];
+}
+/**
+ * Work out what each slot stands for, before any whitespace is weighed up.
+ *
+ * The template's whitespace next to a value is only formatting if what the
+ * value puts there is not text, and that is a question about nodes rather than
+ * about the string a value was written as. So the nodes have to exist before
+ * {@link strip} runs, which means resolving here rather than at substitution.
+ *
+ * A slot addressing no value is left out, which is how {@link substitute} tells
+ * one apart later without repeating the arithmetic.
+ *
+ * The namespace declarations every value under `el` is parsed in are the same,
+ * so they are worked out at most once here, and only where there is a value to
+ * parse: most elements have no slot under them at all.
+ */
+function resolve(el, slots, slot, resolved) {
+    let declarations;
+    Array.from(el.childNodes).forEach((node) => {
+        if (isSlot(node, slot)) {
+            const index = Number(node.data);
+            if (Number.isInteger(index) && index >= 0 && index < slots.length) {
+                if (declarations === undefined)
+                    declarations = inScopeDeclarations(el);
+                resolved.set(node, nodesFor(slots[index], el, declarations));
+            }
+        }
+        else if (node.nodeType === ElementType.NORMAL) {
+            resolve(node, slots, slot, resolved);
+        }
+    });
+}
+/**
+ * Replace each slot with its value's nodes, recording what was found.
+ *
+ * The nodes a value contributes are inserted where its slot was and are not
+ * descended into, so nothing which came from a value is ever rewritten. The
+ * child list is read before anything is inserted, which is what keeps those
+ * nodes out of the walk and so out of the tally: a value may hold a processing
+ * instruction of its own, whatever it is called, without being read as a slot.
+ *
+ * A processing instruction the template wrote out itself has a target of its
+ * own, so it isn't a slot and is passed over like any other node.
+ */
+function substitute(el, slot, resolved, tally) {
+    Array.from(el.childNodes).forEach((node) => {
+        if (isSlot(node, slot)) {
+            const nodes = resolved.get(node);
+            if (nodes) {
+                tally.filled[Number(node.data)]++;
+                nodes.forEach((child) => el.insertBefore(child, node));
+            }
+            else {
+                // Resolving left it out, so it addresses no value at all and
+                // stands in for nothing.
+                tally.stray++;
+            }
+            el.removeChild(node);
+        }
+        else if (node.nodeType === ElementType.NORMAL) {
+            substitute(node, slot, resolved, tally);
+        }
+    });
+}
+/**
+ * Refuse to hand back a tree which doesn't account for every value exactly once.
+ *
+ * Each value is stood in for by one slot, so one slot has to come back.
+ *
+ * Fewer means a value never made it into the stanza. {@link Builder.serialize}
+ * has no case for a processing instruction, so it would go out on the wire as
+ * nothing at all, which is the silent loss this whole mechanism exists to
+ * prevent. Markup written into the template text can cause it by leaving a slot
+ * somewhere it stops being a node: inside a comment or a CDATA section it is
+ * character data, and beside the root element it is outside the tree
+ * {@link fill} walks.
+ *
+ * More means a slot came back which the template never wrote. The same markup
+ * can put one there, and a slot is an address into the value list, so it would
+ * let one value stand in for another. Refusing is the point: a value's markup
+ * is its own and reaches no further.
+ */
+function assertFilled(tally) {
+    if (tally.filled.some((count) => count === 0)) {
+        throw new Error('An interpolated value never made it into the stanza. A value is only stood in for ' +
+            'where an element encloses it, so markup written into the template text must not ' +
+            'leave it inside a comment or a CDATA section, or beside the root element.');
+    }
+    if (tally.stray || tally.filled.some((count) => count > 1)) {
+        throw new Error('Markup interpolated into the template carried a placeholder of its own. ' +
+            'One value cannot stand in for another.');
+    }
+}
+/**
+ * Remove the whitespace which the template's own formatting put between its
+ * tags, replace the slots with their values, and check that every value was
+ * accounted for.
+ *
+ * The nodes a value stands for are worked out first, and put into the tree
+ * last. Stripping in between is what keeps the two kinds of whitespace apart:
+ * a value is still a slot while it runs, so it cannot delete one, and yet the
+ * nodes exist, so the predicate can ask what a value actually puts against the
+ * whitespace next to it.
+ *
+ * That is the one thing {@link strip} cannot tell on its own: whitespace
+ * written between two interpolations is content when it separates text and
+ * formatting when it separates elements, which is the distinction XML itself
+ * draws between mixed and element-only content. Where the answer is not the
+ * wanted one, `xml:space="preserve"` is the way out.
+ */
+function fill(el, slots, slot) {
+    const resolved = new Map();
+    resolve(el, slots, slot, resolved);
+    strip(el, (node) => abutsText(node.previousSibling, slot, resolved, 'last') ||
+        abutsText(node.nextSibling, slot, resolved, 'first'));
+    const tally = { filled: new Array(slots.length).fill(0), stray: 0 };
+    substitute(el, slot, resolved, tally);
+    assertFilled(tally);
+    prune(el);
+    // Each value becomes nodes of its own, and a pruned comment leaves the text
+    // either side of it apart, so text which reads as one run can be several
+    // nodes. Merge them back into the one a parser would have built, which is
+    // what 5.0.0 handed back when every value went through the parser.
+    el.normalize();
+}
+/**
+ * Remove the nodes a stanza cannot carry.
+ *
+ * RFC 6120 § 11.1 restricts an XML stream to a subset of XML which has neither
+ * comments nor processing instructions, and {@link Builder.serialize} writes
+ * neither. A template can hold both, in its own text or inside markup a value
+ * spliced in, so a tree which kept them would describe a different stanza from
+ * the one `toString()` and every transport put on the wire. Dropping them is
+ * what keeps the tree and the wire the same answer.
+ *
+ * Dropped rather than refused because a comment is a reasonable thing to write
+ * in a template, or to find in a fragment which came from somewhere else, and
+ * neither is worth failing a stanza over. Nothing is lost that could have been
+ * sent: writing one out invites the server to answer `restricted-xml` and close
+ * the stream.
+ *
+ * Runs after {@link substitute}, which is the first moment the tree holds every
+ * node it is going to hold. Before it, a slot is a processing instruction like
+ * any other and would be dropped instead of filled, and the nodes a value
+ * contributes are not in the tree yet to be looked at.
+ */
+function prune(el) {
+    Array.from(el.childNodes).forEach((node) => {
+        if (node.nodeType === ElementType.PROCESSING_INSTRUCTION || node.nodeType === ElementType.COMMENT) {
+            el.removeChild(node);
+        }
+        else if (node.nodeType === ElementType.NORMAL) {
+            prune(node);
+        }
+    });
 }
 /**
  * A Stanza represents a XML element used in XMPP (commonly referred to as stanzas).
  */
 class Stanza extends Builder {
-    /**
-     * @param strings
-     * @param values
-     */
     constructor(strings, values) {
         super('stanza');
-        _Stanza_string.set(this, void 0);
+        _Stanza_instances.add(this);
         _Stanza_strings.set(this, void 0);
         _Stanza_values.set(this, void 0);
         __classPrivateFieldSet(this, _Stanza_strings, strings, "f");
@@ -5936,8 +6706,6 @@ class Stanza extends Builder {
      * It's considered "unsafe" because it can pose a security risk if used with
      * untrusted input.
      *
-     * @param string
-     * @returns
      * @example
      *    const status = '<status>I am busy!</status>';
      *    const pres = stx`
@@ -5952,9 +6720,6 @@ class Stanza extends Builder {
     }
     /**
      * Turns the passed-in string into an XML Element.
-     * @param string
-     * @param throwErrorIfInvalidNS
-     * @returns
      */
     static toElement(string, throwErrorIfInvalidNS) {
         const doc = xmlHtmlNode(string);
@@ -5963,54 +6728,151 @@ class Stanza extends Builder {
             throw new Error(`Parser Error: ${parserError}`);
         }
         const node = stripWhitespace(getFirstElementChild(doc));
-        if (['message', 'iq', 'presence'].includes(node.nodeName.toLowerCase()) &&
-            node.namespaceURI !== 'jabber:client' &&
-            node.namespaceURI !== 'jabber:server') {
-            const err_msg = `Invalid namespaceURI ${node.namespaceURI}`;
-            if (throwErrorIfInvalidNS) {
-                throw new Error(err_msg);
-            }
-            else {
-                log.error(err_msg);
-            }
-        }
+        checkNamespace(node, throwErrorIfInvalidNS);
         return node;
     }
-    buildTree() {
-        return Stanza.toElement(this.toString(), true);
-    }
     /**
-     * @returns
+     * Build the stanza the template describes.
      */
-    toString() {
-        __classPrivateFieldSet(this, _Stanza_string, __classPrivateFieldGet(this, _Stanza_string, "f") ||
-            __classPrivateFieldGet(this, _Stanza_strings, "f")
-                .reduce((acc, str, idx) => {
-                const value = __classPrivateFieldGet(this, _Stanza_values, "f").length > idx ? __classPrivateFieldGet(this, _Stanza_values, "f")[idx] : '';
-                return (acc +
-                    str +
-                    (Array.isArray(value)
-                        ? value
-                            .map((v) => v instanceof UnsafeXML || v instanceof Builder
-                            ? v
-                            : xmlescape(v.toString()))
-                            .join('')
-                        : value instanceof UnsafeXML || value instanceof Builder
-                            ? value
-                            : xmlescape((value !== null && value !== void 0 ? value : '').toString())));
-            }, '')
-                .trim(), "f");
-        return __classPrivateFieldGet(this, _Stanza_string, "f");
+    buildTree() {
+        const slots = [];
+        const cursor = newCursor();
+        // Trimmed here and nowhere else. This is the whole template, so what is
+        // cut lies outside the root element, where it is neither content nor
+        // syntax and the parser would pass over it anyway. Nothing is scanned
+        // afterwards either, so the cursor cannot be left describing text which
+        // is no longer there, which is what the same trim did to a nested
+        // template until it was taken out of {@link Stanza.expandValue}.
+        const template = __classPrivateFieldGet(this, _Stanza_instances, "m", _Stanza_expand).call(this, slots, cursor).trim();
+        const doc = xmlHtmlNode(template);
+        const parserError = getParserError(doc);
+        if (parserError) {
+            throw new Error(`Parser Error: ${parserError}`);
+        }
+        const node = getFirstElementChild(doc);
+        fill(node, slots, cursor.slot);
+        checkNamespace(node, true);
+        return node;
     }
 }
-_Stanza_string = new WeakMap(), _Stanza_strings = new WeakMap(), _Stanza_values = new WeakMap();
+_a = Stanza, _Stanza_strings = new WeakMap(), _Stanza_values = new WeakMap(), _Stanza_instances = new WeakSet(), _Stanza_expand = function _Stanza_expand(slots, cursor) {
+    return __classPrivateFieldGet(this, _Stanza_strings, "f").reduce((acc, str, idx) => {
+        acc += emit(str, cursor);
+        if (__classPrivateFieldGet(this, _Stanza_values, "f").length <= idx)
+            return acc;
+        return acc + __classPrivateFieldGet(_a, _a, "m", _Stanza_expandValue).call(_a, __classPrivateFieldGet(this, _Stanza_values, "f")[idx], slots, cursor);
+    }, '');
+}, _Stanza_expandValue = function _Stanza_expandValue(value, slots, cursor) {
+    // A comment and a processing instruction are the places in a template a
+    // value cannot go, so it is refused rather than written.
+    //
+    // Not because a value could break out of one: a comment may not hold
+    // `--` at all, so a value carrying the `-->` which would end it does
+    // not parse, and the parser says so, and a value in a processing
+    // instruction is escaped, so the `>` of a `?>` it carries is not one.
+    // Because it goes nowhere. {@link prune} drops both, so the value in
+    // one is dropped with it on the way to the wire, and no slot was
+    // written to notice: a value there is character data rather than a
+    // node to stand in for, so {@link assertFilled} has nothing to count.
+    // Silent loss is the one thing this mechanism exists to prevent, and
+    // these are the positions where it cannot be caught after the fact.
+    if (cursor.mode === 'comment' || cursor.mode === 'pi') {
+        const what = cursor.mode === 'comment' ? 'a comment' : 'a processing instruction';
+        throw new Error(`A value cannot be interpolated into ${what}. Neither a comment nor a processing ` +
+            'instruction is serialized, so the value would be dropped on the way to the wire ' +
+            'without a word.');
+    }
+    // Inside a tag or a CDATA section there is no node to stand in for, so
+    // the value is written into the text as it always was. What that text
+    // has to look like differs: a CDATA section reads it as characters, an
+    // attribute value as characters the parser would otherwise rewrite, the
+    // rest of a tag as markup.
+    if (cursor.mode === 'cdata') {
+        // A section a value opened at document level is one the values
+        // after it cannot close: each is written as characters, the `]]>`
+        // meant to close it included, so the section runs on through the
+        // rest of the template. Refusing beats the parser error which the
+        // unclosed section would otherwise produce.
+        //
+        // Asked of the section and not of the depth, which the cursor does
+        // not count inside an element a value opened. A section the template
+        // wrote there is at depth zero too, and closes like any other.
+        if (cursor.opened) {
+            throw new Error('A value landed in a CDATA section which markup interpolated at document level ' +
+                'opened. Inside it every value is written as characters, including a "]]>" ' +
+                'meant to close it, so the section would run on through the rest of the ' +
+                'template. Write the section in the template text rather than in a value.');
+        }
+        return emit(serializeIntoCdata(value), cursor);
+    }
+    // A quote is only ever open inside a tag, so this catches an attribute
+    // value and nothing else.
+    if (cursor.quote)
+        return emit(serializeIntoAttribute(value), cursor);
+    if (cursor.mode !== 'text')
+        return emit(serializeValue(value), cursor);
+    if (Array.isArray(value)) {
+        return value.map((v) => __classPrivateFieldGet(_a, _a, "m", _Stanza_expandValue).call(_a, v, slots, cursor)).join('');
+    }
+    // A nested template is expanded into the same text, and what it expands
+    // to is left exactly as the cursor read it.
+    //
+    // It used to be trimmed, which is where the two could part company: the
+    // cursor scans every run as {@link emit} writes it, so cutting
+    // characters off afterwards left it holding a state for text which was
+    // no longer there. A nested template ending in a tag lost the space
+    // between an element's name and the attribute the outer template went
+    // on to write, and one ending in `/ ` left the cursor believing an
+    // element was still open, which put the next value on the wrong side of
+    // {@link Cursor.depth}.
+    //
+    // Nothing is lost by leaving it: whitespace at the ends of a nested
+    // template is between tags like any other, so {@link strip} takes it if
+    // it is formatting and keeps it if it is content, which is the same
+    // judgement it makes everywhere else. The trim could not tell those
+    // apart, and cut inside tags as readily as between them.
+    if (value instanceof _a) {
+        return __classPrivateFieldGet(value, _Stanza_instances, "m", _Stanza_expand).call(value, slots, cursor);
+    }
+    // At document level there is no element for a node to land in.
+    // The value is the stanza itself rather than content inside one, so it is
+    // written into the text and parsed as markup.
+    //
+    // What such a value opens is the one thing the cursor deliberately does
+    // not count. A value here is allowed to span, so that a stanza may be
+    // opened by one and closed by another; counting would leave the cursor
+    // inside the element it opened, and the value which closes that element
+    // again would be stood in for rather than written out. So the depth is
+    // put back where the value found it.
+    //
+    // It is read, though, which is a different question and was once
+    // skipped along with the counting. A comment or a CDATA section a value
+    // opens here carries on into the rest of the template, and a value which
+    // lands in one has to be refused or written as characters like any
+    // other. Left unread, the cursor believed it was still in element
+    // content, so such a value went out escaped as markup, or into a comment
+    // and so nowhere at all, with no slot written for {@link assertFilled}
+    // to miss.
+    if (cursor.depth <= 0) {
+        const depth = cursor.depth;
+        const text = emit(serializeValue(value), cursor);
+        cursor.depth = depth;
+        // The cursor was in text when the value began, or it would not have
+        // got this far, so a CDATA section it is in now is one the value
+        // opened. (Widened because the compiler cannot see emit move it.)
+        if (cursor.mode === 'cdata')
+            cursor.opened = true;
+        return text;
+    }
+    slots.push(value);
+    return emit(`<?${cursor.slot} ${slots.length - 1}?>`, cursor);
+};
 /**
  * Tagged template literal function which generates {@link Stanza} objects
  *
  * @example
  *      const pres = stx`<presence type="${type}" xmlns="jabber:client"><show>${show}</show></presence>`
- *
- *      connection.send(msg);
+ *      connection.send(pres);
  *
  * @example
  *      const msg = stx`<message
@@ -6023,15 +6885,74 @@ _Stanza_string = new WeakMap(), _Stanza_strings = new WeakMap(), _Stanza_values 
  *
  *      connection.send(msg);
  *
- * @param strings
- * @param values
- * @returns
+ * Templates may be indented freely. The whitespace written between their tags
+ * is formatting and is removed. However, whitespace which arrives through a `${}`
+ * value (and is not itself inside a template) is considered content and kept.
+ *
+ * So the rule to write by is that whitespace you want on the wire goes inside
+ * the `${}`.
+ *
+ *      stx`<div xmlns="${XHTML}">${[link1, '\n', link2]}</div>`  // kept
+ *      stx`<div xmlns="${XHTML}">${link1}
+ *          ${link2}</div>`                                      // removed
+ *
+ * Which way the template's own indentation around a `${}` goes is decided by
+ * what the value puts against it, not by how the value was written. Indentation
+ * against text is part of that text and is kept; indentation against an element
+ * separates elements and is formatting, so it is removed. A string and markup
+ * which begins and ends in text therefore lay out alike:
+ *
+ *      stx`<c>
+ *          ${'hello'}
+ *      </c>`                     // <c> holds a line break, "hello", a line break
+ *      stx`<c>
+ *          ${unsafeXML('hello')}
+ *      </c>`                     // the same
+ *      stx`<c>
+ *          ${unsafeXML('<p>hello</p>')}
+ *      </c>`                     // <c> holds only the <p>
+ *
+ * Each end is read on its own, so markup which begins in text and ends in an
+ * element keeps the indentation before it and loses the indentation after it.
+ * Whitespace inside the value is its own either way and is never touched.
+ *
+ * Two things are exempt, because their whitespace is read rather than laid
+ * out: an XHTML-IM `<body>`, the one in the XHTML namespace, where a run of
+ * whitespace between two inline elements separates words, and any subtree
+ * marked `xml:space="preserve"`. The latter is also how to keep whitespace in
+ * a string passed to {@link Stanza.toElement}, where there is no `${}` to put
+ * it in. Either may opt out again with `xml:space="default"`.
+ *
+ * A value interpolated at document level, where no element encloses it, is
+ * the exception to all of the above. It is the stanza rather than content
+ * within one, so it is considered markup like a template's and its whitespace
+ * is stripped the same way:
+ *
+ *      const xhtml = `<title type="xhtml"><div xmlns="${XHTML}">
+ *          <a href="${a}">@bob</a>\n<a href="${b}">link</a>
+ *      </div></title>`;
+ *
+ *      stx`<message xmlns="jabber:client">${unsafeXML(xhtml)}</message>`
+ *      // the line break between the two <a> elements is kept
+ *
+ *      stx`${unsafeXML(`<message xmlns="jabber:client">${xhtml}</message>`)}`
+ *      // it is stripped, along with the template's own indentation
+ *
+ * The two are told apart by where the whitespace came from, and at document
+ * level that is no longer knowable. `xml:space="preserve"` is the only handle
+ * there, so mark the elements whose whitespace matters before passing the markup in.
+ *
+ * Whitespace between XHTML elements is fragile in general, since it collapses
+ * to a single space when rendered and this library is not the only thing
+ * which may drop it. The business rules of XEP-0071 recommend writing a line
+ * break as `<br/>` and whitespace which carries meaning as the equivalent
+ * number of no-break spaces, which survives regardless.
  */
 function stx(strings, ...values) {
     return new Stanza(strings, values);
 }
 
-const Strophe = Object.assign(Object.assign(Object.assign({ VERSION: '4.0.0', get TIMEOUT() {
+const Strophe = Object.assign(Object.assign(Object.assign({ VERSION: '6.0.0', get TIMEOUT() {
         return Bosh.getTimeoutMultplier();
     },
     set TIMEOUT(n) {

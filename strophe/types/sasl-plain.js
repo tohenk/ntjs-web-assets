@@ -1,5 +1,5 @@
-import SASLMechanism from './sasl';
-import utils from './utils';
+import SASLMechanism from './sasl.js';
+import utils from './utils.js';
 class SASLPlain extends SASLMechanism {
     constructor(mechname = 'PLAIN', isClientFirst = true, priority = 50) {
         super(mechname, isClientFirst, priority);

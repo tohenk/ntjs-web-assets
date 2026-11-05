@@ -1,4 +1,4 @@
-import { SMState, StanzaView, StreamManagementController, StreamManagementOptions } from './types';
+import { SMState, StanzaView, StreamManagementController, StreamManagementOptions } from './types.js';
 /**
  * The XEP-0198 Stream Management engine.
  *

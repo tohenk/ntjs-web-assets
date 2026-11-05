@@ -1,6 +1,6 @@
-import Builder, { $build } from '../builder';
-import log from '../log';
-import { NS, ErrorCondition, Status } from '../constants';
+import Builder, { $build } from '../builder.js';
+import log from '../log.js';
+import { NS, ErrorCondition, Status } from '../constants.js';
 /**
  * Helper class that handles WebSocket Connections
  *

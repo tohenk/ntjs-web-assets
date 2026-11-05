@@ -1,5 +1,5 @@
-import type Connection from './connection';
-import SASLMechanism from './sasl';
+import type Connection from './connection.js';
+import SASLMechanism from './sasl.js';
 declare class SASLSHA1 extends SASLMechanism {
     constructor(mechname?: string, isClientFirst?: boolean, priority?: number);
     test(connection: Connection): boolean;

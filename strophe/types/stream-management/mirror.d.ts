@@ -1,4 +1,4 @@
-import { SMState, StanzaView, StreamManagementController } from './types';
+import { SMState, StanzaView, StreamManagementController } from './types.js';
 /**
  * A page-side stand-in for the worker-resident engine: when the connection
  * runs through a SharedWorker, the worker owns all counting, queueing and

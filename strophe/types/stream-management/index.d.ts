@@ -13,11 +13,11 @@
  * parse.ts directly so the page-only modules (dom.ts, mirror.ts) stay out of
  * it by construction.
  */
-export { default } from './engine';
-export { MemoryStorageBackend, SessionStorageBackend } from './storage';
-export { StreamManagementMirror } from './mirror';
-export { isCountableStanza, stampDelay, stripFrom } from './utils';
-export { toStanzaView } from './dom';
-export { peekElement } from './parse';
-export type { StanzaView, QueuedStanza, SMState, SMStorageBackend, StreamManagementController, StreamManagementOptions, } from './types';
+export { default } from './engine.js';
+export { MemoryStorageBackend, SessionStorageBackend } from './storage.js';
+export { StreamManagementMirror } from './mirror.js';
+export { isCountableStanza, stampDelay, stripFrom } from './utils.js';
+export { toStanzaView } from './dom.js';
+export { peekElement } from './parse.js';
+export type { StanzaView, QueuedStanza, SMState, SMStorageBackend, StreamManagementController, StreamManagementOptions, } from './types.js';
 //# sourceMappingURL=index.d.ts.map

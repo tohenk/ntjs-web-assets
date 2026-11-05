@@ -1,4 +1,4 @@
-import StreamManagement from './stream-management/engine';
+import StreamManagement from './stream-management/engine.js';
 /** How often the worker pings its ports (and sweeps for gone ones). */
 export declare const PING_INTERVAL = 30000;
 /**

@@ -12,11 +12,11 @@
  */
 // Must be first: installs the DOM globals (via @xmldom/xmldom) and `ws` that the
 // rest of the library assumes, before any module touches `document`/`DOMParser`.
-import './shims/node-dom';
-import Connection from './connection';
-import Component from './transports/component';
-import ComponentParser from './transports/component-parser';
-import { Strophe } from './index';
+import './shims/node-dom.js';
+import Connection from './connection.js';
+import Component from './transports/component.js';
+import ComponentParser from './transports/component-parser.js';
+import { Strophe } from './index.js';
 // Make the component transport selectable via `{ protocol: 'component' }`.
 Connection.addProtocol('component', Component);
 // Expose the classes on the Strophe namespace for parity with Strophe.Websocket
@@ -24,5 +24,5 @@ Connection.addProtocol('component', Component);
 // transports).
 Strophe.Component = Component;
 Strophe.ComponentParser = ComponentParser;
-export * from './index';
+export * from './index.js';
 export { Component, ComponentParser };

@@ -5,11 +5,11 @@
  * to emulate a persistent, stateful, two-way connection to an XMPP server.
  * More information on BOSH can be found in XEP 124.
  */
-import log from '../log';
-import Builder, { $build } from '../builder';
-import Request from '../request';
-import { getBareJidFromJid, getDomainFromJid, getNodeFromJid } from '../utils';
-import { Status, NS } from '../constants';
+import log from '../log.js';
+import Builder, { $build } from '../builder.js';
+import Request from '../request.js';
+import { getBareJidFromJid, getDomainFromJid, getNodeFromJid } from '../utils.js';
+import { Status, NS } from '../constants.js';
 let timeoutMultiplier = 1.1;
 let secondaryTimeoutMultiplier = 0.1;
 /**

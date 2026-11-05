@@ -1,4 +1,4 @@
-import type Connection from './connection';
+import type Connection from './connection.js';
 declare const scram: {
     /**
      * Whether the Web Crypto `SubtleCrypto` API that SCRAM relies on is available.

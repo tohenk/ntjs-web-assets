@@ -7,7 +7,7 @@
  * bundled into dist/shared-connection-worker.js), so keep it free of imports
  * beyond constants (no ../utils.ts or ../builder.ts, and no *module-level DOM access).
  */
-import { NS } from '../constants';
+import { NS } from '../constants.js';
 /** The 'h' counter is an unsignedInt that wraps back to zero (XEP-0198 §4). */
 export const H_WRAP = 2 ** 32;
 /** Stanza names that count towards the 'h' counters (XEP-0198 §4). */

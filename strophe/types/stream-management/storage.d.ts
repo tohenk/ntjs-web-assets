@@ -1,4 +1,4 @@
-import { SMState, SMStorageBackend } from './types';
+import { SMState, SMStorageBackend } from './types.js';
 /**
  * In-memory storage backend (Node, tests, or non-resumable setups).
  * State is serialized on save so callers can't mutate stored state by reference.

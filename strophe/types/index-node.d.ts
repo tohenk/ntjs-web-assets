@@ -10,10 +10,10 @@
  * The Rollup config points the Node builds (`strophe.node.esm.js`,
  * `strophe.cjs`) at this file, while the browser builds keep using `index.ts`.
  */
-import './shims/node-dom';
-import Component from './transports/component';
-import ComponentParser from './transports/component-parser';
-export * from './index';
+import './shims/node-dom.js';
+import Component from './transports/component.js';
+import ComponentParser from './transports/component-parser.js';
+export * from './index.js';
 export { Component, ComponentParser };
-export type { StreamParserHandlers } from './transports/component-parser';
+export type { StreamParserHandlers } from './transports/component-parser.js';
 //# sourceMappingURL=index-node.d.ts.map

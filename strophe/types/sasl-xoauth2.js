@@ -1,5 +1,5 @@
-import SASLMechanism from './sasl';
-import utils from './utils';
+import SASLMechanism from './sasl.js';
+import utils from './utils.js';
 class SASLXOAuth2 extends SASLMechanism {
     constructor(mechname = 'X-OAUTH2', isClientFirst = true, priority = 30) {
         super(mechname, isClientFirst, priority);

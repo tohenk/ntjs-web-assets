@@ -1,4 +1,4 @@
-import { LogLevel } from './constants';
+import { LogLevel } from './constants.js';
 declare const log: {
     /**
      * Library consumers can use this function to set the log level of Strophe.

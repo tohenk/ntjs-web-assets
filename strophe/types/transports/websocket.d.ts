@@ -7,9 +7,9 @@
  * For more information on XMPP-over-WebSocket see RFC 7395:
  * http://tools.ietf.org/html/rfc7395
  */
-import type Connection from '../connection';
-import Builder from '../builder';
-import { WebsocketLike, Transport } from './types';
+import type Connection from '../connection.js';
+import Builder from '../builder.js';
+import { WebsocketLike, Transport } from './types.js';
 /**
  * Helper class that handles WebSocket Connections
  *

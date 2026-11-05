@@ -1,8 +1,8 @@
-import Websocket from './websocket';
-import log from '../log';
-import Builder, { $build } from '../builder';
-import { LOG_LEVELS, NS, SHARED_WORKER_PROTOCOL_VERSION, Status } from '../constants';
-import { toElement } from '../utils';
+import Websocket from './websocket.js';
+import log from '../log.js';
+import Builder, { $build } from '../builder.js';
+import { LOG_LEVELS, NS, SHARED_WORKER_PROTOCOL_VERSION, Status } from '../constants.js';
+import { toElement } from '../utils.js';
 /**
  * Helper class that handles a websocket connection inside a shared worker.
  */

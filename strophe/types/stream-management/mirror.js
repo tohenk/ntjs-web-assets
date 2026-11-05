@@ -5,7 +5,7 @@
  *
  * Page-only: never imported by the shared-connection-worker bundle.
  */
-import { freshState } from './utils';
+import { freshState } from './utils.js';
 /**
  * A page-side stand-in for the worker-resident engine: when the connection
  * runs through a SharedWorker, the worker owns all counting, queueing and

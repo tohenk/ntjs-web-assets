@@ -7,8 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import SASLMechanism from './sasl';
-import scram from './scram';
+import SASLMechanism from './sasl.js';
+import scram from './scram.js';
 class SASLSHA256 extends SASLMechanism {
     constructor(mechname = 'SCRAM-SHA-256', isClientFirst = true, priority = 70) {
         super(mechname, isClientFirst, priority);

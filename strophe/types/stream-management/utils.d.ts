@@ -1,4 +1,4 @@
-import { SMState } from './types';
+import { SMState } from './types.js';
 /** The 'h' counter is an unsignedInt that wraps back to zero (XEP-0198 §4). */
 export declare const H_WRAP: number;
 /**

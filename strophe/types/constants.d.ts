@@ -103,12 +103,17 @@ export declare const LOG_LEVELS: LogLevels;
  *
  * - ElementType.NORMAL - Normal element.
  * - ElementType.TEXT - Text data element.
+ * - ElementType.CDATA - CDATA section.
+ * - ElementType.PROCESSING_INSTRUCTION - Processing instruction.
+ * - ElementType.COMMENT - Comment.
  * - ElementType.FRAGMENT - XHTML fragment element.
  */
 export declare const ElementType: {
     readonly NORMAL: 1;
     readonly TEXT: 3;
     readonly CDATA: 4;
+    readonly PROCESSING_INSTRUCTION: 7;
+    readonly COMMENT: 8;
     readonly FRAGMENT: 11;
 };
 export {};

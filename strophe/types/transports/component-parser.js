@@ -1,6 +1,23 @@
+/**
+ * This file implements an incremental XML stream parser for the XEP-0114
+ * external-component transport (see {@link Component} in `component.ts`).
+ *
+ * A raw TCP stream has no message framing: bytes arrive in arbitrary chunks and
+ * a single, never-closing `<stream:stream>` root has to be parsed incrementally
+ * into its top-level child stanzas. This is the SAX push parser that
+ * `websocket.ts` anticipated in its "[TODO : We may actually want to use a SAX
+ * Push parser]" note.
+ *
+ * The parser is deliberately Node-only: it relies on `node:string_decoder` to
+ * reassemble multi-byte UTF-8 characters split across TCP reads and on `saxes`
+ * (a small, well-tested SAX tokenizer) for tokenization.
+ * The actual DOM construction reuses Strophe's own {@link xmlGenerator}, so the
+ * `Element` objects handed downstream are the exact same type produced by the
+ * BOSH and WebSocket transports.
+ */
 import { createRequire } from 'node:module';
 import { StringDecoder } from 'node:string_decoder';
-import { xmlGenerator } from '../utils';
+import { xmlGenerator } from '../utils.js';
 /** Cached `saxes` constructor, resolved by {@link getSaxesParser} on first use. */
 let SaxesParserCtor;
 /**
@@ -57,8 +74,8 @@ export default class ComponentParser {
     /**
      * Feed a chunk of raw stream data into the parser.
      *
-     * Accepts a `Buffer` (as delivered by a `node:net` socket) or an already
-     * decoded string. Buffers are run through a {@link StringDecoder} so that a
+     * Accepts bytes (a `Buffer`, as delivered by a `node:net` socket, is a
+     * `Uint8Array`) or an already decoded string. Bytes are run through a {@link StringDecoder} so that a
      * multi-byte UTF-8 character split across two chunks is reassembled instead
      * of corrupted.
      * @param chunk - The bytes (or string) received from the socket.

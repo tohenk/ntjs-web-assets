@@ -1,4 +1,4 @@
-import { getBareJidFromJid, getNamespace as getElementNamespace, handleError, isTagEqual } from './utils';
+import { getBareJidFromJid, getNamespace as getElementNamespace, handleError, isTagEqual } from './utils.js';
 /**
  * _Private_ helper class for managing stanza handlers.
  *
