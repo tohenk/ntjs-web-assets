@@ -247,7 +247,7 @@
     "jsdelivr-dist": "socket.io-client"
   },
   "strophe": {
-    "version": "5.0.0",
+    "version": "6.0.0",
     "cdnjs": "strophe.js",
     "js": {
       "strophe": "strophe",
