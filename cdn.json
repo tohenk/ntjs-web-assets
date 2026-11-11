@@ -41,7 +41,7 @@
     "cdnjs": "blueimp-JavaScript-Templates"
   },
   "bootstrap": {
-    "version": "5.3.8",
+    "version": "5.3.9",
     "jsdelivr-dist": ""
   },
   "bootstrap-datetimepicker": {
@@ -255,7 +255,7 @@
     }
   },
   "tinymce": {
-    "version": "8.10.1",
+    "version": "8.10.2",
     "jsdelivr": ""
   },
   "tinymce-i18n": {
