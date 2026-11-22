@@ -1,5 +1,5 @@
 /**
- * interact.js 1.10.28
+ * interact.js 1.10.29
  *
  * Copyright (c) 2012-present Taye Adeyemi <dev@taye.me>
  * Released under the MIT License.
@@ -219,6 +219,9 @@
   var window$1 = function window(thing) {
     return thing === win || isWindow(thing);
   };
+  var document = function document(thing) {
+    return object(thing) && thing.nodeType === 9;
+  };
   var docFrag = function docFrag(thing) {
     return object(thing) && thing.nodeType === 11;
   };
@@ -252,6 +255,7 @@
   };
   var is = {
     window: window$1,
+    document: document,
     docFrag: docFrag,
     object: object,
     func: func,
@@ -5382,6 +5386,8 @@
       /** @internal */
       this._context = void 0;
       /** @internal */
+      this._unique = void 0;
+      /** @internal */
       this._win = void 0;
       /** @internal */
       this._doc = void 0;
@@ -5389,6 +5395,7 @@
       this._scopeEvents = void 0;
       this._actions = options.actions;
       this.target = target;
+      this._unique = !!options.unique;
       this._context = options.context || defaultContext;
       this._win = getWindow(trySelector(target) ? this._context : target);
       this._doc = this._win.document;
@@ -5488,8 +5495,14 @@
       key: "getRect",
       value: function getRect(element) {
         element = element || (is.element(this.target) ? this.target : null);
-        if (is.string(this.target)) {
-          element = element || this._context.querySelector(this.target);
+        if (is.string(this.target) && !element) {
+          var _context = this._context;
+          if (is.array(_context)) {
+            for (var _i2 = 0; _i2 < _context.length; _i2++) {
+              var context = _context[_i2];
+              if (element = context.querySelector(this.target)) break;
+            }
+          } else element = _context.querySelector(this.target);
         }
         return getElementRect(element);
       }
@@ -5578,7 +5591,10 @@
       value: function getAllElements() {
         var target = this.target;
         if (is.string(target)) {
-          return Array.from(this._context.querySelectorAll(target));
+          var _context = this._context;
+          if (is.array(_context)) return Array.from(new Set(_context.flatMap(function (c) {
+            return Array.from(c.querySelectorAll(target));
+          })));else return Array.from(_context.querySelectorAll(target));
         }
         if (is.func(target) && target.getAllElements) {
           return target.getAllElements();
@@ -5600,8 +5616,33 @@
     }, {
       key: "inContext",
       value: function inContext(element) {
-        return this._context === element.ownerDocument || nodeContains(this._context, element);
+        var _context = this._context;
+        if (typeof Set !== 'undefined' && _context instanceof Set) {
+          _context = Array.from(_context);
+        }
+        if (is.array(_context)) {
+          return _context.some(function (context) {
+            return _inContext(element, context);
+          });
+        }
+
+        // TODO: this is only to allow arrangeable with string target being
+        // set as its children draggable's context. Find a better/more general solution?
+        if (is.string(_context) && 'parentNode' in element) {
+          return !!matchesSelector(parentNode(element), _context);
+        }
+        return _inContext(element, _context);
       }
+
+      /** @internal */
+    }, {
+      key: "_matches",
+      value: function _matches(target) {
+        var context = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this._context;
+        return matches(this, target, context, this.target);
+      }
+
+      // TODO: prevent delegated events for multi-target and multi-context
 
       /** @internal */
     }, {
@@ -5671,15 +5712,17 @@
           if (_type === 'wheel') {
             _type = browser$1.wheelEvent;
           }
-          for (var _i2 = 0, _listeners$_type2 = listeners[_type]; _i2 < _listeners$_type2.length; _i2++) {
-            var listener = _listeners$_type2[_i2];
+          for (var _i4 = 0, _listeners$_type2 = listeners[_type]; _i4 < _listeners$_type2.length; _i4++) {
+            var listener = _listeners$_type2[_i4];
             // if it is an action event type
             if (isNonNativeEvent(_type, this._actions)) {
               this.events[method === OnOffMethod.On ? 'on' : 'off'](_type, listener);
             }
             // delegated event
             else if (is.string(this.target)) {
-              this._scopeEvents[method === OnOffMethod.On ? 'addDelegate' : 'removeDelegate'](this.target, this._context, _type, listener, options);
+              var _context = this._context;
+              if (is.array(_context)) throw new Error("Can't add delegated event to interactable with array context.");
+              this._scopeEvents[method === OnOffMethod.On ? 'addDelegate' : 'removeDelegate'](this.target, _context, _type, listener, options);
             }
             // remove listener from this Interactable's element
             else {
@@ -5764,18 +5807,21 @@
       value: function unset() {
         if (is.string(this.target)) {
           // remove delegated events
-          for (var _type2 in this._scopeEvents.delegatedEvents) {
-            var delegated = this._scopeEvents.delegatedEvents[_type2];
-            for (var i = delegated.length - 1; i >= 0; i--) {
-              var _delegated$i = delegated[i],
-                selector = _delegated$i.selector,
-                context = _delegated$i.context,
-                listeners = _delegated$i.listeners;
-              if (selector === this.target && context === this._context) {
-                delegated.splice(i, 1);
-              }
-              for (var l = listeners.length - 1; l >= 0; l--) {
-                this._scopeEvents.removeDelegate(this.target, this._context, _type2, listeners[l][0], listeners[l][1]);
+
+          if (!is.array(this._context)) {
+            for (var _type2 in this._scopeEvents.delegatedEvents) {
+              var delegated = this._scopeEvents.delegatedEvents[_type2];
+              for (var i = delegated.length - 1; i >= 0; i--) {
+                var _delegated$i = delegated[i],
+                  selector = _delegated$i.selector,
+                  context = _delegated$i.context,
+                  listeners = _delegated$i.listeners;
+                if (selector === this.target && context === this._context) {
+                  delegated.splice(i, 1);
+                }
+                for (var l = listeners.length - 1; l >= 0; l--) {
+                  this._scopeEvents.removeDelegate(this.target, this._context, _type2, listeners[l][0], listeners[l][1]);
+                }
               }
             }
           }
@@ -5786,6 +5832,27 @@
     }]);
     return Interactable;
   }();
+  function _inContext(target, context) {
+    if (is.window(target)) return context.ownerDocument.defaultView === target;
+    return context === target.ownerDocument || nodeContains(context, target);
+  }
+  function matches(self, targetCandidate, context, targetOption) {
+    if (self._context !== context) return false;
+
+    // target is the selector string or Element/EventTarget
+    if (targetCandidate === targetOption) return true;
+    // string or custom candidate differs from interactable target
+    if (is.string(targetCandidate) || is.func(targetCandidate)) return false;
+
+    // target is a selector and the element matches
+    if (is.string(targetOption)) {
+      return is.element(targetCandidate) && matchesSelector(targetCandidate, targetOption);
+    }
+    if (is.func(targetOption)) {
+      return targetOption(targetCandidate, self);
+    }
+    return false;
+  }
 
   var InteractableSet = /*#__PURE__*/function () {
     function InteractableSet(scope) {
@@ -5842,32 +5909,25 @@
     }, {
       key: "getExisting",
       value: function getExisting(target, options) {
+        if (options != null && options.unique) return undefined;
         var context = options && options.context || this.scope.document;
         var isSelector = is.string(target);
-        var interactablesOnTarget = isSelector ? this.selectorMap[target] : target[this.scope.id];
-        if (!interactablesOnTarget) return undefined;
-        return find(interactablesOnTarget, function (interactable) {
-          return interactable._context === context && (isSelector || interactable.inContext(target));
+        var targetMappings = isSelector ? this.selectorMap[target] : target[this.scope.id];
+        if (!targetMappings) return undefined;
+        return find(targetMappings, function (interactable) {
+          return interactable._context === context && (isSelector || !is.element(target) || interactable.inContext(target)) && !interactable._unique;
         });
       }
     }, {
       key: "forEachMatch",
-      value: function forEachMatch(node, callback) {
+      value: function forEachMatch(target, callback) {
         for (var _i2 = 0, _this$list2 = this.list; _i2 < _this$list2.length; _i2++) {
           var _interactable = _this$list2[_i2];
           var ret = void 0;
-          if ((is.string(_interactable.target) ?
-          // target is a selector and the element matches
-          is.element(node) && matchesSelector(node, _interactable.target) :
-          // target is the element
-          node === _interactable.target) &&
-          // the element is in context
-          _interactable.inContext(node)) {
+          if (_interactable._matches(target) && (is.string(target) || is.func(target) || _interactable.inContext(target))) {
             ret = callback(_interactable);
           }
-          if (ret !== undefined) {
-            return ret;
-          }
+          if (ret !== undefined) return ret;
         }
       }
     }]);
@@ -5920,22 +5980,28 @@
     interact.globalEvents = {};
 
     // eslint-disable-next-line no-undef
-    interact.version = "1.10.28";
+    interact.version = "1.10.29";
     interact.scope = scope;
     interact.use = function (plugin, options) {
       this.scope.usePlugin(plugin, options);
       return this;
     };
     interact.isSet = function (target, options) {
-      return !!this.scope.interactables.get(target, options && options.context);
+      if (options != null && options.unique) return false;
+      var context = options && options.context || scope.document;
+      for (var _i2 = 0, _scope$interactables$2 = scope.interactables.list; _i2 < _scope$interactables$2.length; _i2++) {
+        var interactable = _scope$interactables$2[_i2];
+        if (!interactable._unique && interactable._matches(target, context)) return true;
+      }
+      return false;
     };
     interact.on = warnOnce(function on(type, listener, options) {
       if (is.string(type) && type.search(' ') !== -1) {
         type = type.trim().split(/ +/);
       }
       if (is.array(type)) {
-        for (var _i2 = 0, _ref2 = type; _i2 < _ref2.length; _i2++) {
-          var eventType = _ref2[_i2];
+        for (var _i4 = 0, _ref2 = type; _i4 < _ref2.length; _i4++) {
+          var eventType = _ref2[_i4];
           this.on(eventType, listener, options);
         }
         return this;
@@ -5969,8 +6035,8 @@
         type = type.trim().split(/ +/);
       }
       if (is.array(type)) {
-        for (var _i4 = 0, _type2 = type; _i4 < _type2.length; _i4++) {
-          var eventType = _type2[_i4];
+        for (var _i6 = 0, _type2 = type; _i6 < _type2.length; _i6++) {
+          var eventType = _type2[_i6];
           this.off(eventType, listener, options);
         }
         return this;
@@ -6001,8 +6067,8 @@
       return browser$1.supportsPointerEvent;
     };
     interact.stop = function () {
-      for (var _i6 = 0, _this$scope$interacti2 = this.scope.interactions.list; _i6 < _this$scope$interacti2.length; _i6++) {
-        var interaction = _this$scope$interacti2[_i6];
+      for (var _i8 = 0, _this$scope$interacti2 = this.scope.interactions.list; _i8 < _this$scope$interacti2.length; _i8++) {
+        var interaction = _this$scope$interacti2[_i8];
         interaction.stop();
       }
       return this;
