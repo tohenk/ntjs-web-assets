@@ -1,4 +1,4 @@
-/*! DateTime 2.1.3 for DataTables.net
+/*! DateTime 2.2.0 for DataTables.net
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -1563,7 +1563,7 @@ DateTime.defaults = {
     showWeekNumber: false,
     yearRange: 25
 };
-DateTime.version = '2.1.3';
+DateTime.version = '2.2.0';
 // Global export - if no conflicts
 const win = DataTable.use('win');
 if (win && !win.DateTime) {
