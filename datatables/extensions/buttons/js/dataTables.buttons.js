@@ -1,4 +1,4 @@
-/*! Buttons 4.1.3 for DataTables
+/*! Buttons 4.1.4 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -2130,7 +2130,9 @@ class Buttons {
         var tableContainer = Dom.s(hostButton.table().container());
         var position = display.css('position');
         if (options.span === 'container' || options.align === 'dt-container') {
-            hostNode = hostNode.parent();
+            if (hostNode.get(0) !== document.body) {
+                hostNode = hostNode.parent();
+            }
             display.css('width', tableContainer.width() + 'px');
         }
         // Align the popover relative to the DataTables container
@@ -2285,7 +2287,7 @@ class Buttons {
                     // tab
                     return;
                 }
-                if (elements.get().includes(active)) {
+                if (!elements.get().includes(active)) {
                     // If current focus is not inside the popover
                     first.focus();
                     e.preventDefault();
@@ -2424,16 +2426,26 @@ class Buttons {
     disable(node) {
         var button = this._nodeToButton(node);
         if (button) {
+            let domStructure = util.object.assignDeep({}, this.c.dom.button);
+            if (button.inCollection) {
+                util.object.assignDeep(domStructure, this.c.dom.collection.button);
+            }
             if (button.isSplit) {
                 button.node
                     .children()
                     .eq(0)
-                    .classAdd(this.c.dom.button.disabled)
+                    .classAdd(domStructure.disabled)
                     .prop('disabled', true);
             }
             else {
+                button.node.classAdd(domStructure.disabled).prop('disabled', true);
+            }
+            // The liner could have a disabled class on it as well
+            if (domStructure.liner && domStructure.liner.disabled) {
                 button.node
-                    .classAdd(this.c.dom.button.disabled)
+                    .children()
+                    .eq(0)
+                    .classAdd(domStructure.liner.disabled)
                     .prop('disabled', true);
             }
             button.disabled = true;
@@ -2481,16 +2493,30 @@ class Buttons {
         }
         var button = this._nodeToButton(node);
         if (button) {
+            // Get the right DOM structure for the level, extending from the
+            // base
+            let domStructure = util.object.assignDeep({}, this.c.dom.button);
+            if (button.inCollection) {
+                util.object.assignDeep(domStructure, this.c.dom.collection.button);
+            }
             if (button.isSplit) {
                 button.node
                     .children()
                     .eq(0)
-                    .classRemove(this.c.dom.button.disabled)
+                    .classRemove(domStructure.disabled)
                     .prop('disabled', false);
             }
             else {
                 button.node
-                    .classRemove(this.c.dom.button.disabled)
+                    .classRemove(domStructure.disabled)
+                    .prop('disabled', false);
+            }
+            // The liner could have a disabled class on it as well
+            if (domStructure.liner && domStructure.liner.disabled) {
+                button.node
+                    .children()
+                    .eq(0)
+                    .classRemove(domStructure.liner.disabled)
                     .prop('disabled', false);
             }
             button.disabled = false;
@@ -3593,7 +3619,11 @@ Buttons.stripData = function (input, config) {
     }
     // Prevent Excel from running a formula
     if (!config || config.escapeExcelFormula) {
-        if (str.match(/^[=@\t\r]/)) {
+        // For data with certain leading characters, we need to explicity
+        // define the output as a string, which is done with a leading quote
+        // mark. This should not be done on data which is just purely
+        // numeric though.
+        if (!Buttons.isNumber(str) && str.match(/^[=+\-@\t\r]/)) {
             str = "'" + str;
         }
     }
@@ -3607,6 +3637,15 @@ Buttons.stripData = function (input, config) {
  */
 Buttons.entityDecoder = function (fn) {
     _entityDecoder = fn;
+};
+/**
+ * Check if a value contains a number
+ *
+ * @param val Value to check
+ * @returns `true` if it is
+ */
+Buttons.isNumber = function (val) {
+    return !isNaN(parseFloat(val)) && !isNaN(val - 0);
 };
 /**
  * Common function for stripping HTML comments
@@ -3703,7 +3742,7 @@ Buttons.defaults = {
 /**
  * Version information
  */
-Buttons.version = '4.1.3';
+Buttons.version = '4.1.4';
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * DataTables API

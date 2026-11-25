@@ -1,4 +1,4 @@
-/*! Buttons Bootstrap 5 styling 4.1.3 for DataTables
+/*! Buttons Bootstrap 5 styling 4.1.4 for DataTables
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -78,10 +78,11 @@ util.object.assignDeep(DataTable.Buttons.defaults, {
 				tag: 'li',
 				className: 'dt-button',
 				active: 'dt-button-active-a',
-				disabled: 'disabled',
+				disabled: '',
 				liner: {
 					tag: 'a',
-					className: 'dropdown-item'
+					className: 'dropdown-item',
+					disabled: 'disabled',
 				},
 				spacer: {
 					className: 'divider',

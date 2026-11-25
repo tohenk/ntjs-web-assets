@@ -1,4 +1,4 @@
-/*! DataTables 3.1.5
+/*! DataTables 3.1.6
  * Copyright (c) SpryMedia Ltd - datatables.net/license
  */
 
@@ -720,7 +720,7 @@ function ajax(optionsIn) {
         let responseData = xhr.responseText;
         let statusText = 'success';
         if (xhr.status === 0) {
-            return; // aborted
+            statusText = 'error'; // Network error
         }
         else if (xhr.status === 204 || method === 'HEAD') {
             statusText = 'nocontent';
@@ -4353,6 +4353,11 @@ function scrollDraw(settings) {
     table.children('colgroup').prependTo(table);
     // Remove tabindex from the hidden row elements
     table.find('thead, tfoot').find('[tabindex]').attrRemove('tabindex');
+    // And make form elements in the clones inaccessible by tabbing
+    table
+        .find('thead, tfoot')
+        .find('input, select, button')
+        .attr('tabindex', -1);
     // Dynamic ARIA roles - see setup for details on why this is needed
     table
         .find('thead, tfoot')
@@ -5991,7 +5996,13 @@ function filterCreateSearch(searchIn, inOpts) {
                 match +
                 '.)*$';
     }
-    return new RegExp(search, options.caseInsensitive ? 'i' : '');
+    try {
+        return new RegExp(search, options.caseInsensitive ? 'i' : '');
+    }
+    catch (e) {
+        log(null, 1, 'Invalid regular expression for search: ' + search);
+    }
+    return null;
 }
 // Update the filtering data for each row if needed (by invalidation or first
 // run)
@@ -6749,7 +6760,7 @@ function log(ctx, level, msg, tn) {
                 'https://datatables.net/tn/' +
                 tn;
     }
-    {
+    if (!level) {
         // Backwards compatibility pre 1.10
         var type = ext.sErrMode || ext.errMode;
         if (ctx) {
@@ -6764,6 +6775,9 @@ function log(ctx, level, msg, tn) {
         else if (typeof type == 'function') {
             type(ctx, tn, msg);
         }
+    }
+    else if (window.console && console.log) {
+        console.log(msg);
     }
 }
 /**
@@ -6971,7 +6985,12 @@ function listener(that, name, src) {
 function escapeObject(obj) {
     if (ext.escape.attributes) {
         each(obj, function (key, val) {
-            obj[key] = escapeHtml(val);
+            if (util.is.plainObject(val) || util.is.arrayLike(val)) {
+                escapeObject(obj[key]);
+            }
+            else {
+                obj[key] = escapeHtml(val);
+            }
         });
     }
     return obj;
@@ -7247,7 +7266,7 @@ register$1('html-num-fmt', {
     detect: {
         allOf: function (d, settings) {
             var decimal = settings.language.decimal;
-            return util.is.htmlNum(d, decimal, true, false);
+            return util.is.htmlNum(d, decimal, true, true);
         },
         oneOf: function (d, settings) {
             // At least one data point must contain a numeric value
@@ -8849,7 +8868,7 @@ const ext = {
      * Software version
      *  @type string
      */
-    version: '3.1.5'
+    version: '3.1.6'
 };
 //
 // Backwards compatibility. Alias to pre 1.10 Hungarian notation counter parts
